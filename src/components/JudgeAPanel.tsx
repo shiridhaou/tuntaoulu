@@ -25,8 +25,10 @@ export function JudgeAPanel() {
     sessionCode, judgeId,
   } = useCompetition();
 
-  const config = competitionStyle ? STYLE_CONFIGS[competitionStyle] : STYLE_CONFIGS.changquan;
   const aSync = useMatchSync(sessionCode);
+  // Live style broadcast by the Technical Assistant wins over the local pick.
+  const liveStyle = (aSync.style ?? competitionStyle) as string | null;
+  const config = liveStyle && STYLE_CONFIGS[liveStyle] ? STYLE_CONFIGS[liveStyle] : STYLE_CONFIGS.changquan;
   const liveMode: MatchMode = ((aSync.payload as Record<string, unknown> | null)?.match_mode as MatchMode | undefined) ?? "optional";
   const maxA = modeCaps(liveMode).maxA;
   const performanceTime = config.performanceTime;
@@ -38,7 +40,9 @@ export function JudgeAPanel() {
   const [online, setOnline] = useState(true);
   const [submitted, setSubmitted] = useState(false);
 
-  const codes = useMemo(() => catalogForStyle(competitionStyle), [competitionStyle]);
+  // Style-conditional catalogue: 2x codes only for Nanquan, 5x only for Taijiquan.
+  const codes = useMemo(() => catalogForStyle(liveStyle), [liveStyle]);
+
 
   // Available decades (tens digit) present in the active catalogue
   const decades = useMemo(() => {
