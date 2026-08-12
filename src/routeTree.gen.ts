@@ -10,33 +10,128 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DisplayJoinRouteImport } from './routes/display-join'
+import { Route as JudgeJoinRouteImport } from './routes/judge-join'
+import { Route as PublicDisplayRouteImport } from './routes/public-display'
+import { Route as ScoreboardRouteImport } from './routes/scoreboard'
+import { Route as VarReviewRouteImport } from './routes/var-review'
+import { Route as AthleteReportIdRouteImport } from './routes/athlete-report.$id'
+import { Route as PublicReportIdRouteImport } from './routes/public-report.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DisplayJoinRoute = DisplayJoinRouteImport.update({
+  id: '/display-join',
+  path: '/display-join',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JudgeJoinRoute = JudgeJoinRouteImport.update({
+  id: '/judge-join',
+  path: '/judge-join',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PublicDisplayRoute = PublicDisplayRouteImport.update({
+  id: '/public-display',
+  path: '/public-display',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScoreboardRoute = ScoreboardRouteImport.update({
+  id: '/scoreboard',
+  path: '/scoreboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VarReviewRoute = VarReviewRouteImport.update({
+  id: '/var-review',
+  path: '/var-review',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AthleteReportIdRoute = AthleteReportIdRouteImport.update({
+  id: '/athlete-report/$id',
+  path: '/athlete-report/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PublicReportIdRoute = PublicReportIdRouteImport.update({
+  id: '/public-report/$id',
+  path: '/public-report/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/display-join': typeof DisplayJoinRoute
+  '/judge-join': typeof JudgeJoinRoute
+  '/public-display': typeof PublicDisplayRoute
+  '/scoreboard': typeof ScoreboardRoute
+  '/var-review': typeof VarReviewRoute
+  '/athlete-report/$id': typeof AthleteReportIdRoute
+  '/public-report/$id': typeof PublicReportIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/display-join': typeof DisplayJoinRoute
+  '/judge-join': typeof JudgeJoinRoute
+  '/public-display': typeof PublicDisplayRoute
+  '/scoreboard': typeof ScoreboardRoute
+  '/var-review': typeof VarReviewRoute
+  '/athlete-report/$id': typeof AthleteReportIdRoute
+  '/public-report/$id': typeof PublicReportIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/display-join': typeof DisplayJoinRoute
+  '/judge-join': typeof JudgeJoinRoute
+  '/public-display': typeof PublicDisplayRoute
+  '/scoreboard': typeof ScoreboardRoute
+  '/var-review': typeof VarReviewRoute
+  '/athlete-report/$id': typeof AthleteReportIdRoute
+  '/public-report/$id': typeof PublicReportIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/display-join'
+    | '/judge-join'
+    | '/public-display'
+    | '/scoreboard'
+    | '/var-review'
+    | '/athlete-report/$id'
+    | '/public-report/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/display-join'
+    | '/judge-join'
+    | '/public-display'
+    | '/scoreboard'
+    | '/var-review'
+    | '/athlete-report/$id'
+    | '/public-report/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/display-join'
+    | '/judge-join'
+    | '/public-display'
+    | '/scoreboard'
+    | '/var-review'
+    | '/athlete-report/$id'
+    | '/public-report/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DisplayJoinRoute: typeof DisplayJoinRoute
+  JudgeJoinRoute: typeof JudgeJoinRoute
+  PublicDisplayRoute: typeof PublicDisplayRoute
+  ScoreboardRoute: typeof ScoreboardRoute
+  VarReviewRoute: typeof VarReviewRoute
+  AthleteReportIdRoute: typeof AthleteReportIdRoute
+  PublicReportIdRoute: typeof PublicReportIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +143,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/display-join': {
+      id: '/display-join'
+      path: '/display-join'
+      fullPath: '/display-join'
+      preLoaderRoute: typeof DisplayJoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/judge-join': {
+      id: '/judge-join'
+      path: '/judge-join'
+      fullPath: '/judge-join'
+      preLoaderRoute: typeof JudgeJoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/public-display': {
+      id: '/public-display'
+      path: '/public-display'
+      fullPath: '/public-display'
+      preLoaderRoute: typeof PublicDisplayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scoreboard': {
+      id: '/scoreboard'
+      path: '/scoreboard'
+      fullPath: '/scoreboard'
+      preLoaderRoute: typeof ScoreboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/var-review': {
+      id: '/var-review'
+      path: '/var-review'
+      fullPath: '/var-review'
+      preLoaderRoute: typeof VarReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/athlete-report/$id': {
+      id: '/athlete-report/$id'
+      path: '/athlete-report/$id'
+      fullPath: '/athlete-report/$id'
+      preLoaderRoute: typeof AthleteReportIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/public-report/$id': {
+      id: '/public-report/$id'
+      path: '/public-report/$id'
+      fullPath: '/public-report/$id'
+      preLoaderRoute: typeof PublicReportIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DisplayJoinRoute: DisplayJoinRoute,
+  JudgeJoinRoute: JudgeJoinRoute,
+  PublicDisplayRoute: PublicDisplayRoute,
+  ScoreboardRoute: ScoreboardRoute,
+  VarReviewRoute: VarReviewRoute,
+  AthleteReportIdRoute: AthleteReportIdRoute,
+  PublicReportIdRoute: PublicReportIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
