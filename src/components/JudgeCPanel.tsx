@@ -38,11 +38,23 @@ export function JudgeCPanel() {
   const config = liveStyle ? STYLE_CONFIGS[liveStyle] : STYLE_CONFIGS.changquan;
   const athlete = athletes[currentAthleteIndex];
   const [extraMovements, setExtraMovements] = useState<DifficultyMovement[]>([]);
-  const sheet: DifficultyMovement[] = useMemo(() => {
+  const fullSheet: DifficultyMovement[] = useMemo(() => {
     const base = athlete?.difficultySheet?.length ? athlete.difficultySheet : DEFAULT_SHEET;
     const extra = extraMovements.filter(e => !base.some(b => b.code === e.code));
     return [...base, ...extra];
   }, [athlete, extraMovements]);
+
+  // Combined codes coming from the Excel sheet (e.g. "323A+353B") are CONNECTIONS
+  // and are judged separately from movement difficulty (0.60 ceiling).
+  const sheet: DifficultyMovement[] = useMemo(
+    () => fullSheet.filter(d => !isConnectionCode(d.code)),
+    [fullSheet],
+  );
+  const sheetConnections: ConnectionBonus[] = useMemo(
+    () => fullSheet.filter(d => isConnectionCode(d.code)).map(d => lookupConnection(d.code)),
+    [fullSheet],
+  );
+
 
 
   // Notify Judge C when a NEW difficulty sheet arrives from the TA
