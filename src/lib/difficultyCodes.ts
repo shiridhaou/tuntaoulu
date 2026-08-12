@@ -86,3 +86,26 @@ export function parseDifficultyCodes(raw: unknown): string[] {
 export function buildDifficultySheet(codes: string[]): DifficultyMovement[] {
   return codes.map(lookupCode);
 }
+
+/* ───────── Connection codes (وضعيات الربط) ─────────
+   Excel sheets may express a connection as a combined code such as
+   "323A+353B". These are judged separately from movement difficulty and
+   count against the 0.60 connection ceiling. */
+
+/** True when a code represents a connection (combined) rather than a single movement. */
+export function isConnectionCode(code: string): boolean {
+  return /\+/.test(String(code ?? ""));
+}
+
+/** Normalize a combined code like "323a + 353b" into a connection bonus entry. */
+export function lookupConnection(code: string): ConnectionBonus {
+  const parts = String(code).toUpperCase().split("+").map(s => s.trim()).filter(Boolean);
+  const key = parts.join("+");
+  const value = parts.length >= 3 ? 0.3 : 0.2;
+  return {
+    code: key,
+    label: `Connection ${parts.join(" + ")}`,
+    labelAr: `ربط ${parts.join(" + ")}`,
+    value,
+  };
+}
