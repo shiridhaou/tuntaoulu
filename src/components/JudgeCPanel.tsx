@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { submitJudgeScore } from "@/lib/scoreSubmit";
 import { useMatchSync } from "@/hooks/useMatchSync";
 import { toast } from "sonner";
-import { QUICK_CODES, CONNECTION_BONUSES, MAX_C_MOVEMENT, MAX_C_CONNECTION, lookupCode } from "@/lib/difficultyCodes";
+import { QUICK_CODES, CONNECTION_BONUSES, MAX_C_MOVEMENT, MAX_C_CONNECTION, lookupCode, isConnectionCode, lookupConnection, type ConnectionBonus } from "@/lib/difficultyCodes";
 
 const DEFAULT_SHEET: DifficultyMovement[] = [
   { code: "323A", label: "Tornado 360°", connection: "Independent", value: 0.2 },
