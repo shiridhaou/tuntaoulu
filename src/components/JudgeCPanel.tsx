@@ -55,6 +55,14 @@ export function JudgeCPanel() {
     [fullSheet],
   );
 
+  /** Connection buttons = athlete-sheet connections first, then the standard catalogue. */
+  const connectionOptions: { bonus: ConnectionBonus; fromSheet: boolean }[] = useMemo(() => [
+    ...sheetConnections.map(b => ({ bonus: b, fromSheet: true })),
+    ...CONNECTION_BONUSES
+      .filter(b => !sheetConnections.some(s2 => s2.code === b.code))
+      .map(b => ({ bonus: b, fromSheet: false })),
+  ], [sheetConnections]);
+
 
 
   // Notify Judge C when a NEW difficulty sheet arrives from the TA
@@ -175,7 +183,7 @@ export function JudgeCPanel() {
   };
 
 
-  const tapConnection = (b: typeof CONNECTION_BONUSES[number]) => {
+  const tapConnection = (b: ConnectionBonus) => {
     const idx = attemptIndex(b.code);
     if (idx >= 0) { toggleJudgeCAttempt(idx); return; }
     if (connectionTotal + b.value > MAX_C_CONNECTION + 1e-6) {
