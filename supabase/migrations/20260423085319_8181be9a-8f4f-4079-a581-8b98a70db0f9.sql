@@ -1,0 +1,1 @@
+ALTER TABLE public.current_match ADD COLUMN IF NOT EXISTS ta_deductions jsonb NOT NULL DEFAULT '{}'::jsonb;
