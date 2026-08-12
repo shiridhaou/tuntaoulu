@@ -58,8 +58,18 @@ export const MAX_C_CONNECTION = 0.6;
 
 export function lookupCode(code: string): DifficultyMovement {
   const key = code.trim().toUpperCase();
+  if (/\+/.test(key)) {
+    const parts = key.split("+").map(s => s.trim()).filter(Boolean);
+    return {
+      code: parts.join("+"),
+      label: `Connection ${parts.join(" + ")}`,
+      connection: "Connection",
+      value: parts.length >= 3 ? 0.3 : 0.2,
+    };
+  }
   const meta = CATALOG[key];
   if (meta) return { code: key, ...meta };
+
   const tier = key.slice(-1);
   const value = tier === "C" ? 0.4 : tier === "B" ? 0.3 : 0.2;
   return { code: key, label: key, connection: "Independent", value };
