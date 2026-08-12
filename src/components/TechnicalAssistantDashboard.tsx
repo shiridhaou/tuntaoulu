@@ -216,14 +216,21 @@ function TADashboardInner() {
         .maybeSingle();
       if (cancelled) return;
       const prev = (existing?.payload as Record<string, unknown> | null) ?? {};
-      if ((prev.match_mode as string | undefined) === matchMode) return;
+      const sameMode = (prev.match_mode as string | undefined) === matchMode;
+      const sameStyle = (existing?.style ?? null) === styleCategory && (prev.style as string | undefined) === styleCategory;
+      if (sameMode && sameStyle) return;
       await supabase.from("current_match").upsert({
         session_code: sessionCode,
         athlete_id: existing?.athlete_id ?? null,
-        style: existing?.style ?? styleCategory,
-        payload: { ...prev, match_mode: matchMode } as never,
+        style: styleCategory,
+        payload: { ...prev, match_mode: matchMode, style: styleCategory } as never,
         updated_at: new Date().toISOString(),
       }, { onConflict: "session_code" });
+      await supabase.from("match_events").insert({
+        session_code: sessionCode,
+        event_type: "config_broadcast",
+        payload: { match_mode: matchMode, style: styleCategory },
+      });
     })();
     return () => { cancelled = true; };
   }, [matchMode, sessionCode, styleCategory]);
@@ -625,6 +632,22 @@ function TADashboardInner() {
   }
 
 
+  // Broadcast VAR — asks the VAR referee to review the current athlete at the
+  // exact timer position, and mirrors the request to the public display flag.
+  async function broadcastVar() {
+    if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
+    await emitEvent("var_review_request", {
+      at: timerSec,
+      athlete_id: liveAthlete?.id ?? null,
+      athlete_name: liveAthlete?.full_name ?? null,
+      bib: liveAthlete?.bib_number ?? null,
+      style: styleCategory,
+      match_mode: matchMode,
+    });
+    pushLog("var", `🎥 VAR review @ ${Math.floor(timerSec / 60)}:${String(timerSec % 60).padStart(2, "0")}`);
+    toast.success("تم إرسال طلب مراجعة الفيديو إلى حكم VAR");
+  }
+
   // Lock match config and broadcast to all judges (preserves any existing athlete)
   async function lockAndStart() {
     if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
@@ -823,6 +846,12 @@ function TADashboardInner() {
             <Button onClick={signalChief} size="sm"
               className="h-7 px-2 text-xs bg-fed-red hover:bg-fed-red/90 text-white shadow shadow-fed-red/30 font-bold">
               <Megaphone className="h-3 w-3 ml-1" /> Signal Chief
+            </Button>
+
+            {/* Broadcast VAR — sends a video-review request to the VAR screen */}
+            <Button onClick={broadcastVar} size="sm"
+              className="h-7 px-2 text-xs bg-orange-500 hover:bg-orange-600 text-black shadow shadow-orange-500/30 font-bold">
+              <Video className="h-3 w-3 ml-1" /> Broadcast VAR
             </Button>
 
             {/* View Session Logs — opens the Event Drawer */}
