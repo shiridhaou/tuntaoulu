@@ -200,6 +200,43 @@ export function JudgeCPanel() {
   // when the TA toggled mode mid-event. The Chief is responsible for whether
   // C scores count toward the final aggregate.
 
+  // Compulsory routines (إجبارية) do NOT include Group C — panel is disabled and
+  // the score is forced to 0 until the TA switches back to Optional.
+  if (matchMode === "compulsory") {
+    return (
+      <div className="h-screen cyber-bg flex flex-col overflow-hidden text-white" dir="rtl">
+        <header className="border-b border-cyber-orange/25 bg-black/60 backdrop-blur px-4 py-3 shrink-0">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <button onClick={() => setSelectedRole(null)} className="h-9 w-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white">
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <FederationLogo size="sm" />
+            </div>
+            <span className="text-xs text-green-300 font-heading font-bold px-2.5 py-1 rounded-full border border-green-400/40 bg-green-400/10" dir="ltr">
+              COMPULSORY · A 7 + B 3
+            </span>
+            <button onClick={logout} className="text-xs text-white/50 hover:text-white">خروج</button>
+          </div>
+        </header>
+        <main className="flex-1 flex flex-col items-center justify-center p-6 text-center gap-4">
+          <div className="h-24 w-24 rounded-full border-2 border-white/10 bg-white/5 flex items-center justify-center">
+            <X className="h-10 w-10 text-white/30" />
+          </div>
+          <h2 className="text-2xl font-heading font-black text-white">نمط إجباري</h2>
+          <p className="text-sm text-white/60 max-w-md font-body leading-relaxed">
+            مجموعة الصعوبة (C) معطّلة في الأساليب الإلزامية.<br/>
+            في انتظار تحويل المساعد التقني إلى النمط الاختياري.
+          </p>
+          <div className="rounded-xl border border-white/10 bg-black/40 px-4 py-2 mt-2">
+            <p className="text-[9px] uppercase tracking-[0.3em] text-white/40" dir="ltr">Group C</p>
+            <p className="text-3xl font-heading font-black text-white/80 tabular-nums" dir="ltr">0.00</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   // Traditional styles do NOT use Group C — auto-zero and disable UI.
   if (liveStyle === "traditional") {
     if (judgeCAttempts.length > 0) {
