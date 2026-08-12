@@ -139,6 +139,18 @@ export function JudgeAPanel() {
           <span className="shrink-0 text-[10px] font-black tracking-[0.25em] px-2 py-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-300" dir="ltr">
             JUDGE A · QUALITY
           </span>
+          <span
+            className={`shrink-0 text-[9px] font-black tracking-widest px-2 py-0.5 rounded-full border ${
+              liveMode === "compulsory"
+                ? "border-green-400/50 bg-green-400/10 text-green-300"
+                : "border-orange-400/50 bg-orange-400/10 text-orange-300"
+            }`}
+            dir="ltr"
+            title="النمط والأسلوب المبثوثان من المساعد التقني"
+          >
+            {liveMode === "compulsory" ? "COMP 7.00" : "OPT 5.00"} · {(liveStyle ?? "—").toUpperCase()}
+          </span>
+
           <span className={`shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${online ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"}`}>
             {online ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
             {online ? "LIVE" : "OFF"}
