@@ -66,6 +66,19 @@ export function JudgeAPanel() {
 
   useEffect(() => { setConfirmed([]); setSubmitted(false); }, [currentAthlete?.id]);
 
+  // Notify the judge whenever the TA changes the match mode or the style live.
+  const lastCfgRef = useRef<string>("");
+  useEffect(() => {
+    const sig = `${liveMode}|${liveStyle ?? "-"}`;
+    if (lastCfgRef.current === "" ) { lastCfgRef.current = sig; return; }
+    if (lastCfgRef.current === sig) return;
+    lastCfgRef.current = sig;
+    toast.info(
+      `تحديث من المساعد التقني: ${liveMode === "compulsory" ? "إجبارية" : "اختيارية"} · ${liveStyle ?? "—"} — الدرجة من ${modeCaps(liveMode).maxA.toFixed(2)}`,
+    );
+  }, [liveMode, liveStyle]);
+
+
   const addCode = useCallback((c: CodeEntry) => {
     haptic([28, 18, 28]);
     setConfirmed(prev => [...prev, c]);
