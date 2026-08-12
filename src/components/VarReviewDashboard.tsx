@@ -30,6 +30,7 @@ export function VarReviewDashboard() {
   const [match, setMatch] = useState<CurrentMatchRow | null>(null);
   const [scores, setScores] = useState<ScoreRow[]>([]);
   const [flagged, setFlagged] = useState<Set<string>>(new Set());
+  const [varRequest, setVarRequest] = useState<{ at: number; athlete_name: string | null; bib: string | null } | null>(null);
 
   useEffect(() => {
     if (!sessionCode) return;
@@ -64,6 +65,19 @@ export function VarReviewDashboard() {
       .on("postgres_changes",
         { event: "*", schema: "public", table: "current_match", filter: `session_code=eq.${sessionCode}` },
         () => void loadMatch())
+      .on("postgres_changes",
+        { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${sessionCode}` },
+        (p) => {
+          const row = p.new as { event_type?: string; payload?: Record<string, unknown> };
+          if (row?.event_type !== "var_review_request") return;
+          const pl = row.payload ?? {};
+          setVarRequest({
+            at: Number(pl['at'] ?? 0),
+            athlete_name: (pl['athlete_name'] as string | null) ?? null,
+            bib: (pl['bib'] as string | null) ?? null,
+          });
+          toast.warning(`طلب مراجعة فيديو — ${(pl['athlete_name'] as string) ?? "اللاعب الحالي"}`);
+        })
       .subscribe();
 
     return () => { cancelled = true; supabase.removeChannel(ch); };
@@ -147,6 +161,24 @@ export function VarReviewDashboard() {
       </header>
 
       <main className="max-w-5xl mx-auto p-4 space-y-4">
+        {varRequest && (
+          <section className="rounded-2xl border border-orange-500/50 bg-orange-500/10 p-4 flex items-center justify-between animate-pulse">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.3em] text-orange-300">VAR Review Requested</p>
+              <p className="text-lg font-heading font-black text-white mt-1" dir="ltr">
+                {varRequest.bib ? `#${varRequest.bib} · ` : ""}{varRequest.athlete_name ?? athleteName}
+              </p>
+              <p className="text-[11px] text-white/60 font-mono" dir="ltr">
+                @ {Math.floor(varRequest.at / 60)}:{String(varRequest.at % 60).padStart(2, "0")}
+              </p>
+            </div>
+            <button onClick={() => setVarRequest(null)}
+              className="h-8 px-3 rounded-lg bg-orange-500 text-black text-[11px] font-black tracking-wider">
+              ACKNOWLEDGE
+            </button>
+          </section>
+        )}
+
         {/* Current athlete card */}
         <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 flex items-center justify-between">
           <div>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useCompetition, STYLE_CONFIGS } from "@/store/competition-store";
 import { submitJudgeScore } from "@/lib/scoreSubmit";
 import { toast } from "sonner";
@@ -25,8 +25,10 @@ export function JudgeAPanel() {
     sessionCode, judgeId,
   } = useCompetition();
 
-  const config = competitionStyle ? STYLE_CONFIGS[competitionStyle] : STYLE_CONFIGS.changquan;
   const aSync = useMatchSync(sessionCode);
+  // Live style broadcast by the Technical Assistant wins over the local pick.
+  const liveStyle = (aSync.style ?? competitionStyle) as string | null;
+  const config = liveStyle && STYLE_CONFIGS[liveStyle] ? STYLE_CONFIGS[liveStyle] : STYLE_CONFIGS.changquan;
   const liveMode: MatchMode = ((aSync.payload as Record<string, unknown> | null)?.match_mode as MatchMode | undefined) ?? "optional";
   const maxA = modeCaps(liveMode).maxA;
   const performanceTime = config.performanceTime;
@@ -38,7 +40,9 @@ export function JudgeAPanel() {
   const [online, setOnline] = useState(true);
   const [submitted, setSubmitted] = useState(false);
 
-  const codes = useMemo(() => catalogForStyle(competitionStyle), [competitionStyle]);
+  // Style-conditional catalogue: 2x codes only for Nanquan, 5x only for Taijiquan.
+  const codes = useMemo(() => catalogForStyle(liveStyle), [liveStyle]);
+
 
   // Available decades (tens digit) present in the active catalogue
   const decades = useMemo(() => {
@@ -61,6 +65,19 @@ export function JudgeAPanel() {
   }, []);
 
   useEffect(() => { setConfirmed([]); setSubmitted(false); }, [currentAthlete?.id]);
+
+  // Notify the judge whenever the TA changes the match mode or the style live.
+  const lastCfgRef = useRef<string>("");
+  useEffect(() => {
+    const sig = `${liveMode}|${liveStyle ?? "-"}`;
+    if (lastCfgRef.current === "" ) { lastCfgRef.current = sig; return; }
+    if (lastCfgRef.current === sig) return;
+    lastCfgRef.current = sig;
+    toast.info(
+      `تحديث من المساعد التقني: ${liveMode === "compulsory" ? "إجبارية" : "اختيارية"} · ${liveStyle ?? "—"} — الدرجة من ${modeCaps(liveMode).maxA.toFixed(2)}`,
+    );
+  }, [liveMode, liveStyle]);
+
 
   const addCode = useCallback((c: CodeEntry) => {
     haptic([28, 18, 28]);
@@ -122,6 +139,18 @@ export function JudgeAPanel() {
           <span className="shrink-0 text-[10px] font-black tracking-[0.25em] px-2 py-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-300" dir="ltr">
             JUDGE A · QUALITY
           </span>
+          <span
+            className={`shrink-0 text-[9px] font-black tracking-widest px-2 py-0.5 rounded-full border ${
+              liveMode === "compulsory"
+                ? "border-green-400/50 bg-green-400/10 text-green-300"
+                : "border-orange-400/50 bg-orange-400/10 text-orange-300"
+            }`}
+            dir="ltr"
+            title="النمط والأسلوب المبثوثان من المساعد التقني"
+          >
+            {liveMode === "compulsory" ? "COMP 7.00" : "OPT 5.00"} · {(liveStyle ?? "—").toUpperCase()}
+          </span>
+
           <span className={`shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${online ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"}`}>
             {online ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
             {online ? "LIVE" : "OFF"}

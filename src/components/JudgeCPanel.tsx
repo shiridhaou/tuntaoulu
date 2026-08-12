@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { submitJudgeScore } from "@/lib/scoreSubmit";
 import { useMatchSync } from "@/hooks/useMatchSync";
 import { toast } from "sonner";
-import { QUICK_CODES, CONNECTION_BONUSES, MAX_C_MOVEMENT, MAX_C_CONNECTION, lookupCode } from "@/lib/difficultyCodes";
+import { QUICK_CODES, CONNECTION_BONUSES, MAX_C_MOVEMENT, MAX_C_CONNECTION, lookupCode, isConnectionCode, lookupConnection, type ConnectionBonus } from "@/lib/difficultyCodes";
 
 const DEFAULT_SHEET: DifficultyMovement[] = [
   { code: "323A", label: "Tornado 360°", connection: "Independent", value: 0.2 },
@@ -38,11 +38,31 @@ export function JudgeCPanel() {
   const config = liveStyle ? STYLE_CONFIGS[liveStyle] : STYLE_CONFIGS.changquan;
   const athlete = athletes[currentAthleteIndex];
   const [extraMovements, setExtraMovements] = useState<DifficultyMovement[]>([]);
-  const sheet: DifficultyMovement[] = useMemo(() => {
+  const fullSheet: DifficultyMovement[] = useMemo(() => {
     const base = athlete?.difficultySheet?.length ? athlete.difficultySheet : DEFAULT_SHEET;
     const extra = extraMovements.filter(e => !base.some(b => b.code === e.code));
     return [...base, ...extra];
   }, [athlete, extraMovements]);
+
+  // Combined codes coming from the Excel sheet (e.g. "323A+353B") are CONNECTIONS
+  // and are judged separately from movement difficulty (0.60 ceiling).
+  const sheet: DifficultyMovement[] = useMemo(
+    () => fullSheet.filter(d => !isConnectionCode(d.code)),
+    [fullSheet],
+  );
+  const sheetConnections: ConnectionBonus[] = useMemo(
+    () => fullSheet.filter(d => isConnectionCode(d.code)).map(d => lookupConnection(d.code)),
+    [fullSheet],
+  );
+
+  /** Connection buttons = athlete-sheet connections first, then the standard catalogue. */
+  const connectionOptions: { bonus: ConnectionBonus; fromSheet: boolean }[] = useMemo(() => [
+    ...sheetConnections.map(b => ({ bonus: b, fromSheet: true })),
+    ...CONNECTION_BONUSES
+      .filter(b => !sheetConnections.some(s2 => s2.code === b.code))
+      .map(b => ({ bonus: b, fromSheet: false })),
+  ], [sheetConnections]);
+
 
 
   // Notify Judge C when a NEW difficulty sheet arrives from the TA
@@ -163,7 +183,7 @@ export function JudgeCPanel() {
   };
 
 
-  const tapConnection = (b: typeof CONNECTION_BONUSES[number]) => {
+  const tapConnection = (b: ConnectionBonus) => {
     const idx = attemptIndex(b.code);
     if (idx >= 0) { toggleJudgeCAttempt(idx); return; }
     if (connectionTotal + b.value > MAX_C_CONNECTION + 1e-6) {
@@ -179,6 +199,43 @@ export function JudgeCPanel() {
   // Field-test feedback: hiding the panel based on match_mode caused sync errors
   // when the TA toggled mode mid-event. The Chief is responsible for whether
   // C scores count toward the final aggregate.
+
+  // Compulsory routines (إجبارية) do NOT include Group C — panel is disabled and
+  // the score is forced to 0 until the TA switches back to Optional.
+  if (matchMode === "compulsory") {
+    return (
+      <div className="h-screen cyber-bg flex flex-col overflow-hidden text-white" dir="rtl">
+        <header className="border-b border-cyber-orange/25 bg-black/60 backdrop-blur px-4 py-3 shrink-0">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <button onClick={() => setSelectedRole(null)} className="h-9 w-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white">
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <FederationLogo size="sm" />
+            </div>
+            <span className="text-xs text-green-300 font-heading font-bold px-2.5 py-1 rounded-full border border-green-400/40 bg-green-400/10" dir="ltr">
+              COMPULSORY · A 7 + B 3
+            </span>
+            <button onClick={logout} className="text-xs text-white/50 hover:text-white">خروج</button>
+          </div>
+        </header>
+        <main className="flex-1 flex flex-col items-center justify-center p-6 text-center gap-4">
+          <div className="h-24 w-24 rounded-full border-2 border-white/10 bg-white/5 flex items-center justify-center">
+            <X className="h-10 w-10 text-white/30" />
+          </div>
+          <h2 className="text-2xl font-heading font-black text-white">نمط إجباري</h2>
+          <p className="text-sm text-white/60 max-w-md font-body leading-relaxed">
+            مجموعة الصعوبة (C) معطّلة في الأساليب الإلزامية.<br/>
+            في انتظار تحويل المساعد التقني إلى النمط الاختياري.
+          </p>
+          <div className="rounded-xl border border-white/10 bg-black/40 px-4 py-2 mt-2">
+            <p className="text-[9px] uppercase tracking-[0.3em] text-white/40" dir="ltr">Group C</p>
+            <p className="text-3xl font-heading font-black text-white/80 tabular-nums" dir="ltr">0.00</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   // Traditional styles do NOT use Group C — auto-zero and disable UI.
   if (liveStyle === "traditional") {
@@ -411,24 +468,26 @@ export function JudgeCPanel() {
               </p>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {CONNECTION_BONUSES.map((b) => {
+              {connectionOptions.map(({ bonus: b, fromSheet }) => {
                 const a = judgeCAttempts.find(x => x.code === b.code);
                 return (
                   <button
                     key={b.code}
                     type="button"
-                    title={b.labelAr}
+                    title={fromSheet ? `${b.labelAr} · من استمارة اللاعب` : b.labelAr}
                     onClick={(e) => { e.currentTarget.blur(); tapConnection(b); }}
                     className={`px-2 py-1 rounded-lg text-[11px] font-heading font-black border-2 transition-colors ${
                       a && a.successful ? "border-cyan-400/60 bg-cyan-400/15 text-cyan-200"
+                        : fromSheet ? "border-cyan-400/40 bg-cyan-400/5 text-cyan-100 hover:border-cyan-400/70"
                         : "border-white/10 bg-white/5 text-white/70 hover:border-cyan-400/50"
                     }`}
                     dir="ltr"
                   >
-                    {b.code} · +{b.value.toFixed(2)}
+                    {fromSheet ? "★ " : ""}{b.code} · +{b.value.toFixed(2)}
                   </button>
                 );
               })}
+
             </div>
           </div>
         </div>
