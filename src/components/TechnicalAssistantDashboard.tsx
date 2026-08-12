@@ -6,7 +6,7 @@ import {
   Download, Settings, ListChecks, KeyRound, Copy, X, FileCheck2,
   Timer, Pause, RotateCcw, AlertTriangle, Megaphone,
   Activity, Send, LogIn, UserPlus, Lock, Unlock, Plus, Minus,
-  ChevronDown, ChevronUp, Radio, Zap,
+  ChevronDown, ChevronUp, Radio, Zap, Video,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
