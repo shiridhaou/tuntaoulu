@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useCompetition, STYLE_CONFIGS } from "@/store/competition-store";
 import { submitJudgeScore } from "@/lib/scoreSubmit";
 import { toast } from "sonner";
