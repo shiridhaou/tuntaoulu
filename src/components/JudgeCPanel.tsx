@@ -423,24 +423,26 @@ export function JudgeCPanel() {
               </p>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {CONNECTION_BONUSES.map((b) => {
+              {connectionOptions.map(({ bonus: b, fromSheet }) => {
                 const a = judgeCAttempts.find(x => x.code === b.code);
                 return (
                   <button
                     key={b.code}
                     type="button"
-                    title={b.labelAr}
+                    title={fromSheet ? `${b.labelAr} · من استمارة اللاعب` : b.labelAr}
                     onClick={(e) => { e.currentTarget.blur(); tapConnection(b); }}
                     className={`px-2 py-1 rounded-lg text-[11px] font-heading font-black border-2 transition-colors ${
                       a && a.successful ? "border-cyan-400/60 bg-cyan-400/15 text-cyan-200"
+                        : fromSheet ? "border-cyan-400/40 bg-cyan-400/5 text-cyan-100 hover:border-cyan-400/70"
                         : "border-white/10 bg-white/5 text-white/70 hover:border-cyan-400/50"
                     }`}
                     dir="ltr"
                   >
-                    {b.code} · +{b.value.toFixed(2)}
+                    {fromSheet ? "★ " : ""}{b.code} · +{b.value.toFixed(2)}
                   </button>
                 );
               })}
+
             </div>
           </div>
         </div>
