@@ -28,10 +28,15 @@ function DisplayJoinPage() {
     if (c.length < 4) { toast.error("أدخل رمز جلسة صالحاً"); return; }
     setLoading(true);
     try {
+      // A device identity must exist BEFORE anything else, otherwise the display
+      // cannot read the session's live rows once it is in.
+      await ensureDeviceSession();
       // Session codes are no longer publicly listable; validate via a scoped RPC.
       const { data: active, error } = await supabase.rpc("is_active_session", { _code: c });
       if (error) throw error;
       if (!active) { toast.error("رمز الجلسة غير صحيح أو غير نشط"); return; }
+      // Register the display as a session member so reads are permitted.
+      await joinSessionMembership(c, "display");
       setSessionCode(c);
       toast.success("تم الاتصال — جارٍ فتح شاشة العرض");
       navigate({ to: "/scoreboard" });
@@ -41,6 +46,7 @@ function DisplayJoinPage() {
       setLoading(false);
     }
   }
+
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" dir="rtl">
