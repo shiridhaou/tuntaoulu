@@ -64,17 +64,25 @@ function useLiveSession() {
     return () => { cancelled = true; void cleanup?.then?.((fn) => fn?.()); };
   }, [sessionCode]);
 
-  // Tick timer locally based on TA broadcasts
-  const [, force] = useState(0);
+  // Tick the timer locally from the TA broadcast — ONCE PER SECOND and only when the
+  // displayed second actually changes, so the screen never re-renders needlessly.
+  const [tickSec, setTickSec] = useState(0);
   useEffect(() => {
+    const compute = () =>
+      taTimer.running && taTimer.startedAt
+        ? taTimer.baseSec + Math.floor((Date.now() - taTimer.startedAt) / 1000)
+        : taTimer.baseSec;
+    setTickSec(compute());
     if (!taTimer.running) return;
-    const id = setInterval(() => force((n) => n + 1), 500);
+    const id = setInterval(() => {
+      const next = compute();
+      setTickSec((prev) => (prev === next ? prev : next));
+    }, 250);
     return () => clearInterval(id);
-  }, [taTimer.running]);
+  }, [taTimer.running, taTimer.startedAt, taTimer.baseSec]);
 
-  const liveTimerSec = taTimer.running && taTimer.startedAt
-    ? taTimer.baseSec + Math.floor((Date.now() - taTimer.startedAt) / 1000)
-    : taTimer.baseSec;
+  const liveTimerSec = tickSec;
+
 
   return { activeSessionCode, liveAthlete, liveTimerSec, callBanner };
 }
