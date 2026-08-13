@@ -72,36 +72,61 @@ function useActiveSession() {
 }
 
 // ── Live snapshot ─────────────────────────────────────────────────────
+// STABILITY: the public TV screen must only re-render when the data actually
+// changes. Every setter below is guarded by a value comparison, and the TA
+// deduction "pulse" is computed from a ref instead of a nested setState
+// (nested updaters re-ran on every render and made the screen tremble).
+function sameJson(a: unknown, b: unknown): boolean {
+  try { return JSON.stringify(a) === JSON.stringify(b); } catch { return a === b; }
+}
+
 function useLiveDisplay(sessionCode: string | null) {
   const [athlete, setAthlete] = useState<AthleteRow | null>(null);
   const [judgeScores, setJudgeScores] = useState<JudgeScore[]>([]);
   const [result, setResult] = useState<MatchResult | null>(null);
   const [liveTaDeduction, setLiveTaDeduction] = useState<number>(0);
   const [liveTaPulse, setLiveTaPulse] = useState<number>(0);
+  const taRef = useRef<number>(0);
 
   useEffect(() => {
     if (!sessionCode) return;
     let cancelled = false;
     let currentAthleteId: string | null = null;
 
+    const applyTaTotal = (taTotal: number) => {
+      if (cancelled || taRef.current === taTotal) return;
+      taRef.current = taTotal;
+      setLiveTaDeduction(taTotal);
+      setLiveTaPulse((p) => p + 1);
+    };
+
     const loadAthlete = async (athleteId: string | null) => {
-      if (!athleteId) { setAthlete(null); return; }
+      if (!athleteId) { setAthlete((prev) => (prev === null ? prev : null)); return; }
       const { data } = await supabase
         .from("athletes")
         .select("id,full_name,bib_number,country,club,age_category,difficulty_codes,style")
         .eq("id", athleteId)
         .maybeSingle();
-      if (!cancelled) setAthlete((data as AthleteRow) ?? null);
+      if (cancelled) return;
+      const next = (data as AthleteRow) ?? null;
+      setAthlete((prev) => (sameJson(prev, next) ? prev : next));
     };
 
     const loadJudgeScores = async (athleteId: string | null) => {
-      if (!athleteId) { setJudgeScores([]); return; }
+      if (!athleteId) { setJudgeScores((prev) => (prev.length === 0 ? prev : [])); return; }
       const { data } = await supabase
         .from("judge_scores")
         .select("judge_slot,judge_role,score,payload")
         .eq("session_code", sessionCode)
         .eq("athlete_id", athleteId);
-      if (!cancelled) setJudgeScores((data as JudgeScore[]) ?? []);
+      if (cancelled) return;
+      const next = (data as JudgeScore[]) ?? [];
+      setJudgeScores((prev) => (sameJson(prev, next) ? prev : next));
+    };
+
+    const applyResult = (next: MatchResult | null) => {
+      if (cancelled) return;
+      setResult((prev) => (sameJson(prev, next) ? prev : next));
     };
 
     const loadResult = async (athleteId: string | null) => {
@@ -114,7 +139,7 @@ function useLiveDisplay(sessionCode: string | null) {
           .order("updated_at", { ascending: false })
           .limit(1)
           .maybeSingle();
-        if (!cancelled) setResult((latest as MatchResult) ?? null);
+        applyResult((latest as MatchResult) ?? null);
         return (latest as MatchResult | null)?.athlete_id ?? null;
       }
       const { data } = await supabase
@@ -126,62 +151,72 @@ function useLiveDisplay(sessionCode: string | null) {
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (!cancelled) setResult((data as MatchResult) ?? null);
+      applyResult((data as MatchResult) ?? null);
       return athleteId;
     };
 
+    // Coalesce bursts of realtime events into a single snapshot reload.
+    let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+    let reloading = false;
+
     const reloadSnapshot = async () => {
-      const { data: cm } = await supabase
-        .from("current_match")
-        .select("athlete_id, ta_deductions")
-        .eq("session_code", sessionCode)
-        .maybeSingle();
-      const currentId = cm?.athlete_id ?? null;
-      const td = (cm as any)?.ta_deductions;
-      const taTotal = td && typeof td === "object" ? Number(td.total ?? 0) : 0;
-      if (!cancelled) {
-        setLiveTaDeduction((prev) => {
-          if (prev !== taTotal) setLiveTaPulse((p) => p + 1);
-          return taTotal;
-        });
+      if (reloading) return;
+      reloading = true;
+      try {
+        const { data: cm } = await supabase
+          .from("current_match")
+          .select("athlete_id, ta_deductions")
+          .eq("session_code", sessionCode)
+          .maybeSingle();
+        const currentId = cm?.athlete_id ?? null;
+        const td = (cm as any)?.ta_deductions;
+        applyTaTotal(td && typeof td === "object" ? Number(td.total ?? 0) : 0);
+        const resultAthleteId = await loadResult(currentId);
+        currentAthleteId = currentId ?? resultAthleteId;
+        await Promise.all([
+          loadAthlete(currentAthleteId),
+          loadJudgeScores(currentAthleteId),
+        ]);
+      } finally {
+        reloading = false;
       }
-      const resultAthleteId = await loadResult(currentId);
-      currentAthleteId = currentId ?? resultAthleteId;
-      await Promise.all([
-        loadAthlete(currentAthleteId),
-        loadJudgeScores(currentAthleteId),
-      ]);
+    };
+
+    const scheduleReload = () => {
+      if (reloadTimer) clearTimeout(reloadTimer);
+      reloadTimer = setTimeout(() => { void reloadSnapshot(); }, 250);
     };
 
     void reloadSnapshot();
 
     const ch = supabase
-      .channel(`pdisplay-${sessionCode}-${Math.random().toString(36).slice(2, 6)}`)
+      .channel(`pdisplay-${sessionCode}`)
       .on("postgres_changes",
         { event: "*", schema: "public", table: "current_match", filter: `session_code=eq.${sessionCode}` },
         (payload) => {
           const row = payload.new as any;
           const td = row?.ta_deductions;
-          const taTotal = td && typeof td === "object" ? Number(td.total ?? 0) : 0;
-          setLiveTaDeduction((prev) => {
-            if (prev !== taTotal) setLiveTaPulse((p) => p + 1);
-            return taTotal;
-          });
-          void reloadSnapshot();
+          applyTaTotal(td && typeof td === "object" ? Number(td.total ?? 0) : 0);
+          scheduleReload();
         })
       .on("postgres_changes",
         { event: "*", schema: "public", table: "judge_scores", filter: `session_code=eq.${sessionCode}` },
-        async () => { await loadJudgeScores(currentAthleteId); })
+        () => { void loadJudgeScores(currentAthleteId); })
       .on("postgres_changes",
         { event: "*", schema: "public", table: "match_results", filter: `session_code=eq.${sessionCode}` },
-        () => { void reloadSnapshot(); })
+        () => { scheduleReload(); })
       .subscribe();
 
-    return () => { cancelled = true; supabase.removeChannel(ch); };
+    return () => {
+      cancelled = true;
+      if (reloadTimer) clearTimeout(reloadTimer);
+      supabase.removeChannel(ch);
+    };
   }, [sessionCode]);
 
   return { athlete, judgeScores, result, liveTaDeduction, liveTaPulse };
 }
+
 
 // ── Live ranking among published athletes in same session ─────────────
 type RankRow = { athlete_id: string; athlete_name: string | null; final_score: number };
