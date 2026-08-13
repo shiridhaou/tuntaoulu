@@ -190,7 +190,7 @@ function useLiveDisplay(sessionCode: string | null) {
     void reloadSnapshot();
 
     const ch = supabase
-      .channel(`pdisplay-${sessionCode}`)
+      .channel(`pdisplay-${sessionCode}-${Math.random().toString(36).slice(2, 6)}`)
       .on("postgres_changes",
         { event: "*", schema: "public", table: "current_match", filter: `session_code=eq.${sessionCode}` },
         (payload) => {
