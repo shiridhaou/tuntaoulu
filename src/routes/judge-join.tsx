@@ -107,6 +107,10 @@ function JudgeJoinPage() {
 
     setSubmitting(true);
     try {
+      // A device identity must exist FIRST: the code check and every later read/write
+      // happen as this device, and racing them was the cause of "فشل الدخول".
+      await ensureDeviceSession();
+
       // Verify the code matches an active session created by the Chief.
       const { data: sessionActive, error: sErr } = await supabase
         .rpc("is_active_session", { _code: trimmedCode });
@@ -118,13 +122,10 @@ function JudgeJoinPage() {
         return;
       }
 
-      // Score/status writes require an authenticated device identity. Wait for
-      // it here instead of allowing entry while background auth is still racing.
-      await ensureDeviceSession();
-
       // Register this device as a member of the session — required by RLS
       // before any score/status write is accepted.
       await joinSessionMembership(trimmedCode, role);
+
 
       setSessionCode(trimmedCode);
       setAuthenticated(true);
