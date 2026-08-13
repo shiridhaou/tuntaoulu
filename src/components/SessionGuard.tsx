@@ -25,13 +25,10 @@ export function SessionGuard({ children }: { children: ReactNode }) {
     }
     setState("checking");
     supabase
-      .from("sessions")
-      .select("code, active")
-      .eq("code", sessionCode)
-      .maybeSingle()
+      .rpc("is_active_session", { _code: sessionCode })
       .then(({ data, error }) => {
         if (cancelled) return;
-        if (error || !data || data.active === false) {
+        if (error || !data) {
           console.warn("[SessionGuard] invalid/expired session", { sessionCode, error });
           setState("invalid");
         } else {

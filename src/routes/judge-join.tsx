@@ -108,14 +108,11 @@ function JudgeJoinPage() {
     setSubmitting(true);
     try {
       // Verify the code matches an active session created by the Chief.
-      const { data: session, error: sErr } = await supabase
-        .from("sessions")
-        .select("code, active")
-        .eq("code", trimmedCode)
-        .maybeSingle();
+      const { data: sessionActive, error: sErr } = await supabase
+        .rpc("is_active_session", { _code: trimmedCode });
 
       if (sErr) throw sErr;
-      if (!session || session.active === false) {
+      if (!sessionActive) {
         setError("رمز الجلسة غير صحيح أو منتهي — تحقق مع رئيس القضاة");
         setSubmitting(false);
         return;

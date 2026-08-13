@@ -73,34 +73,17 @@ function PublicReportPage() {
   const [downloading, setDownloading] = useState(false);
 
   const load = async () => {
-    const [r, a] = await Promise.all([
-      supabase
-        .from("match_results")
-        .select("athlete_id,athlete_name,style,score_a,score_b,score_c,deductions,final_score,payload,session_code,updated_at")
-        .eq("athlete_id", id)
-        .eq("published", true)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from("athletes")
-        .select("full_name,country,club,age_category,bib_number,style")
-        .eq("id", id)
-        .maybeSingle(),
-    ]);
-    const res = (r.data as Result | null) ?? null;
-    setResult(res);
-    setAthlete((a.data as typeof athlete) ?? null);
-    if (res) {
-      const js = await supabase
-        .from("judge_scores")
-        .select("judge_slot,judge_role,score,payload")
-        .eq("session_code", res.session_code)
-        .eq("athlete_id", id);
-      setJudgeScores((js.data as JudgeScore[]) ?? []);
-    } else {
-      setJudgeScores([]);
-    }
+    // Published reports are served through a scoped RPC so match, athlete and
+    // judge data are not publicly readable across sessions.
+    const { data: report } = await supabase.rpc("get_public_report", { _athlete_id: id });
+    const rep = (report ?? null) as {
+      result: Result | null;
+      athlete: typeof athlete;
+      judge_scores: JudgeScore[];
+    } | null;
+    setResult(rep?.result ?? null);
+    setAthlete(rep?.athlete ?? null);
+    setJudgeScores(rep?.judge_scores ?? []);
     setLoading(false);
   };
 
