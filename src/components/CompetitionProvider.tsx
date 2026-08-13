@@ -744,7 +744,11 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
     lsSet(LS_KEYS.role, null);
     lsSet(LS_KEYS.session, null);
     lsSet(LS_KEYS.judgeId, null);
+    // Drop the tab marker so the next load starts on Role Selection, never on the
+    // previously used station.
+    try { if (typeof window !== "undefined") window.sessionStorage.removeItem("taolu.tab"); } catch { /* ignore */ }
   };
+
 
 
   return (
