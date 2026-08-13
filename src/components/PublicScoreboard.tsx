@@ -43,7 +43,7 @@ function useLiveSession() {
           const aid = payload.new?.athlete_id;
           if (!aid) { setLiveAthlete(null); return; }
           const { data: a } = await supabase.from("athletes").select("id,full_name,bib_number,country,club,age_category,style").eq("id", aid).maybeSingle();
-          if (a) setLiveAthlete(a as any);
+          if (a) setLiveAthlete((prev) => (JSON.stringify(prev) === JSON.stringify(a) ? prev : (a as any)));
         })
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${activeCode}` }, (payload: any) => {
           const ev = payload.new;

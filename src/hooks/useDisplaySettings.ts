@@ -27,18 +27,31 @@ function extract(payload: unknown): DisplaySettings {
 export function useDisplaySettings(sessionCode: string | null): DisplaySettings {
   const [settings, setSettings] = useState<DisplaySettings>(DEFAULTS);
 
+  // STABILITY: current_match changes many times per second while the timer runs.
+  // Only publish a NEW settings object when the display settings really changed,
+  // otherwise every consumer (public display / scoreboard) re-renders and trembles.
+  const apply = (next: DisplaySettings) =>
+    setSettings((prev) =>
+      prev.marquee === next.marquee &&
+      prev.leaderboardMode === next.leaderboardMode &&
+      prev.sponsors.length === next.sponsors.length &&
+      prev.sponsors.every((s, i) => s === next.sponsors[i])
+        ? prev
+        : next,
+    );
+
   useEffect(() => {
     if (!sessionCode) { setSettings(DEFAULTS); return; }
     let cancelled = false;
 
     supabase.from("current_match").select("payload").eq("session_code", sessionCode).maybeSingle()
-      .then(({ data }) => { if (!cancelled && data) setSettings(extract((data as { payload?: unknown }).payload)); });
+      .then(({ data }) => { if (!cancelled && data) apply(extract((data as { payload?: unknown }).payload)); });
 
-    const ch = supabase.channel(`display-${sessionCode}-${Math.random().toString(36).slice(2, 8)}`)
+    const ch = supabase.channel(`display-${sessionCode}`)
       .on("postgres_changes",
         { event: "*", schema: "public", table: "current_match", filter: `session_code=eq.${sessionCode}` },
         (payload: { new?: { payload?: unknown } }) => {
-          if (payload.new) setSettings(extract(payload.new.payload));
+          if (payload.new) apply(extract(payload.new.payload));
         })
       .subscribe();
 
