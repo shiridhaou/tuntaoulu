@@ -82,11 +82,9 @@ function SessionEntryGate({ onConnected }: { onConnected: (code: string) => void
     if (c.length < 4) { toast.error("أدخل رمز جلسة صالحاً"); return; }
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("sessions").select("code, active").eq("code", c).maybeSingle();
+      const { data: active, error } = await supabase.rpc("is_active_session", { _code: c });
       if (error) throw error;
-      if (!data) { toast.error("رمز الجلسة غير موجود — تحقّق من الرئيس"); return; }
-      if (!data.active) { toast.error("الجلسة غير نشطة"); return; }
+      if (!active) { toast.error("رمز الجلسة غير صحيح أو غير نشط"); return; }
       // Writes (tournament creation, athlete import) require an authenticated
       // device identity + a membership row. Establish both before entering.
       const { data: auth } = await supabase.auth.getSession();

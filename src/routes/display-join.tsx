@@ -28,11 +28,10 @@ function DisplayJoinPage() {
     if (c.length < 4) { toast.error("أدخل رمز جلسة صالحاً"); return; }
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("sessions").select("code, active").eq("code", c).maybeSingle();
+      // Session codes are no longer publicly listable; validate via a scoped RPC.
+      const { data: active, error } = await supabase.rpc("is_active_session", { _code: c });
       if (error) throw error;
-      if (!data) { toast.error("رمز الجلسة غير موجود — تحقّق من الرئيس"); return; }
-      if (!data.active) { toast.error("الجلسة غير نشطة"); return; }
+      if (!active) { toast.error("رمز الجلسة غير صحيح أو غير نشط"); return; }
       setSessionCode(c);
       toast.success("تم الاتصال — جارٍ فتح شاشة العرض");
       navigate({ to: "/scoreboard" });
