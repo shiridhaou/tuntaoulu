@@ -22,3 +22,15 @@ export async function joinSessionMembership(
     );
   if (error) console.warn("[session] membership registration failed", error.message);
 }
+
+/**
+ * Guarantees a device identity exists before any session validation / join.
+ * Without it, the very first read after joining can race an unauthenticated client.
+ */
+export async function ensureDeviceSession(): Promise<void> {
+  const { data, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (data.session) return;
+  const { error } = await supabase.auth.signInAnonymously();
+  if (error) throw error;
+}
