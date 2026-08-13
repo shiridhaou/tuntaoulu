@@ -267,14 +267,16 @@ function LiveScoreboard() {
   // Use TA's broadcast timer when available, else fallback to local
   const displayTimerSec = liveTimerSec || timerElapsed;
 
-  // Performance timer tick
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Performance timer tick — the interval is created ONCE per run/stop, not on every
+  // second (recreating it each tick was part of the flickering).
+  const elapsedRef = useRef(timerElapsed);
+  elapsedRef.current = timerElapsed;
   useEffect(() => {
-    if (timerRunning) {
-      intervalRef.current = setInterval(() => setTimerElapsed(timerElapsed + 1), 1000);
-    }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [timerRunning, timerElapsed, setTimerElapsed]);
+    if (!timerRunning) return;
+    const id = setInterval(() => setTimerElapsed(elapsedRef.current + 1), 1000);
+    return () => clearInterval(id);
+  }, [timerRunning, setTimerElapsed]);
+
 
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
