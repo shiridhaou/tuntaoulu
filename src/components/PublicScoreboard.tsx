@@ -43,7 +43,7 @@ function useLiveSession() {
           const aid = payload.new?.athlete_id;
           if (!aid) { setLiveAthlete(null); return; }
           const { data: a } = await supabase.from("athletes").select("id,full_name,bib_number,country,club,age_category,style").eq("id", aid).maybeSingle();
-          if (a) setLiveAthlete(a as any);
+          if (a) setLiveAthlete((prev) => (JSON.stringify(prev) === JSON.stringify(a) ? prev : (a as any)));
         })
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${activeCode}` }, (payload: any) => {
           const ev = payload.new;
@@ -64,17 +64,25 @@ function useLiveSession() {
     return () => { cancelled = true; void cleanup?.then?.((fn) => fn?.()); };
   }, [sessionCode]);
 
-  // Tick timer locally based on TA broadcasts
-  const [, force] = useState(0);
+  // Tick the timer locally from the TA broadcast — ONCE PER SECOND and only when the
+  // displayed second actually changes, so the screen never re-renders needlessly.
+  const [tickSec, setTickSec] = useState(0);
   useEffect(() => {
+    const compute = () =>
+      taTimer.running && taTimer.startedAt
+        ? taTimer.baseSec + Math.floor((Date.now() - taTimer.startedAt) / 1000)
+        : taTimer.baseSec;
+    setTickSec(compute());
     if (!taTimer.running) return;
-    const id = setInterval(() => force((n) => n + 1), 500);
+    const id = setInterval(() => {
+      const next = compute();
+      setTickSec((prev) => (prev === next ? prev : next));
+    }, 250);
     return () => clearInterval(id);
-  }, [taTimer.running]);
+  }, [taTimer.running, taTimer.startedAt, taTimer.baseSec]);
 
-  const liveTimerSec = taTimer.running && taTimer.startedAt
-    ? taTimer.baseSec + Math.floor((Date.now() - taTimer.startedAt) / 1000)
-    : taTimer.baseSec;
+  const liveTimerSec = tickSec;
+
 
   return { activeSessionCode, liveAthlete, liveTimerSec, callBanner };
 }
@@ -259,14 +267,16 @@ function LiveScoreboard() {
   // Use TA's broadcast timer when available, else fallback to local
   const displayTimerSec = liveTimerSec || timerElapsed;
 
-  // Performance timer tick
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Performance timer tick — the interval is created ONCE per run/stop, not on every
+  // second (recreating it each tick was part of the flickering).
+  const elapsedRef = useRef(timerElapsed);
+  elapsedRef.current = timerElapsed;
   useEffect(() => {
-    if (timerRunning) {
-      intervalRef.current = setInterval(() => setTimerElapsed(timerElapsed + 1), 1000);
-    }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [timerRunning, timerElapsed, setTimerElapsed]);
+    if (!timerRunning) return;
+    const id = setInterval(() => setTimerElapsed(elapsedRef.current + 1), 1000);
+    return () => clearInterval(id);
+  }, [timerRunning, setTimerElapsed]);
+
 
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 

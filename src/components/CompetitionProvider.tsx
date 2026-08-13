@@ -141,14 +141,26 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // SESSION PERSISTENCE (v2): a refresh, a closed tab or a background reload must
-    // NEVER destroy an active session. Any role (Chief, TA, Judge A/B/C, VAR) that
-    // successfully joined a session keeps sessionCode + role across reloads.
+    // SESSION PERSISTENCE (v3): a REFRESH inside the same tab must never destroy an
+    // active station (role + session code stay put). But opening the portal fresh
+    // (new tab, new device, or after "خروج") must ALWAYS land on Role Selection —
+    // never auto-force the previously saved role.
+    //
+    // The distinction is a tab-scoped marker: sessionStorage survives reloads but
+    // not a new tab / new visit.
+    let sameTabReload = false;
+    try {
+      if (typeof window !== "undefined") {
+        sameTabReload = window.sessionStorage.getItem("taolu.tab") === "1";
+        window.sessionStorage.setItem("taolu.tab", "1");
+      }
+    } catch { /* ignore */ }
+
     const storedSession = lsGet(LS_KEYS.session);
     const storedJudgeId = lsGet(LS_KEYS.judgeId);
     const storedRole = lsGet(LS_KEYS.role) as UserRole;
 
-    if (storedSession) {
+    if (storedSession && sameTabReload) {
       setSessionCodeState(storedSession);
       if (storedJudgeId) setJudgeIdState(storedJudgeId);
       // Prefer the explicitly stored role; otherwise derive it from the judge slot.
@@ -162,18 +174,21 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
         storedJudgeId.startsWith("C")   ? "c-difficulty-judge" :
         null;
       setSelectedRole(derived);
+      setSetupCompleteState(lsGet("taolu.setupComplete") === "1");
     } else {
-      // No stored session → clean slate, land on RoleSelection.
+      // Fresh visit (or no session) → clean slate on RoleSelection. The session code
+      // stays in localStorage only as a convenience prefill on the join screens.
       lsSet(LS_KEYS.role, null);
       lsSet(LS_KEYS.judgeId, null);
       lsSet("taolu.setupComplete", null);
       setSelectedRole(null);
       setSessionCodeState(null);
       setJudgeIdState(null);
+      setSetupCompleteState(false);
     }
-    setSetupCompleteState(lsGet("taolu.setupComplete") === "1");
     setStorageHydrated(true);
   }, []);
+
 
 
   const approvedJudges = useMemo(() => Object.keys(judgeAssignments), [judgeAssignments]);
@@ -729,7 +744,11 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
     lsSet(LS_KEYS.role, null);
     lsSet(LS_KEYS.session, null);
     lsSet(LS_KEYS.judgeId, null);
+    // Drop the tab marker so the next load starts on Role Selection, never on the
+    // previously used station.
+    try { if (typeof window !== "undefined") window.sessionStorage.removeItem("taolu.tab"); } catch { /* ignore */ }
   };
+
 
 
   return (
