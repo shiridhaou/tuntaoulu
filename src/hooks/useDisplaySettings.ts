@@ -47,7 +47,9 @@ export function useDisplaySettings(sessionCode: string | null): DisplaySettings 
     supabase.from("current_match").select("payload").eq("session_code", sessionCode).maybeSingle()
       .then(({ data }) => { if (!cancelled && data) apply(extract((data as { payload?: unknown }).payload)); });
 
-    const ch = supabase.channel(`display-${sessionCode}`)
+    // Unique channel per hook instance: two components on the same screen must not
+    // share one channel (Supabase rejects adding listeners after subscribe()).
+    const ch = supabase.channel(`display-${sessionCode}-${Math.random().toString(36).slice(2, 8)}`)
       .on("postgres_changes",
         { event: "*", schema: "public", table: "current_match", filter: `session_code=eq.${sessionCode}` },
         (payload: { new?: { payload?: unknown } }) => {
