@@ -245,22 +245,23 @@ export function JudgeAPanel() {
       {/* Sub-code grid for the selected decade */}
       <main className="flex-1 min-h-0 overflow-y-auto p-3">
         <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-          {subCodes.map(c => (
+          {subRules.map(r => (
             <button
-              key={c.code}
-              onClick={() => addCode(c)}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-right active:scale-[0.97] transition-all hover:border-emerald-500/50"
+              key={r.errorCode}
+              onClick={() => addCode(toEntry(r))}
+              className="rounded-2xl border border-white/10 bg-black/60 p-3 text-right active:scale-[0.97] transition-all hover:border-emerald-500/50"
               style={{ backdropFilter: "blur(14px)" }}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-2xl font-black tabular-nums" dir="ltr">{c.code}</span>
-                <span className="text-lg font-black tabular-nums text-red-400" dir="ltr">−{c.value.toFixed(2)}</span>
+                <span className="text-2xl font-black tabular-nums" dir="ltr">{r.errorCode}</span>
+                <span className="text-lg font-black tabular-nums text-red-400" dir="ltr">−{r.deductionValue.toFixed(2)}</span>
               </div>
-              <p className="mt-1 text-[12px] font-bold text-white/85 truncate" dir="rtl">{c.labelAr}</p>
-              <p className="text-[11px] text-white/50 truncate" dir="ltr">{c.label}</p>
+              <p className="text-[11px] font-bold text-emerald-300/80 truncate" dir="ltr">{r.pinyin}</p>
+              <p className="mt-1 text-[12px] font-bold text-white/85 truncate" dir="rtl">{r.arabicDescription}</p>
+              <p className="text-[11px] text-white/50 truncate" dir="ltr">{r.englishDescription}</p>
             </button>
           ))}
-          {subCodes.length === 0 && (
+          {subRules.length === 0 && (
             <p className="text-[12px] text-white/40 col-span-full text-center py-6" dir="rtl">لا توجد أكواد في هذه الفئة لهذا الأسلوب</p>
           )}
         </div>
@@ -269,10 +270,11 @@ export function JudgeAPanel() {
       <DeductionModal
         open={modalOpen}
         decade={decade}
-        codes={subCodes}
-        onPick={(c) => { addCode(c); setModalOpen(false); }}
+        rules={subRules}
+        onPick={(r) => { addCode(toEntry(r)); setModalOpen(false); }}
         onClose={() => setModalOpen(false)}
       />
+
 
 
       {/* Action row */}
