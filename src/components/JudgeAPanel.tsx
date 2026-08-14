@@ -7,9 +7,18 @@ import { useMatchSync } from "@/hooks/useMatchSync";
 import { modeCaps, type MatchMode } from "@/lib/matchMode";
 
 /* Official Group A code catalogue lives in @/lib/deductionCodes */
-import { catalogForStyle, type CodeEntry } from "@/lib/deductionCodes";
+import { type CodeEntry } from "@/lib/deductionCodes";
+import { enabledKeysForStyle, rulesForKey, type GroupARule } from "@/config/groupARulesEngine";
 import { GroupAKeypad } from "@/components/GroupAKeypad";
 import { DeductionModal } from "@/components/DeductionModal";
+
+const toEntry = (r: GroupARule): CodeEntry => ({
+  code: r.errorCode,
+  label: r.englishDescription,
+  labelAr: r.arabicDescription,
+  value: r.deductionValue,
+});
+
 
 
 function haptic(ms: number | number[] = 25) {
@@ -45,23 +54,16 @@ export function JudgeAPanel() {
   const [modalOpen, setModalOpen] = useState(false);
 
 
-  // Style-conditional catalogue: 2x codes only for Nanquan, 5x only for Taijiquan.
-  const codes = useMemo(() => catalogForStyle(liveStyle), [liveStyle]);
+  // Style-aware rules engine: keys 0–7 always render, availability is style-driven.
+  const decades = useMemo(() => enabledKeysForStyle(liveStyle), [liveStyle]);
 
-
-  // Available decades (tens digit) present in the active catalogue
-  const decades = useMemo(() => {
-    const set = new Set<string>();
-    codes.forEach(c => set.add(c.code[0]));
-    return Array.from(set).sort();
-  }, [codes]);
-
-  const [decade, setDecade] = useState<string>(decades[0] ?? "1");
+  const [decade, setDecade] = useState<string>(decades[0] ?? "0");
   useEffect(() => {
-    if (!decades.includes(decade)) setDecade(decades[0] ?? "1");
+    if (!decades.includes(decade)) setDecade(decades[0] ?? "0");
   }, [decades, decade]);
 
-  const subCodes = useMemo(() => codes.filter(c => c.code[0] === decade), [codes, decade]);
+  const subRules = useMemo(() => rulesForKey(liveStyle, decade), [liveStyle, decade]);
+
 
   useEffect(() => {
     const u = () => setOnline(navigator.onLine);
@@ -243,22 +245,23 @@ export function JudgeAPanel() {
       {/* Sub-code grid for the selected decade */}
       <main className="flex-1 min-h-0 overflow-y-auto p-3">
         <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-          {subCodes.map(c => (
+          {subRules.map(r => (
             <button
-              key={c.code}
-              onClick={() => addCode(c)}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-right active:scale-[0.97] transition-all hover:border-emerald-500/50"
+              key={r.errorCode}
+              onClick={() => addCode(toEntry(r))}
+              className="rounded-2xl border border-white/10 bg-black/60 p-3 text-right active:scale-[0.97] transition-all hover:border-emerald-500/50"
               style={{ backdropFilter: "blur(14px)" }}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-2xl font-black tabular-nums" dir="ltr">{c.code}</span>
-                <span className="text-lg font-black tabular-nums text-red-400" dir="ltr">−{c.value.toFixed(2)}</span>
+                <span className="text-2xl font-black tabular-nums" dir="ltr">{r.errorCode}</span>
+                <span className="text-lg font-black tabular-nums text-red-400" dir="ltr">−{r.deductionValue.toFixed(2)}</span>
               </div>
-              <p className="mt-1 text-[12px] font-bold text-white/85 truncate" dir="rtl">{c.labelAr}</p>
-              <p className="text-[11px] text-white/50 truncate" dir="ltr">{c.label}</p>
+              <p className="text-[11px] font-bold text-emerald-300/80 truncate" dir="ltr">{r.pinyin}</p>
+              <p className="mt-1 text-[12px] font-bold text-white/85 truncate" dir="rtl">{r.arabicDescription}</p>
+              <p className="text-[11px] text-white/50 truncate" dir="ltr">{r.englishDescription}</p>
             </button>
           ))}
-          {subCodes.length === 0 && (
+          {subRules.length === 0 && (
             <p className="text-[12px] text-white/40 col-span-full text-center py-6" dir="rtl">لا توجد أكواد في هذه الفئة لهذا الأسلوب</p>
           )}
         </div>
@@ -267,10 +270,11 @@ export function JudgeAPanel() {
       <DeductionModal
         open={modalOpen}
         decade={decade}
-        codes={subCodes}
-        onPick={(c) => { addCode(c); setModalOpen(false); }}
+        rules={subRules}
+        onPick={(r) => { addCode(toEntry(r)); setModalOpen(false); }}
         onClose={() => setModalOpen(false)}
       />
+
 
 
       {/* Action row */}
