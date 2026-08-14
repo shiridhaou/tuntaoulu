@@ -1,18 +1,18 @@
-import { GROUP_A_KEYS, CATEGORY_INFO } from "@/lib/deductionDiagrams";
+import { GROUP_A_KEYS, GROUP_A_GROUP_INFO } from "@/config/groupARulesEngine";
 
 function haptic(ms: number | number[] = 18) {
   try { (navigator as Navigator & { vibrate?: (p: number | number[]) => boolean })?.vibrate?.(ms); } catch { /* noop */ }
 }
 
 type Props = {
-  /** Categories (tens digits) available for the live style, from existing sync props */
+  /** Keys (0–7) enabled for the live style, from existing sync props */
   availableDecades: string[];
   activeDecade: string;
   onSelect: (decade: string) => void;
 };
 
 /**
- * Group A keypad — strictly limited to keys 0–7.
+ * Group A keypad — always renders keys 0–7.
  * Purely presentational: it consumes props, never touches sync state.
  */
 export function GroupAKeypad({ availableDecades, activeDecade, onSelect }: Props) {
@@ -20,8 +20,8 @@ export function GroupAKeypad({ availableDecades, activeDecade, onSelect }: Props
     <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
       {GROUP_A_KEYS.map(d => {
         const enabled = availableDecades.includes(d);
-        const active = activeDecade === d;
-        const info = CATEGORY_INFO[d];
+        const active = enabled && activeDecade === d;
+        const info = GROUP_A_GROUP_INFO[d];
         return (
           <button
             key={d}
