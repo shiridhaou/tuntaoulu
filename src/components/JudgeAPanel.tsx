@@ -8,6 +8,9 @@ import { modeCaps, type MatchMode } from "@/lib/matchMode";
 
 /* Official Group A code catalogue lives in @/lib/deductionCodes */
 import { catalogForStyle, type CodeEntry } from "@/lib/deductionCodes";
+import { GroupAKeypad } from "@/components/GroupAKeypad";
+import { DeductionModal } from "@/components/DeductionModal";
+
 
 function haptic(ms: number | number[] = 25) {
   try { (navigator as Navigator & { vibrate?: (p: number | number[]) => boolean })?.vibrate?.(ms); } catch { /* noop */ }
@@ -39,6 +42,8 @@ export function JudgeAPanel() {
   const [confirmed, setConfirmed] = useState<CodeEntry[]>([]);
   const [online, setOnline] = useState(true);
   const [submitted, setSubmitted] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+
 
   // Style-conditional catalogue: 2x codes only for Nanquan, 5x only for Taijiquan.
   const codes = useMemo(() => catalogForStyle(liveStyle), [liveStyle]);
