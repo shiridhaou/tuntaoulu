@@ -226,33 +226,13 @@ export function JudgeAPanel() {
         </div>
       </div>
 
-      {/* Decade keypad 0–9 */}
+      {/* Group A keypad — restricted to 0–7 */}
       <div className="px-3 pt-2 shrink-0">
-        <div className="grid grid-cols-10 gap-1.5">
-          {["0","1","2","3","4","5","6","7","8","9"].map(d => {
-            const enabled = decades.includes(d);
-            const active = decade === d;
-            return (
-              <button
-                key={d}
-                disabled={!enabled}
-                onClick={() => { haptic(18); setDecade(d); }}
-                className="h-14 rounded-xl font-black tabular-nums select-none active:scale-[0.95] transition-all disabled:opacity-20"
-                style={{
-                  fontSize: "clamp(20px, 3.2vw, 32px)",
-                  background: active ? "rgba(52,211,153,0.18)" : "rgba(255,255,255,0.04)",
-                  border: `1px solid ${active ? "rgba(52,211,153,0.75)" : "rgba(255,255,255,0.12)"}`,
-                  color: active ? "#6ee7b7" : "#fff",
-                  boxShadow: active ? "0 0 22px rgba(52,211,153,0.4)" : "none",
-                  backdropFilter: "blur(14px)",
-                }}
-                dir="ltr"
-              >
-                {d}
-              </button>
-            );
-          })}
-        </div>
+        <GroupAKeypad
+          availableDecades={decades}
+          activeDecade={decade}
+          onSelect={(d) => { setDecade(d); setModalOpen(true); }}
+        />
       </div>
 
       {/* Sub-code grid for the selected decade */}
@@ -278,6 +258,15 @@ export function JudgeAPanel() {
           )}
         </div>
       </main>
+
+      <DeductionModal
+        open={modalOpen}
+        decade={decade}
+        codes={subCodes}
+        onPick={(c) => { addCode(c); setModalOpen(false); }}
+        onClose={() => setModalOpen(false)}
+      />
+
 
       {/* Action row */}
       <div className="px-3 pb-3 shrink-0 grid grid-cols-[1fr_auto_auto] gap-2">
