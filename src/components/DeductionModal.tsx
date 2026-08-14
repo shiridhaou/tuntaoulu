@@ -1,22 +1,25 @@
 import { X } from "lucide-react";
-import type { CodeEntry } from "@/lib/deductionCodes";
-import { CATEGORY_INFO, CODE_PINYIN } from "@/lib/deductionDiagrams";
+import type { GroupARule } from "@/config/groupARulesEngine";
+import { GROUP_A_GROUP_INFO } from "@/config/groupARulesEngine";
+import { CATEGORY_INFO } from "@/lib/deductionDiagrams";
 
 type Props = {
   open: boolean;
   decade: string;
-  codes: CodeEntry[];
-  onPick: (c: CodeEntry) => void;
+  rules: GroupARule[];
+  onPick: (r: GroupARule) => void;
   onClose: () => void;
 };
 
 /**
  * Deduction details popover for Group A.
- * Presentational only — receives codes and callbacks from the panel.
+ * Presentational only — receives rules and callbacks from the panel.
+ * Key 7 never logs directly: the judge must pick a sub-code here.
  */
-export function DeductionModal({ open, decade, codes, onPick, onClose }: Props) {
+export function DeductionModal({ open, decade, rules, onPick, onClose }: Props) {
   if (!open) return null;
-  const info = CATEGORY_INFO[decade];
+  const info = GROUP_A_GROUP_INFO[decade];
+  const diagram = CATEGORY_INFO[decade]?.image;
 
   return (
     <div
@@ -30,9 +33,10 @@ export function DeductionModal({ open, decade, codes, onPick, onClose }: Props) 
         <header className="sticky top-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10 bg-[#0b0b0b]/95 backdrop-blur">
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-[0.3em] text-white/40" dir="ltr">
-              CATEGORY {decade}{info ? ` · ${info.pinyin}` : ""}
+              KEY {decade}{info ? ` · ${info.pinyin}` : ""}
             </p>
             <h2 className="text-base font-black truncate" dir="rtl">{info?.titleAr ?? "الأكواد"}</h2>
+            {info && <p className="text-[10px] text-white/40" dir="ltr">{info.titleEn}</p>}
           </div>
           <button
             onClick={onClose}
@@ -43,38 +47,37 @@ export function DeductionModal({ open, decade, codes, onPick, onClose }: Props) 
           </button>
         </header>
 
-        {info && (
+        {diagram && (
           <div className="px-4 pt-4">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 flex justify-center">
+            <div className="rounded-2xl border border-white/10 bg-black p-3 flex justify-center">
               <img
-                src={info.image}
-                alt={`رسم توضيحي — ${info.titleAr}`}
+                src={diagram}
+                alt={`رسم توضيحي — ${info?.titleAr ?? decade}`}
                 loading="lazy"
                 className="max-h-44 object-contain"
+                style={{ filter: "grayscale(1) invert(1) contrast(1.4) brightness(1.1)" }}
               />
             </div>
           </div>
         )}
 
         <div className="p-4 grid gap-2 sm:grid-cols-2">
-          {codes.map(c => (
+          {rules.map(r => (
             <button
-              key={c.code}
-              onClick={() => onPick(c)}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-right active:scale-[0.97] transition-all hover:border-emerald-500/50"
+              key={r.errorCode}
+              onClick={() => onPick(r)}
+              className="rounded-2xl border border-white/10 bg-black/60 p-3 text-right active:scale-[0.97] transition-all hover:border-emerald-500/50"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xl font-black tabular-nums" dir="ltr">{c.code}</span>
-                <span className="text-base font-black tabular-nums text-red-400" dir="ltr">−{c.value.toFixed(2)}</span>
+                <span className="text-xl font-black tabular-nums" dir="ltr">{r.errorCode}</span>
+                <span className="text-base font-black tabular-nums text-red-400" dir="ltr">−{r.deductionValue.toFixed(2)}</span>
               </div>
-              {CODE_PINYIN[c.code] && (
-                <p className="mt-0.5 text-[11px] font-bold text-emerald-300/80" dir="ltr">{CODE_PINYIN[c.code]}</p>
-              )}
-              <p className="mt-1 text-[12px] font-bold text-white/85" dir="rtl">{c.labelAr}</p>
-              <p className="text-[11px] text-white/50" dir="ltr">{c.label}</p>
+              <p className="mt-0.5 text-[11px] font-bold text-emerald-300/80" dir="ltr">{r.pinyin}</p>
+              <p className="mt-1 text-[12px] font-bold text-white/85" dir="rtl">{r.arabicDescription}</p>
+              <p className="text-[11px] text-white/50" dir="ltr">{r.englishDescription}</p>
             </button>
           ))}
-          {codes.length === 0 && (
+          {rules.length === 0 && (
             <p className="text-[12px] text-white/40 col-span-full text-center py-6" dir="rtl">
               لا توجد أكواد في هذه الفئة لهذا الأسلوب
             </p>
