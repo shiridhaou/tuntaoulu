@@ -54,23 +54,16 @@ export function JudgeAPanel() {
   const [modalOpen, setModalOpen] = useState(false);
 
 
-  // Style-conditional catalogue: 2x codes only for Nanquan, 5x only for Taijiquan.
-  const codes = useMemo(() => catalogForStyle(liveStyle), [liveStyle]);
+  // Style-aware rules engine: keys 0–7 always render, availability is style-driven.
+  const decades = useMemo(() => enabledKeysForStyle(liveStyle), [liveStyle]);
 
-
-  // Available decades (tens digit) present in the active catalogue
-  const decades = useMemo(() => {
-    const set = new Set<string>();
-    codes.forEach(c => set.add(c.code[0]));
-    return Array.from(set).sort();
-  }, [codes]);
-
-  const [decade, setDecade] = useState<string>(decades[0] ?? "1");
+  const [decade, setDecade] = useState<string>(decades[0] ?? "0");
   useEffect(() => {
-    if (!decades.includes(decade)) setDecade(decades[0] ?? "1");
+    if (!decades.includes(decade)) setDecade(decades[0] ?? "0");
   }, [decades, decade]);
 
-  const subCodes = useMemo(() => codes.filter(c => c.code[0] === decade), [codes, decade]);
+  const subRules = useMemo(() => rulesForKey(liveStyle, decade), [liveStyle, decade]);
+
 
   useEffect(() => {
     const u = () => setOnline(navigator.onLine);
