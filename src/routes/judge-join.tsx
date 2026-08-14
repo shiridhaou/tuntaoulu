@@ -5,7 +5,7 @@ import { FederationLogo } from "@/components/FederationLogo";
 import { ShieldCheck, Star, Zap, Target, Users, Cpu } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { joinSessionMembership } from "@/lib/sessionMembership";
+import { joinSessionMembership, ensureDeviceSession } from "@/lib/sessionMembership";
 
 const ORANGE = "#FF7A1A";
 const GOLD = "#F4C542";
