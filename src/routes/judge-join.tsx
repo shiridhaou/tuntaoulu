@@ -27,13 +27,6 @@ export const Route = createFileRoute("/judge-join")({
 
 type JoinRole = RequestedRole | "TA";
 
-async function ensureDeviceSession(): Promise<void> {
-  const { data, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError) throw sessionError;
-  if (data.session) return;
-  const { error } = await supabase.auth.signInAnonymously();
-  if (error) throw error;
-}
 
 const ROLE_OPTIONS: { id: JoinRole; title: string; subtitle: string; color: string; bg: string; icon: React.ReactNode }[] = [
   { id: "A",   title: "Quality Judge",     subtitle: "حكم الجودة (A)",           color: "#34D399", bg: "rgba(52,211,153,0.12)", icon: <Star className="h-6 w-6" /> },
