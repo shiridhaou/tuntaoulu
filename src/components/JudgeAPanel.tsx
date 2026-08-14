@@ -7,9 +7,18 @@ import { useMatchSync } from "@/hooks/useMatchSync";
 import { modeCaps, type MatchMode } from "@/lib/matchMode";
 
 /* Official Group A code catalogue lives in @/lib/deductionCodes */
-import { catalogForStyle, type CodeEntry } from "@/lib/deductionCodes";
+import { type CodeEntry } from "@/lib/deductionCodes";
+import { enabledKeysForStyle, rulesForKey, type GroupARule } from "@/config/groupARulesEngine";
 import { GroupAKeypad } from "@/components/GroupAKeypad";
 import { DeductionModal } from "@/components/DeductionModal";
+
+const toEntry = (r: GroupARule): CodeEntry => ({
+  code: r.errorCode,
+  label: r.englishDescription,
+  labelAr: r.arabicDescription,
+  value: r.deductionValue,
+});
+
 
 
 function haptic(ms: number | number[] = 25) {
