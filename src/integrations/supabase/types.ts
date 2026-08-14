@@ -383,11 +383,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      can_write_session: { Args: { _code: string }; Returns: boolean }
       get_public_report: { Args: { _athlete_id: string }; Returns: Json }
       is_active_session: { Args: { _code: string }; Returns: boolean }
-      is_real_user: { Args: never; Returns: boolean }
-      is_session_member: { Args: { _code: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
