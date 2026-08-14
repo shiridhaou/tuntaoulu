@@ -1,1 +1,0 @@
-DROP POLICY IF EXISTS "match_clips_auth_select" ON storage.objects;
