@@ -69,11 +69,31 @@ export function useMatchSync(sessionCode: string | null): MatchSyncSnapshot {
       },
     ).subscribe();
 
+    // Low-latency fallback: the Technical Assistant also pushes a lightweight
+    // `session_state_change` broadcast whenever style / mode / category change,
+    // so judge panels update even if postgres replication lags.
+    const bc = supabase.channel(sessionStateChannel(sessionCode));
+    bc.on("broadcast", { event: SESSION_STATE_EVENT }, ({ payload }) => {
+      const p = (payload ?? {}) as Partial<MatchSyncRow>;
+      setRow((prev) => ({
+        session_code: sessionCode,
+        athlete_id: prev?.athlete_id ?? null,
+        timer_state: prev?.timer_state ?? "idle",
+        started_at: prev?.started_at ?? null,
+        elapsed_ms: prev?.elapsed_ms ?? 0,
+        style: p.style !== undefined ? p.style : (prev?.style ?? null),
+        payload: { ...(prev?.payload ?? {}), ...((p.payload as Record<string, unknown>) ?? {}) },
+        updated_at: new Date().toISOString(),
+      }));
+    }).subscribe();
+
     return () => {
       cancelled = true;
       try { supabase.removeChannel(ch); } catch { /* ignore */ }
+      try { supabase.removeChannel(bc); } catch { /* ignore */ }
     };
   }, [sessionCode]);
+
 
   // 2) Local 1Hz tick only while running
   useEffect(() => {
