@@ -934,7 +934,60 @@ function TADashboardInner() {
                           {tournament ? "تحديث البطولة" : "إنشاء البطولة"}
                         </Button>
                       </div>
+
+                      {/* ===== Export / Webhook settings ===== */}
+                      <div className="border-t border-border/40 pt-4 space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Radio className="h-4 w-4 text-fed-blue" />
+                            <h3 className="text-sm font-heading font-bold">تصدير النتائج · Webhook</h3>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = { ...webhook, enabled: !webhook.enabled };
+                              setWebhook(next); saveWebhookSettings(sessionCode, next);
+                            }}
+                            className={`px-3 py-1 rounded-full text-[11px] font-bold border transition-all ${
+                              webhook.enabled
+                                ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-300"
+                                : "border-border bg-muted/30 text-muted-foreground"
+                            }`}
+                          >
+                            {webhook.enabled ? "مفعّل · ON" : "معطّل · OFF"}
+                          </button>
+                        </div>
+                        <Field label="عنوان الـ Webhook (HTTPS)">
+                          <Input
+                            dir="ltr"
+                            value={webhook.url}
+                            onChange={(e) => setWebhook({ ...webhook, url: e.target.value })}
+                            placeholder="https://federation.example.tn/api/live-results"
+                          />
+                        </Field>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[10px] text-muted-foreground leading-relaxed">
+                            يُرسل JSON عند نشر النتيجة النهائية: tournamentId, athleteName, team, style,
+                            difficultyScore, deductionScore, finalScore, timestamp
+                          </p>
+                          <Button
+                            size="sm" variant="outline"
+                            className="shrink-0 border-fed-blue/40 text-fed-blue hover:bg-fed-blue/10"
+                            onClick={() => {
+                              if (webhook.url && !isValidWebhookUrl(webhook.url)) {
+                                toast.error("عنوان غير صالح — استعمل http(s)://");
+                                return;
+                              }
+                              saveWebhookSettings(sessionCode, webhook);
+                              toast.success("تم حفظ إعدادات التصدير");
+                            }}
+                          >
+                            حفظ
+                          </Button>
+                        </div>
+                      </div>
                     </motion.section>
+
                   </TabsContent>
 
                   {/* ===== TAB: IMPORT ===== */}
