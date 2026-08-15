@@ -33,7 +33,32 @@ export interface MatchSyncSnapshot {
   payload: Record<string, unknown> | null;
 }
 
-/** Subscribe to current_match for a session and return live elapsed seconds. */
+/** Realtime broadcast channel used for instant config (style / mode) pushes. */
+export const SESSION_STATE_EVENT = "session_state_change";
+export const sessionStateChannel = (code: string) => `session-state-${code}`;
+
+/**
+ * Push an immediate style / match-mode / category change to every connected
+ * panel. This is a UI-level broadcast only — the authoritative row in
+ * `current_match` is still written by the caller.
+ */
+export async function broadcastSessionState(
+  sessionCode: string,
+  patch: { style?: string | null; payload?: Record<string, unknown> },
+) {
+  const ch = supabase.channel(sessionStateChannel(sessionCode));
+  await new Promise<void>((resolve) => {
+    ch.subscribe((status) => { if (status === "SUBSCRIBED") resolve(); });
+    setTimeout(resolve, 1500);
+  });
+  try {
+    await ch.send({ type: "broadcast", event: SESSION_STATE_EVENT, payload: patch });
+  } finally {
+    setTimeout(() => { try { supabase.removeChannel(ch); } catch { /* ignore */ } }, 500);
+  }
+}
+
+
 export function useMatchSync(sessionCode: string | null): MatchSyncSnapshot {
   const [row, setRow] = useState<MatchSyncRow | null>(null);
   const [tick, setTick] = useState(0);
@@ -69,11 +94,31 @@ export function useMatchSync(sessionCode: string | null): MatchSyncSnapshot {
       },
     ).subscribe();
 
+    // Low-latency fallback: the Technical Assistant also pushes a lightweight
+    // `session_state_change` broadcast whenever style / mode / category change,
+    // so judge panels update even if postgres replication lags.
+    const bc = supabase.channel(sessionStateChannel(sessionCode));
+    bc.on("broadcast", { event: SESSION_STATE_EVENT }, ({ payload }) => {
+      const p = (payload ?? {}) as Partial<MatchSyncRow>;
+      setRow((prev) => ({
+        session_code: sessionCode,
+        athlete_id: prev?.athlete_id ?? null,
+        timer_state: prev?.timer_state ?? "idle",
+        started_at: prev?.started_at ?? null,
+        elapsed_ms: prev?.elapsed_ms ?? 0,
+        style: p.style !== undefined ? p.style : (prev?.style ?? null),
+        payload: { ...(prev?.payload ?? {}), ...((p.payload as Record<string, unknown>) ?? {}) },
+        updated_at: new Date().toISOString(),
+      }));
+    }).subscribe();
+
     return () => {
       cancelled = true;
       try { supabase.removeChannel(ch); } catch { /* ignore */ }
+      try { supabase.removeChannel(bc); } catch { /* ignore */ }
     };
   }, [sessionCode]);
+
 
   // 2) Local 1Hz tick only while running
   useEffect(() => {

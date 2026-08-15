@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
+import { sendResultWebhook } from "@/lib/resultsWebhook";
 import { Link } from "@tanstack/react-router";
 import { useCompetition, STYLE_CONFIGS, type CompetitionStyle } from "@/store/competition-store";
 import { FederationLogo } from "./FederationLogo";
@@ -343,6 +344,18 @@ function ChiefRefereeDashboardInner() {
       });
       setScoreRevealed(true);
       commitCurrentResult();
+
+      // External results export (federation site / broadcast overlay).
+      void sendResultWebhook(sessionCode, {
+        tournamentId: sessionCode,
+        athleteName: currentAthlete.name,
+        team: currentAthlete.country ?? null,
+        style: competitionStyle,
+        difficultyScore: matchMode === "optional" ? groupCTotal : null,
+        deductionScore: taDeduction,
+        finalScore: aggregateFinal,
+        timestamp: new Date().toISOString(),
+      });
     } catch (e) {
       console.error("[CHIEF PUBLISH] failed", e);
     } finally {

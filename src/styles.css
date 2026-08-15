@@ -359,3 +359,24 @@
   animation: ta-pulse-flash 1.1s ease-out;
   transform-origin: center;
 }
+
+/* ===== Western numerals (0-9) everywhere =====
+   The interface is Arabic/RTL, but scores, timers, tables and dates must use
+   standard Western Arabic digits with lining, tabular figures. */
+html,
+body,
+[dir="rtl"] {
+  font-variant-numeric: lining-nums tabular-nums;
+  -moz-font-feature-settings: "lnum" 1, "tnum" 1;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+}
+
+/* Date inputs always render ISO (YYYY-MM-DD) left-to-right. */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+input[type="number"] {
+  direction: ltr;
+  text-align: left;
+  font-variant-numeric: lining-nums tabular-nums;
+}

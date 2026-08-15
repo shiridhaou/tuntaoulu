@@ -17,7 +17,10 @@ import Papa from "papaparse";
 import { supabase } from "@/integrations/supabase/client";
 import { joinSessionMembership } from "@/lib/sessionMembership";
 
-import { matchControl, useMatchSync } from "@/hooks/useMatchSync";
+import { matchControl, useMatchSync, broadcastSessionState } from "@/hooks/useMatchSync";
+import { getWebhookSettings, saveWebhookSettings, isValidWebhookUrl, type WebhookSettings } from "@/lib/resultsWebhook";
+import { dateInputProps, fmtClock } from "@/lib/numFormat";
+
 import { FederationLogo } from "./FederationLogo";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -201,37 +204,59 @@ function TADashboardInner() {
   const [styleCategory, setStyleCategory] = useState<"changquan" | "nanquan" | "taijiquan" | "traditional">("changquan");
   const [configLocked, setConfigLocked] = useState(false);
 
-  // LIVE BROADCAST of match_mode (Compulsory / Optional) — pushes to current_match.payload
-  // the moment the TA flips the dropdown so every Judge B / C panel rescales without refresh.
+  // Results export webhook (UI-level; stored per session in localStorage)
+  const [webhook, setWebhook] = useState<WebhookSettings>({ enabled: false, url: "" });
+  useEffect(() => { setWebhook(getWebhookSettings(sessionCode)); }, [sessionCode]);
+
+  // LIVE BROADCAST of match config (mode / style / category) — pushes to
+  // current_match + an instant realtime broadcast so every Judge A/B/C panel
+  // reloads its active rules engine without a refresh.
   useEffect(() => {
     if (!sessionCode) return;
     let cancelled = false;
     (async () => {
-      const { data: existing } = await supabase
-        .from("current_match")
-        .select("athlete_id, payload, style")
-        .eq("session_code", sessionCode)
-        .maybeSingle();
-      if (cancelled) return;
-      const prev = (existing?.payload as Record<string, unknown> | null) ?? {};
-      const sameMode = (prev.match_mode as string | undefined) === matchMode;
-      const sameStyle = (existing?.style ?? null) === styleCategory && (prev.style as string | undefined) === styleCategory;
-      if (sameMode && sameStyle) return;
-      await supabase.from("current_match").upsert({
-        session_code: sessionCode,
-        athlete_id: existing?.athlete_id ?? null,
-        style: styleCategory,
-        payload: { ...prev, match_mode: matchMode, style: styleCategory } as never,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "session_code" });
-      await supabase.from("match_events").insert({
-        session_code: sessionCode,
-        event_type: "config_broadcast",
-        payload: { match_mode: matchMode, style: styleCategory },
-      });
+      try {
+        const { data: existing, error: readErr } = await supabase
+          .from("current_match")
+          .select("athlete_id, payload, style")
+          .eq("session_code", sessionCode)
+          .maybeSingle();
+        if (readErr) throw readErr;
+        if (cancelled) return;
+        const prev = (existing?.payload as Record<string, unknown> | null) ?? {};
+        const sameMode = (prev.match_mode as string | undefined) === matchMode;
+        const sameStyle = (existing?.style ?? null) === styleCategory && (prev.style as string | undefined) === styleCategory;
+        const sameRule = (prev.time_rule_id as string | undefined) === timeRuleId;
+        if (sameMode && sameStyle && sameRule) return;
+
+        const nextPayload = { ...prev, match_mode: matchMode, style: styleCategory, time_rule_id: timeRuleId };
+
+        // 1) Instant push (sub-second) to all connected panels.
+        await broadcastSessionState(sessionCode, { style: styleCategory, payload: nextPayload });
+
+        // 2) Authoritative persistence for late joiners / reloads.
+        const { error: writeErr } = await supabase.from("current_match").upsert({
+          session_code: sessionCode,
+          athlete_id: existing?.athlete_id ?? null,
+          style: styleCategory,
+          payload: nextPayload as never,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "session_code" });
+        if (writeErr) throw writeErr;
+
+        await supabase.from("match_events").insert({
+          session_code: sessionCode,
+          event_type: "session_state_change",
+          payload: { match_mode: matchMode, style: styleCategory, time_rule_id: timeRuleId },
+        });
+        if (!cancelled) pushLog("config", `📡 بث: ${styleCategory} · ${matchMode}`);
+      } catch (e: any) {
+        if (!cancelled) toast.error(`فشل بث الإعدادات للحكام: ${e?.message ?? "خطأ"}`);
+      }
     })();
     return () => { cancelled = true; };
-  }, [matchMode, sessionCode, styleCategory]);
+  }, [matchMode, sessionCode, styleCategory, timeRuleId]);
+
 
   // Event log (collapsible drawer)
   const [eventLog, setEventLog] = useState<{ ts: number; type: string; label: string }[]>([]);
@@ -418,7 +443,7 @@ function TADashboardInner() {
     setManualSaving(true);
     try {
       const cat = manualForm.category || (manualForm.birth_date ? classifyAge(manualForm.birth_date) : null);
-      const { error } = await supabase.from("athletes").insert({
+      const { data: inserted, error } = await supabase.from("athletes").insert({
         tournament_id: tournament.id,
         bib_number: manualForm.bib.trim() || null,
         full_name: manualForm.name.trim(),
@@ -427,10 +452,20 @@ function TADashboardInner() {
         age_category: cat,
         club: manualForm.club.trim() || null,
         country: manualForm.country.trim() || null,
+        style: styleCategory,
         status: "waiting",
-      });
+      }).select().single();
       if (error) throw error;
-      toast.success("تمت إضافة اللاعب");
+      // Make the athlete selectable in the queue immediately (before the
+      // realtime refresh lands).
+      if (inserted) {
+        setAthletes((prev) => {
+          const next = [...prev.filter((a) => a.id !== (inserted as Athlete).id), inserted as Athlete];
+          return next.sort((a, b) => (a.bib_number ?? "").localeCompare(b.bib_number ?? ""));
+        });
+      }
+      pushLog("athlete", `➕ ${manualForm.name.trim()}`);
+      toast.success("تمت إضافة اللاعب — جاهز في قائمة الانتظار");
       setManualForm({ bib: "", name: "", club: "", country: "Tunisia", gender: "", birth_date: "", category: "" });
       setManualOpen(false);
       void loadActive();
@@ -897,10 +932,10 @@ function TADashboardInner() {
                           <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="تونس" />
                         </Field>
                         <Field label="تاريخ البداية" icon={<Calendar className="h-3 w-3" />}>
-                          <Input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
+                          <Input type="date" {...dateInputProps} value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
                         </Field>
                         <Field label="تاريخ النهاية" icon={<Calendar className="h-3 w-3" />}>
-                          <Input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
+                          <Input type="date" {...dateInputProps} value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
                         </Field>
                       </div>
                       <div className="flex justify-end pt-2">
@@ -909,7 +944,60 @@ function TADashboardInner() {
                           {tournament ? "تحديث البطولة" : "إنشاء البطولة"}
                         </Button>
                       </div>
+
+                      {/* ===== Export / Webhook settings ===== */}
+                      <div className="border-t border-border/40 pt-4 space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Radio className="h-4 w-4 text-fed-blue" />
+                            <h3 className="text-sm font-heading font-bold">تصدير النتائج · Webhook</h3>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = { ...webhook, enabled: !webhook.enabled };
+                              setWebhook(next); saveWebhookSettings(sessionCode, next);
+                            }}
+                            className={`px-3 py-1 rounded-full text-[11px] font-bold border transition-all ${
+                              webhook.enabled
+                                ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-300"
+                                : "border-border bg-muted/30 text-muted-foreground"
+                            }`}
+                          >
+                            {webhook.enabled ? "مفعّل · ON" : "معطّل · OFF"}
+                          </button>
+                        </div>
+                        <Field label="عنوان الـ Webhook (HTTPS)">
+                          <Input
+                            dir="ltr"
+                            value={webhook.url}
+                            onChange={(e) => setWebhook({ ...webhook, url: e.target.value })}
+                            placeholder="https://federation.example.tn/api/live-results"
+                          />
+                        </Field>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[10px] text-muted-foreground leading-relaxed">
+                            يُرسل JSON عند نشر النتيجة النهائية: tournamentId, athleteName, team, style,
+                            difficultyScore, deductionScore, finalScore, timestamp
+                          </p>
+                          <Button
+                            size="sm" variant="outline"
+                            className="shrink-0 border-fed-blue/40 text-fed-blue hover:bg-fed-blue/10"
+                            onClick={() => {
+                              if (webhook.url && !isValidWebhookUrl(webhook.url)) {
+                                toast.error("عنوان غير صالح — استعمل http(s)://");
+                                return;
+                              }
+                              saveWebhookSettings(sessionCode, webhook);
+                              toast.success("تم حفظ إعدادات التصدير");
+                            }}
+                          >
+                            حفظ
+                          </Button>
+                        </div>
+                      </div>
                     </motion.section>
+
                   </TabsContent>
 
                   {/* ===== TAB: IMPORT ===== */}
@@ -1258,7 +1346,7 @@ function TADashboardInner() {
               ) : eventLog.map((e, i) => (
                 <div key={i} className="flex items-center justify-between gap-2 text-xs py-1.5 border-b border-white/5">
                   <span className="text-white/80 truncate">{e.label}</span>
-                  <span className="text-muted-foreground font-mono shrink-0">{new Date(e.ts).toLocaleTimeString("en-GB")}</span>
+                  <span className="text-muted-foreground font-mono shrink-0">{fmtClock(e.ts)}</span>
                 </div>
               ))}
             </div>
@@ -1431,7 +1519,7 @@ function TADashboardInner() {
               <Input value={manualForm.country} onChange={(e) => setManualForm({ ...manualForm, country: e.target.value })} placeholder="Tunisia" />
             </Field>
             <Field label="تاريخ الميلاد">
-              <Input type="date" value={manualForm.birth_date} onChange={(e) => setManualForm({ ...manualForm, birth_date: e.target.value })} />
+              <Input type="date" {...dateInputProps} value={manualForm.birth_date} onChange={(e) => setManualForm({ ...manualForm, birth_date: e.target.value })} />
             </Field>
             <Field label="الفئة العمرية">
               <select value={manualForm.category} onChange={(e) => setManualForm({ ...manualForm, category: e.target.value as AgeCategory | "" })}
@@ -1607,7 +1695,7 @@ function EventDrawer({ log, open, onOpenChange, onClear }: {
           ) : log.map((e, i) => (
             <div key={i} className="flex items-center justify-between gap-2 text-[10px] py-1 border-b border-white/5">
               <span className="text-white/80 truncate">{e.label}</span>
-              <span className="text-muted-foreground font-mono shrink-0">{new Date(e.ts).toLocaleTimeString("en-GB")}</span>
+              <span className="text-muted-foreground font-mono shrink-0">{fmtClock(e.ts)}</span>
             </div>
           ))}
         </div>
@@ -2029,14 +2117,14 @@ function parseDate(v: string): string | null {
 
 function normalizeRow(row: Record<string, any>, tournamentId: string) {
   const bib = pick(row, ["number", "bib", "bib_number", "dossard", "n°", "no", "num", "id", "registration", "رقم", "الرقم", "رقم التسجيل", "رقم اللاعب"]);
-  const name = pick(row, ["name", "full_name", "fullname", "athlete", "athlete_name", "nom", "nom complet", "الاسم", "اسم", "اسم اللاعب", "الاسم الكامل"]);
-  const gender = pick(row, ["gender", "sex", "sexe", "الجنس"]);
+  const name = pick(row, ["name", "full_name", "fullname", "athlete", "athlete_name", "nom", "nom complet", "nom_complet", "prenom nom", "participant", "competitor", "الاسم", "اسم", "اسم اللاعب", "الاسم الكامل"]);
+  const gender = pick(row, ["gender", "sex", "sexe", "genre", "m/f", "الجنس", "النوع الاجتماعي"]);
   const birth = pick(row, ["birth", "birth_date", "date_of_birth", "dob", "naissance", "date de naissance", "تاريخ الميلاد", "الميلاد"]);
-  const club = pick(row, ["club", "team", "association", "النادي", "نادي", "الجمعية", "الفريق"]);
+  const club = pick(row, ["club", "team", "equipe", "équipe", "association", "school", "ecole", "النادي", "نادي", "الجمعية", "الفريق"]);
   const country = pick(row, ["country", "pays", "nation", "الدولة", "بلد", "البلد"]);
-  const categoryRaw = pick(row, ["category", "age_category", "categorie", "catégorie", "الفئة", "الصنف", "الفئة العمرية"]);
+  const categoryRaw = pick(row, ["category", "age_category", "age", "age group", "categorie", "catégorie", "cat", "الفئة", "الصنف", "الفئة العمرية"]);
 
-  const styleRaw = pick(row, ["style", "discipline", "speciality", "specialty", "الأسلوب", "الاسلوب", "الاختصاص", "النوع"]);
+  const styleRaw = pick(row, ["style", "styles", "discipline", "epreuve", "épreuve", "event", "event_type", "speciality", "specialty", "الأسلوب", "الاسلوب", "الاختصاص", "النوع"]);
   const modeRaw = pick(row, ["match_mode", "mode", "match mode", "type", "category_type", "نوع المنافسة", "النمط", "نمط", "نوع"]);
   const diffRaw = pick(row, ["difficulty_codes", "difficulty codes", "difficulty", "codes", "صعوبة", "الصعوبة", "أكواد الصعوبة"]);
   const birth_date = parseDate(birth);
