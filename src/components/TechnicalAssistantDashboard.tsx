@@ -922,10 +922,10 @@ function TADashboardInner() {
                           <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="تونس" />
                         </Field>
                         <Field label="تاريخ البداية" icon={<Calendar className="h-3 w-3" />}>
-                          <Input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
+                          <Input type="date" {...dateInputProps} value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
                         </Field>
                         <Field label="تاريخ النهاية" icon={<Calendar className="h-3 w-3" />}>
-                          <Input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
+                          <Input type="date" {...dateInputProps} value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
                         </Field>
                       </div>
                       <div className="flex justify-end pt-2">
@@ -1283,7 +1283,7 @@ function TADashboardInner() {
               ) : eventLog.map((e, i) => (
                 <div key={i} className="flex items-center justify-between gap-2 text-xs py-1.5 border-b border-white/5">
                   <span className="text-white/80 truncate">{e.label}</span>
-                  <span className="text-muted-foreground font-mono shrink-0">{new Date(e.ts).toLocaleTimeString("en-GB")}</span>
+                  <span className="text-muted-foreground font-mono shrink-0">{fmtClock(e.ts)}</span>
                 </div>
               ))}
             </div>
@@ -1456,7 +1456,7 @@ function TADashboardInner() {
               <Input value={manualForm.country} onChange={(e) => setManualForm({ ...manualForm, country: e.target.value })} placeholder="Tunisia" />
             </Field>
             <Field label="تاريخ الميلاد">
-              <Input type="date" value={manualForm.birth_date} onChange={(e) => setManualForm({ ...manualForm, birth_date: e.target.value })} />
+              <Input type="date" {...dateInputProps} value={manualForm.birth_date} onChange={(e) => setManualForm({ ...manualForm, birth_date: e.target.value })} />
             </Field>
             <Field label="الفئة العمرية">
               <select value={manualForm.category} onChange={(e) => setManualForm({ ...manualForm, category: e.target.value as AgeCategory | "" })}
@@ -1632,7 +1632,7 @@ function EventDrawer({ log, open, onOpenChange, onClear }: {
           ) : log.map((e, i) => (
             <div key={i} className="flex items-center justify-between gap-2 text-[10px] py-1 border-b border-white/5">
               <span className="text-white/80 truncate">{e.label}</span>
-              <span className="text-muted-foreground font-mono shrink-0">{new Date(e.ts).toLocaleTimeString("en-GB")}</span>
+              <span className="text-muted-foreground font-mono shrink-0">{fmtClock(e.ts)}</span>
             </div>
           ))}
         </div>
