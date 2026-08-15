@@ -443,7 +443,7 @@ function TADashboardInner() {
     setManualSaving(true);
     try {
       const cat = manualForm.category || (manualForm.birth_date ? classifyAge(manualForm.birth_date) : null);
-      const { error } = await supabase.from("athletes").insert({
+      const { data: inserted, error } = await supabase.from("athletes").insert({
         tournament_id: tournament.id,
         bib_number: manualForm.bib.trim() || null,
         full_name: manualForm.name.trim(),
@@ -452,10 +452,20 @@ function TADashboardInner() {
         age_category: cat,
         club: manualForm.club.trim() || null,
         country: manualForm.country.trim() || null,
+        style: styleCategory,
         status: "waiting",
-      });
+      }).select().single();
       if (error) throw error;
-      toast.success("تمت إضافة اللاعب");
+      // Make the athlete selectable in the queue immediately (before the
+      // realtime refresh lands).
+      if (inserted) {
+        setAthletes((prev) => {
+          const next = [...prev.filter((a) => a.id !== (inserted as Athlete).id), inserted as Athlete];
+          return next.sort((a, b) => (a.bib_number ?? "").localeCompare(b.bib_number ?? ""));
+        });
+      }
+      pushLog("athlete", `➕ ${manualForm.name.trim()}`);
+      toast.success("تمت إضافة اللاعب — جاهز في قائمة الانتظار");
       setManualForm({ bib: "", name: "", club: "", country: "Tunisia", gender: "", birth_date: "", category: "" });
       setManualOpen(false);
       void loadActive();
@@ -2107,14 +2117,14 @@ function parseDate(v: string): string | null {
 
 function normalizeRow(row: Record<string, any>, tournamentId: string) {
   const bib = pick(row, ["number", "bib", "bib_number", "dossard", "n°", "no", "num", "id", "registration", "رقم", "الرقم", "رقم التسجيل", "رقم اللاعب"]);
-  const name = pick(row, ["name", "full_name", "fullname", "athlete", "athlete_name", "nom", "nom complet", "الاسم", "اسم", "اسم اللاعب", "الاسم الكامل"]);
-  const gender = pick(row, ["gender", "sex", "sexe", "الجنس"]);
+  const name = pick(row, ["name", "full_name", "fullname", "athlete", "athlete_name", "nom", "nom complet", "nom_complet", "prenom nom", "participant", "competitor", "الاسم", "اسم", "اسم اللاعب", "الاسم الكامل"]);
+  const gender = pick(row, ["gender", "sex", "sexe", "genre", "m/f", "الجنس", "النوع الاجتماعي"]);
   const birth = pick(row, ["birth", "birth_date", "date_of_birth", "dob", "naissance", "date de naissance", "تاريخ الميلاد", "الميلاد"]);
-  const club = pick(row, ["club", "team", "association", "النادي", "نادي", "الجمعية", "الفريق"]);
+  const club = pick(row, ["club", "team", "equipe", "équipe", "association", "school", "ecole", "النادي", "نادي", "الجمعية", "الفريق"]);
   const country = pick(row, ["country", "pays", "nation", "الدولة", "بلد", "البلد"]);
-  const categoryRaw = pick(row, ["category", "age_category", "categorie", "catégorie", "الفئة", "الصنف", "الفئة العمرية"]);
+  const categoryRaw = pick(row, ["category", "age_category", "age", "age group", "categorie", "catégorie", "cat", "الفئة", "الصنف", "الفئة العمرية"]);
 
-  const styleRaw = pick(row, ["style", "discipline", "speciality", "specialty", "الأسلوب", "الاسلوب", "الاختصاص", "النوع"]);
+  const styleRaw = pick(row, ["style", "styles", "discipline", "epreuve", "épreuve", "event", "event_type", "speciality", "specialty", "الأسلوب", "الاسلوب", "الاختصاص", "النوع"]);
   const modeRaw = pick(row, ["match_mode", "mode", "match mode", "type", "category_type", "نوع المنافسة", "النمط", "نمط", "نوع"]);
   const diffRaw = pick(row, ["difficulty_codes", "difficulty codes", "difficulty", "codes", "صعوبة", "الصعوبة", "أكواد الصعوبة"]);
   const birth_date = parseDate(birth);
