@@ -201,37 +201,59 @@ function TADashboardInner() {
   const [styleCategory, setStyleCategory] = useState<"changquan" | "nanquan" | "taijiquan" | "traditional">("changquan");
   const [configLocked, setConfigLocked] = useState(false);
 
-  // LIVE BROADCAST of match_mode (Compulsory / Optional) — pushes to current_match.payload
-  // the moment the TA flips the dropdown so every Judge B / C panel rescales without refresh.
+  // Results export webhook (UI-level; stored per session in localStorage)
+  const [webhook, setWebhook] = useState<WebhookSettings>({ enabled: false, url: "" });
+  useEffect(() => { setWebhook(getWebhookSettings(sessionCode)); }, [sessionCode]);
+
+  // LIVE BROADCAST of match config (mode / style / category) — pushes to
+  // current_match + an instant realtime broadcast so every Judge A/B/C panel
+  // reloads its active rules engine without a refresh.
   useEffect(() => {
     if (!sessionCode) return;
     let cancelled = false;
     (async () => {
-      const { data: existing } = await supabase
-        .from("current_match")
-        .select("athlete_id, payload, style")
-        .eq("session_code", sessionCode)
-        .maybeSingle();
-      if (cancelled) return;
-      const prev = (existing?.payload as Record<string, unknown> | null) ?? {};
-      const sameMode = (prev.match_mode as string | undefined) === matchMode;
-      const sameStyle = (existing?.style ?? null) === styleCategory && (prev.style as string | undefined) === styleCategory;
-      if (sameMode && sameStyle) return;
-      await supabase.from("current_match").upsert({
-        session_code: sessionCode,
-        athlete_id: existing?.athlete_id ?? null,
-        style: styleCategory,
-        payload: { ...prev, match_mode: matchMode, style: styleCategory } as never,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "session_code" });
-      await supabase.from("match_events").insert({
-        session_code: sessionCode,
-        event_type: "config_broadcast",
-        payload: { match_mode: matchMode, style: styleCategory },
-      });
+      try {
+        const { data: existing, error: readErr } = await supabase
+          .from("current_match")
+          .select("athlete_id, payload, style")
+          .eq("session_code", sessionCode)
+          .maybeSingle();
+        if (readErr) throw readErr;
+        if (cancelled) return;
+        const prev = (existing?.payload as Record<string, unknown> | null) ?? {};
+        const sameMode = (prev.match_mode as string | undefined) === matchMode;
+        const sameStyle = (existing?.style ?? null) === styleCategory && (prev.style as string | undefined) === styleCategory;
+        const sameRule = (prev.time_rule_id as string | undefined) === timeRuleId;
+        if (sameMode && sameStyle && sameRule) return;
+
+        const nextPayload = { ...prev, match_mode: matchMode, style: styleCategory, time_rule_id: timeRuleId };
+
+        // 1) Instant push (sub-second) to all connected panels.
+        await broadcastSessionState(sessionCode, { style: styleCategory, payload: nextPayload });
+
+        // 2) Authoritative persistence for late joiners / reloads.
+        const { error: writeErr } = await supabase.from("current_match").upsert({
+          session_code: sessionCode,
+          athlete_id: existing?.athlete_id ?? null,
+          style: styleCategory,
+          payload: nextPayload as never,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "session_code" });
+        if (writeErr) throw writeErr;
+
+        await supabase.from("match_events").insert({
+          session_code: sessionCode,
+          event_type: "session_state_change",
+          payload: { match_mode: matchMode, style: styleCategory, time_rule_id: timeRuleId },
+        });
+        if (!cancelled) pushLog("config", `📡 بث: ${styleCategory} · ${matchMode}`);
+      } catch (e: any) {
+        if (!cancelled) toast.error(`فشل بث الإعدادات للحكام: ${e?.message ?? "خطأ"}`);
+      }
     })();
     return () => { cancelled = true; };
-  }, [matchMode, sessionCode, styleCategory]);
+  }, [matchMode, sessionCode, styleCategory, timeRuleId]);
+
 
   // Event log (collapsible drawer)
   const [eventLog, setEventLog] = useState<{ ts: number; type: string; label: string }[]>([]);
