@@ -33,7 +33,32 @@ export interface MatchSyncSnapshot {
   payload: Record<string, unknown> | null;
 }
 
-/** Subscribe to current_match for a session and return live elapsed seconds. */
+/** Realtime broadcast channel used for instant config (style / mode) pushes. */
+export const SESSION_STATE_EVENT = "session_state_change";
+export const sessionStateChannel = (code: string) => `session-state-${code}`;
+
+/**
+ * Push an immediate style / match-mode / category change to every connected
+ * panel. This is a UI-level broadcast only — the authoritative row in
+ * `current_match` is still written by the caller.
+ */
+export async function broadcastSessionState(
+  sessionCode: string,
+  patch: { style?: string | null; payload?: Record<string, unknown> },
+) {
+  const ch = supabase.channel(sessionStateChannel(sessionCode));
+  await new Promise<void>((resolve) => {
+    ch.subscribe((status) => { if (status === "SUBSCRIBED") resolve(); });
+    setTimeout(resolve, 1500);
+  });
+  try {
+    await ch.send({ type: "broadcast", event: SESSION_STATE_EVENT, payload: patch });
+  } finally {
+    setTimeout(() => { try { supabase.removeChannel(ch); } catch { /* ignore */ } }, 500);
+  }
+}
+
+
 export function useMatchSync(sessionCode: string | null): MatchSyncSnapshot {
   const [row, setRow] = useState<MatchSyncRow | null>(null);
   const [tick, setTick] = useState(0);
