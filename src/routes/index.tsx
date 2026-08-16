@@ -41,9 +41,21 @@ function roleNeedsAssignedSlot(role: UserRole) {
 }
 
 function Index() {
-  const { selectedRole, judgeId, setupComplete, setSetupComplete } = useCompetition();
+  const { selectedRole, judgeId, setupComplete, setSetupComplete, storageHydrated } = useCompetition();
+
+  // Wait for the persisted role/session to be restored before deciding what to
+  // render — otherwise a reload or a socket-driven remount briefly sees a null
+  // role and bounces the user off their assigned station.
+  if (!storageHydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#050505" }}>
+        <span className="text-xs tracking-widest uppercase text-white/50 font-body">Restoring session…</span>
+      </div>
+    );
+  }
 
   if (!selectedRole) return <RoleSelection />;
+
 
   // Standalone roles (no slot assignment needed)
   if (selectedRole === "chief-referee") {
