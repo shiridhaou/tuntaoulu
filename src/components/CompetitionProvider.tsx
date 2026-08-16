@@ -748,6 +748,7 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
   return (
     <CompetitionContext.Provider
       value={{
+        storageHydrated,
         isAuthenticated, selectedRole, competitionStyle, athletes, currentAthleteIndex,
         timerRunning, timerElapsed, continuityPause,
         sessionCode, judgeId,
