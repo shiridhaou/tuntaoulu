@@ -21,6 +21,7 @@ import { matchControl, useMatchSync, broadcastSessionState } from "@/hooks/useMa
 import { getWebhookSettings, saveWebhookSettings, isValidWebhookUrl, type WebhookSettings } from "@/lib/resultsWebhook";
 import { dateInputProps, fmtClock, toWesternDigits } from "@/lib/numFormat";
 import { cleanUuid, newUuid } from "@/lib/uuid";
+import { normalizeStyle, styleLabelAr } from "@/lib/styleNames";
 
 import { FederationLogo } from "./FederationLogo";
 import { Button } from "./ui/button";
@@ -55,6 +56,7 @@ interface Athlete {
   club: string | null;
   country: string | null;
   status: "waiting" | "judging" | "done";
+  style?: string | null;
   difficulty_codes?: string[] | null;
   difficulty_sheet?: DifficultyItem[] | null;
 }
