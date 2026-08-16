@@ -464,8 +464,10 @@ function TADashboardInner() {
   async function persistRecords(records: ReturnType<typeof normalizeRow>[]) {
     if (!records.length) return;
     try {
+      // Never send a non-UUID tournament_id to the database (22P02).
+      const tid = await resolveTournamentId();
       // Strip transient fields (e.g. _mode) before persisting.
-      const clean = records.map(({ _mode, ...rest }: any) => rest);
+      const clean = records.map(({ _mode, ...rest }: any) => ({ ...rest, tournament_id: tid }));
       const { error } = await supabase.from("athletes").insert(clean);
       if (error) throw error;
       toast.success(`تم حفظ ${records.length} لاعب`);
