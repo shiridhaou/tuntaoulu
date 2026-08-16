@@ -200,6 +200,9 @@ function TADashboardInner() {
   // Out-of-bounds points stepper (IWUF: 0.1 per OOB)
   const [oobPoints, setOobPoints] = useState(0);
 
+  // Manually selected athlete (from the queue table "اختيار / Select" action).
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
   // Match config (broadcast to judges via current_match.payload)
   const [matchMode, setMatchMode] = useState<"compulsory" | "optional">("optional");
   const [styleCategory, setStyleCategory] = useState<"changquan" | "nanquan" | "taijiquan" | "traditional">("changquan");
