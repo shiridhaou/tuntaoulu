@@ -25,8 +25,10 @@ export function GroupAKeypad({ availableDecades, activeDecade, onSelect }: Props
         return (
           <button
             key={d}
+            type="button"
             disabled={!enabled}
-            onClick={() => { haptic(18); onSelect(d); }}
+            onPointerDown={(e) => { e.stopPropagation(); }}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); haptic(18); onSelect(d); }}
             title={info ? `${info.pinyin} — ${info.titleAr}` : d}
             className="h-16 rounded-xl font-black tabular-nums select-none active:scale-[0.95] transition-all disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed flex flex-col items-center justify-center"
             style={{

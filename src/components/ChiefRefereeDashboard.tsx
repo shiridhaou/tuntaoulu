@@ -12,6 +12,7 @@ import { FinalScoreSheetModal } from "./FinalScoreSheetModal";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMatchSync } from "@/hooks/useMatchSync";
+import { styleLabelAr, styleLabelEn } from "@/lib/styleNames";
 import { modeCaps } from "@/lib/matchMode";
 import { pushDisplaySettings, uploadSponsorLogo } from "@/hooks/useDisplaySettings";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -105,8 +106,22 @@ function ChiefRefereeDashboardInner() {
   const effMaxB = caps.maxB;
   const effMaxC = caps.maxC;
   const selectedAthlete = athletes[currentAthleteIndex];
+  // Metadata pushed by the TA in the MATCH_STATE_CHANGE payload — used as an
+  // instant fallback so the name bar flips off "waiting" even before the local
+  // athlete list has mirrored the row.
+  const syncAthleteMeta = (timerSync.payload as Record<string, any> | null)?.activeAthlete
+    ?? (timerSync.payload as Record<string, any> | null)?.athlete ?? null;
   const currentAthlete = timerSync.athleteId
-    ? athletes.find((athlete) => athlete.id === timerSync.athleteId) ?? selectedAthlete
+    ? athletes.find((athlete) => athlete.id === timerSync.athleteId)
+      ?? (syncAthleteMeta
+        ? {
+            id: timerSync.athleteId,
+            name: String(syncAthleteMeta.name ?? "—"),
+            country: String(syncAthleteMeta.country ?? "—"),
+            category: String(syncAthleteMeta.category ?? ""),
+            order: currentAthleteIndex + 1,
+          }
+        : selectedAthlete)
     : null;
   const hasActiveAthlete = Boolean(timerSync.athleteId);
 
@@ -505,7 +520,9 @@ function ChiefRefereeDashboardInner() {
               )}
             </div>
               <p className="text-[10px] text-white/50 font-heading font-bold tracking-[0.2em] mt-0.5" dir="ltr">
-               {STYLES.find(s => s.id === competitionStyle)?.label || currentAthlete?.category || "Waiting for Athlete"}
+               {timerSync.style || competitionStyle
+                 ? `${styleLabelEn(timerSync.style ?? competitionStyle)} · ${styleLabelAr(timerSync.style ?? competitionStyle)}`
+                 : currentAthlete?.category || "Waiting for Athlete"}
             </p>
           </div>
 

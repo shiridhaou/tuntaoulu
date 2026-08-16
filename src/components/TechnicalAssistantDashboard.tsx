@@ -21,6 +21,7 @@ import { matchControl, useMatchSync, broadcastSessionState } from "@/hooks/useMa
 import { getWebhookSettings, saveWebhookSettings, isValidWebhookUrl, type WebhookSettings } from "@/lib/resultsWebhook";
 import { dateInputProps, fmtClock, toWesternDigits } from "@/lib/numFormat";
 import { cleanUuid, newUuid } from "@/lib/uuid";
+import { normalizeStyle, styleLabelAr } from "@/lib/styleNames";
 
 import { FederationLogo } from "./FederationLogo";
 import { Button } from "./ui/button";
@@ -55,6 +56,7 @@ interface Athlete {
   club: string | null;
   country: string | null;
   status: "waiting" | "judging" | "done";
+  style?: string | null;
   difficulty_codes?: string[] | null;
   difficulty_sheet?: DifficultyItem[] | null;
 }
@@ -632,26 +634,33 @@ function TADashboardInner() {
     await supabase.from("current_match").upsert({
       session_code: sessionCode,
       athlete_id: athlete.id,
-      style: styleCategory,
+      style: normalizeStyle(athlete.style ?? styleCategory, styleCategory),
       timer_state: "idle",
       started_at: null,
       elapsed_ms: 0,
       payload: {
         match_mode: matchMode,
-        style: styleCategory,
+        style: normalizeStyle(athlete.style ?? styleCategory, styleCategory),
         time_rule: timeRuleId,
         locked: configLocked,
+        status: "LIVE",
+        category: athlete.age_category ?? null,
         difficultySheet,
+        movements: difficultySheet,
         athlete: {
           id: athlete.id,
           name: athlete.full_name,
           bib: athlete.bib_number,
           club: athlete.club,
           country: athlete.country,
+          category: athlete.age_category ?? null,
         },
       } as never,
       updated_at: new Date().toISOString(),
     }, { onConflict: "session_code" });
+
+    // Instant MATCH_STATE_CHANGE fan-out (Chief, A/B/C, VAR) + C-sheet push.
+    await publishMatchState(athlete, "LIVE", difficultySheet);
 
     // Reset all existing judge slots to judging for this athlete
     await supabase.from("judge_status")
@@ -717,15 +726,91 @@ function TADashboardInner() {
     void loadJudgeStatuses();
   }
 
+  /** Resolve the athlete's Group C movements (curated sheet → codes → []). */
+  async function resolveMovements(athlete: Athlete): Promise<DifficultyItem[]> {
+    const { data: aRow } = await supabase
+      .from("athletes").select("difficulty_codes, difficulty_sheet").eq("id", athlete.id).maybeSingle();
+    const curated = ((aRow as any)?.difficulty_sheet ?? athlete.difficulty_sheet ?? []) as DifficultyItem[];
+    const codes = ((aRow as any)?.difficulty_codes ?? athlete.difficulty_codes ?? []) as string[];
+    if (Array.isArray(curated) && curated.length > 0) {
+      return curated.map((d: any) => ({
+        code: String(d.code ?? "").toUpperCase(),
+        label: String(d.label ?? d.code ?? ""),
+        value: Number(d.value ?? 0),
+      })).filter((d) => d.code);
+    }
+    if (codes.length) {
+      const { buildDifficultySheet } = await import("@/lib/difficultyCodes");
+      return buildDifficultySheet(codes) as DifficultyItem[];
+    }
+    return [];
+  }
+
+  /**
+   * Publish the full match state to every subscriber (Chief, A/B/C, VAR) —
+   * writes the authoritative `current_match` row AND fires an instant
+   * broadcast so panels flip off "WAITING FOR TA" without waiting for
+   * postgres replication.
+   */
+  async function publishMatchState(
+    athlete: Athlete,
+    status: "CALLED" | "LIVE",
+    movements: DifficultyItem[],
+  ) {
+    if (!sessionCode) return;
+    const style = normalizeStyle(athlete.style ?? styleCategory, styleCategory);
+    const athletePayload = {
+      id: athlete.id,
+      name: athlete.full_name,
+      bib: athlete.bib_number,
+      club: athlete.club,
+      country: athlete.country,
+      category: athlete.age_category ?? null,
+    };
+    const payload = {
+      match_mode: matchMode,
+      style,
+      time_rule: timeRuleId,
+      locked: configLocked,
+      status,
+      category: athlete.age_category ?? null,
+      athlete: athletePayload,
+      activeAthlete: athletePayload,
+      movements,
+      difficultySheet: movements,
+    };
+
+    await supabase.from("current_match").upsert({
+      session_code: sessionCode,
+      athlete_id: athlete.id,
+      style,
+      payload: payload as never,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "session_code" });
+
+    // Instant fan-out (MATCH_STATE_CHANGE) to all connected panels.
+    await broadcastSessionState(sessionCode, { style, athlete_id: athlete.id, payload });
+    await emitEvent("match_state_change", {
+      activeAthlete: athletePayload,
+      status,
+      category: athlete.age_category ?? null,
+      style,
+      movements,
+    });
+  }
+
   async function callAthlete(athlete: Athlete) {
+    const movements = await resolveMovements(athlete);
+    await publishMatchState(athlete, "CALLED", movements);
     await emitEvent("call_next", {
       athlete_id: athlete.id,
       name: athlete.full_name,
       bib: athlete.bib_number,
       club: athlete.club,
       country: athlete.country,
+      movements,
     });
-    toast.success(`تم نداء اللاعب: ${athlete.full_name}`);
+    toast.success(`تم نداء اللاعب: ${athlete.full_name} — تم إرسال ${movements.length} حركة لحكام C`);
   }
 
   // ──────────────────────────────────────────────────────────────────────
@@ -753,8 +838,29 @@ function TADashboardInner() {
   // so Chief, Judges and Public Display all see the same authoritative timer.
   async function timerStart() {
     if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
-    await matchControl.start(sessionCode);
-    await emitEvent("timer_start", { at: timerSec });
+    try {
+      // matchControl.start() UPDATEs the row — make sure it exists first,
+      // otherwise the click silently does nothing and the clock never moves.
+      const { data: existing } = await supabase
+        .from("current_match").select("session_code")
+        .eq("session_code", sessionCode).maybeSingle();
+      if (!existing) {
+        await supabase.from("current_match").upsert({
+          session_code: sessionCode,
+          athlete_id: liveAthlete?.id ?? null,
+          style: styleCategory,
+          timer_state: "idle",
+          started_at: null,
+          elapsed_ms: 0,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "session_code" });
+      }
+      await matchControl.start(sessionCode);
+      await emitEvent("timer_start", { at: timerSec });
+      pushLog("time", "▶ تشغيل المؤقت");
+    } catch (e: any) {
+      toast.error(e?.message ?? "تعذّر تشغيل المؤقت");
+    }
   }
   async function timerStop() {
     if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
@@ -1006,6 +1112,9 @@ function TADashboardInner() {
                 <SelectItem value="traditional">Traditional</SelectItem>
               </SelectContent>
             </Select>
+            <span className="hidden xl:inline-flex items-center px-2 h-7 rounded-lg border border-fed-blue/30 bg-background/60 text-[11px] font-bold text-fed-blue">
+              {styleLabelAr(styleCategory)}
+            </span>
             {!configLocked ? (
               <Button onClick={lockAndStart} size="sm" className="h-7 px-2 text-xs bg-gold text-navy hover:bg-gold/90 font-bold">
                 <Lock className="h-3 w-3 ml-1" /> Lock
@@ -1327,15 +1436,15 @@ function TADashboardInner() {
 
             <div className="flex gap-1.5 mt-2">
               {!timerRunning ? (
-                <Button onClick={timerStart} size="sm" className="flex-1 h-8 bg-emerald-500 hover:bg-emerald-600 text-white">
+                <Button type="button" onClick={() => void timerStart()} size="sm" className="flex-1 h-8 bg-emerald-500 hover:bg-emerald-600 text-white">
                   <Play className="h-3 w-3 ml-1" /> Start
                 </Button>
               ) : (
-                <Button onClick={timerStop} size="sm" className="flex-1 h-8 bg-orange-500 hover:bg-orange-600 text-white">
+                <Button type="button" onClick={() => void timerStop()} size="sm" className="flex-1 h-8 bg-orange-500 hover:bg-orange-600 text-white">
                   <Pause className="h-3 w-3 ml-1" /> Stop
                 </Button>
               )}
-              <Button onClick={timerReset} size="sm" variant="outline" className="h-8 px-2 border-white/20 text-white hover:bg-white/10">
+              <Button type="button" onClick={() => void timerReset()} size="sm" variant="outline" className="h-8 px-2 border-white/20 text-white hover:bg-white/10">
                 <RotateCcw className="h-3 w-3" />
               </Button>
             </div>
@@ -2022,7 +2131,7 @@ function DifficultyManager({
   // the Group C judges (no manual tap required). Guarded per athlete.
   const autoPushRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!targetAthlete || !isLive || !sessionCode) return;
+    if (!targetAthlete || !sessionCode) return;
     if (sheet.length === 0) return;
     if (autoPushRef.current === targetAthlete.id) return;
     autoPushRef.current = targetAthlete.id;
@@ -2081,7 +2190,7 @@ function DifficultyManager({
         .eq("id", targetAthlete.id);
       if (error) throw error;
 
-      if (broadcastNow && sessionCode && isLive) {
+      if (broadcastNow && sessionCode) {
         // Update the live current_match payload so all C judges receive immediately.
         const { data: existing } = await supabase
           .from("current_match").select("payload, athlete_id, style")
@@ -2091,13 +2200,16 @@ function DifficultyManager({
           session_code: sessionCode,
           athlete_id: existing?.athlete_id ?? targetAthlete.id,
           style: (existing as any)?.style ?? null,
-          payload: { ...prevPayload, difficultySheet: clean } as never,
+          payload: { ...prevPayload, difficultySheet: clean, movements: clean } as never,
           updated_at: new Date().toISOString(),
         }, { onConflict: "session_code" });
         await supabase.from("match_events").insert({
           session_code: sessionCode,
           event_type: "difficulty_pushed",
           payload: { athlete_id: targetAthlete.id, count: clean.length, total },
+        });
+        await broadcastSessionState(sessionCode, {
+          payload: { difficultySheet: clean, movements: clean },
         });
         setPushed(true);
         toast.success(`📤 تم دفع ${clean.length} حركة إلى حكام المجموعة C`);
@@ -2171,7 +2283,7 @@ function DifficultyManager({
             className="h-8 border-white/20 text-white/80 hover:bg-white/10 text-xs">
             <CheckCircle2 className="h-3 w-3 ml-1" /> حفظ
           </Button>
-          <Button onClick={() => saveSheet(true)} size="sm" disabled={loading || !isLive || sheet.length === 0}
+          <Button type="button" onClick={() => void saveSheet(true)} size="sm" disabled={loading || !sessionCode || sheet.length === 0}
             className="h-8 bg-cyber-orange text-black hover:brightness-110 font-bold text-xs disabled:opacity-40">
             <Send className="h-3 w-3 ml-1" /> دفع لحكام C
           </Button>
@@ -2192,7 +2304,7 @@ function DifficultyManager({
                 <Input
                   value={d.code}
                   onChange={(e) => updateRow(i, { code: e.target.value.toUpperCase() })}
-                  className="col-span-2 h-7 text-xs font-mono font-bold text-cyber-orange bg-black border-white/10"
+                  className="col-span-2 h-7 text-xs font-mono font-bold text-cyber-orange bg-black border-white/10 num-west"
                   dir="ltr"
                 />
                 <Input
@@ -2205,7 +2317,7 @@ function DifficultyManager({
                   type="number" step="0.05" min="0" max="1"
                   value={d.value}
                   onChange={(e) => updateRow(i, { value: parseFloat(e.target.value) || 0 })}
-                  className="col-span-1 h-7 text-xs text-center font-mono font-bold text-emerald-400 bg-black border-white/10"
+                  className="col-span-1 h-7 text-xs text-center font-mono font-bold text-emerald-400 bg-black border-white/10 num-west"
                   dir="ltr"
                 />
                 <Button onClick={() => removeRow(i)} size="icon" variant="ghost"

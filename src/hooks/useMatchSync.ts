@@ -44,7 +44,7 @@ export const sessionStateChannel = (code: string) => `session-state-${code}`;
  */
 export async function broadcastSessionState(
   sessionCode: string,
-  patch: { style?: string | null; payload?: Record<string, unknown> },
+  patch: { style?: string | null; athlete_id?: string | null; payload?: Record<string, unknown> },
 ) {
   const ch = supabase.channel(sessionStateChannel(sessionCode));
   await new Promise<void>((resolve) => {
@@ -102,7 +102,7 @@ export function useMatchSync(sessionCode: string | null): MatchSyncSnapshot {
       const p = (payload ?? {}) as Partial<MatchSyncRow>;
       setRow((prev) => ({
         session_code: sessionCode,
-        athlete_id: prev?.athlete_id ?? null,
+        athlete_id: p.athlete_id !== undefined ? p.athlete_id : (prev?.athlete_id ?? null),
         timer_state: prev?.timer_state ?? "idle",
         started_at: prev?.started_at ?? null,
         elapsed_ms: prev?.elapsed_ms ?? 0,
