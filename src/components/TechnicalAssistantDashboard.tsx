@@ -1541,7 +1541,7 @@ function TADashboardInner() {
 
         {/* ===== MAIN WORKSPACE: MATCH MANAGEMENT ===== */}
         <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          className="glass-card rounded-xl p-3 flex flex-col gap-3">
+          className="num-west glass-card rounded-xl p-3 flex flex-col gap-3">
 
           <div className="flex items-center justify-between flex-wrap gap-2 shrink-0">
             <div className="flex items-center gap-2 flex-wrap">
