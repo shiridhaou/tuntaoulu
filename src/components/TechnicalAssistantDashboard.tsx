@@ -608,8 +608,10 @@ function TADashboardInner() {
     // the simple `difficulty_codes` array + IWUF catalog.
     const { data: aRow } = await supabase
       .from("athletes").select("difficulty_codes, difficulty_sheet").eq("id", athlete.id).maybeSingle();
-    const curated = (aRow as { difficulty_sheet?: DifficultyItem[] | null } | null)?.difficulty_sheet ?? [];
-    const codes = (aRow as { difficulty_codes?: string[] } | null)?.difficulty_codes ?? [];
+    const curated = (aRow as { difficulty_sheet?: DifficultyItem[] | null } | null)?.difficulty_sheet
+      ?? athlete.difficulty_sheet ?? [];
+    const codes = (aRow as { difficulty_codes?: string[] } | null)?.difficulty_codes
+      ?? athlete.difficulty_codes ?? [];
     let difficultySheet: DifficultyItem[] = [];
     if (Array.isArray(curated) && curated.length > 0) {
       difficultySheet = curated.map((d: any) => ({
