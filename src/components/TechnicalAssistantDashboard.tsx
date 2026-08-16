@@ -1660,6 +1660,7 @@ function TADashboardInner() {
             )}
           </div>
         </motion.section>
+        </div>
       </div>
 
       <style>{`
