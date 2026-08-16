@@ -1271,7 +1271,7 @@ function TADashboardInner() {
 
         {/* ===== FIXED TOP BAR: Timer | OOB | Sync + Athlete Call ===== */}
         <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl p-3 grid grid-cols-12 gap-3 border border-foreground/10 shrink-0"
+          className="num-west rounded-2xl p-3 grid grid-cols-12 gap-3 border border-foreground/10 shrink-0"
           style={{ background: "#000" }}
         >
           {/* Official Timer — Phase-aware (PRE / LIVE / POST) */}
@@ -2124,7 +2124,7 @@ function DifficultyManager({
   return (
     <motion.section
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl p-3 border-2 border-cyber-orange/40 bg-black shadow-[0_0_24px_rgba(251,146,60,0.15)]"
+      className="num-west rounded-2xl p-3 border-2 border-cyber-orange/40 bg-black shadow-[0_0_24px_rgba(251,146,60,0.15)]"
     >
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
