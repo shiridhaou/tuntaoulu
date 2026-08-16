@@ -15,7 +15,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { supabase } from "@/integrations/supabase/client";
-import { joinSessionMembership } from "@/lib/sessionMembership";
+import { joinSessionMembership, ensureDeviceSession } from "@/lib/sessionMembership";
 
 import { matchControl, useMatchSync, broadcastSessionState } from "@/hooks/useMatchSync";
 import { getWebhookSettings, saveWebhookSettings, isValidWebhookUrl, type WebhookSettings } from "@/lib/resultsWebhook";
@@ -350,7 +350,7 @@ function TADashboardInner() {
       } else {
         // Writes require an authenticated device + membership row for this session.
         await ensureDeviceSession();
-        await joinSessionMembership(sessionCode, "technical-assistant");
+        await joinSessionMembership(sessionCode ?? "", "technical-assistant");
 
         let { data, error } = await supabase.from("tournaments").insert(payload).select().single();
         if (error) {
@@ -358,7 +358,7 @@ function TADashboardInner() {
             message: error.message, details: error.details, hint: error.hint, code: error.code, payload,
           });
           // Retry once after re-asserting membership (RLS race on first join).
-          await joinSessionMembership(sessionCode, "technical-assistant");
+          await joinSessionMembership(sessionCode ?? "", "technical-assistant");
           const retry = await supabase.from("tournaments").insert(payload).select().single();
           if (retry.error) {
             console.error("[tournaments] insert retry failed", {
