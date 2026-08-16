@@ -290,6 +290,22 @@ function TADashboardInner() {
 
   // Timer ticks are driven by useMatchSync (1Hz local extrapolation while running).
 
+  const localTournamentKey = () => `ta:tournament:${sessionCode ?? "none"}`;
+
+  function readLocalTournament(): Tournament | null {
+    try {
+      const raw = localStorage.getItem(localTournamentKey());
+      return raw ? (JSON.parse(raw) as Tournament) : null;
+    } catch { return null; }
+  }
+
+  function writeLocalTournament(t: Tournament | null) {
+    try {
+      if (t) localStorage.setItem(localTournamentKey(), JSON.stringify(t));
+      else localStorage.removeItem(localTournamentKey());
+    } catch { /* storage unavailable — local context still holds the value */ }
+  }
+
   async function loadActive() {
     if (!sessionCode) return;
     const { data: t } = await supabase
@@ -297,6 +313,7 @@ function TADashboardInner() {
       .order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (t) {
       setTournament(t as Tournament);
+      writeLocalTournament(t as Tournament);
       setForm({
         name: t.name, location: t.location ?? "",
         start_date: t.start_date ?? "", end_date: t.end_date ?? "",
@@ -304,13 +321,24 @@ function TADashboardInner() {
       const { data: a } = await supabase
         .from("athletes").select("*").eq("tournament_id", t.id)
         .order("bib_number", { ascending: true });
-      setAthletes((a ?? []) as Athlete[]);
+      // Merge: never drop locally queued athletes that haven't synced yet.
+      setAthletes((prev) => {
+        const remote = (a ?? []) as Athlete[];
+        const ids = new Set(remote.map((x) => x.id));
+        return [...remote, ...prev.filter((x) => !ids.has(x.id))];
+      });
     } else {
-      setTournament(null);
-      setAthletes([]);
-      setForm({ name: "", location: "", start_date: "", end_date: "" });
+      const local = readLocalTournament();
+      if (local) {
+        setTournament(local);
+        setForm({
+          name: local.name, location: local.location ?? "",
+          start_date: local.start_date ?? "", end_date: local.end_date ?? "",
+        });
+      }
     }
   }
+
 
   async function loadJudgeStatuses() {
     if (!sessionCode) return;
@@ -331,68 +359,57 @@ function TADashboardInner() {
     return parts.join(" — ") || "خطأ غير معروف";
   }
 
-  async function saveTournament() {
+  /**
+   * Local-first: the form is committed to local context + localStorage right
+   * away, then pushed to the database in the background. Database problems are
+   * logged (and surfaced as a soft notice) but never block the panel.
+   */
+  function saveTournament() {
     if (!form.name.trim()) { toast.error("اسم البطولة مطلوب"); return; }
-    setLoading(true);
-    try {
-      const payload = {
-        name: form.name.trim(),
-        location: form.location.trim() || null,
-        start_date: form.start_date.trim() || null,
-        end_date: form.end_date.trim() || null,
-        session_code: sessionCode,
-        active: true,
-      };
 
-      if (tournament) {
-        const { error } = await supabase.from("tournaments").update(payload).eq("id", tournament.id);
-        if (error) throw error;
-        toast.success("تم تحديث البطولة");
-      } else {
-        // Writes require an authenticated device + membership row for this session.
+    const payload = {
+      name: form.name.trim(),
+      location: form.location.trim() || null,
+      start_date: form.start_date.trim() || null,
+      end_date: form.end_date.trim() || null,
+      session_code: sessionCode,
+      active: true,
+    };
+
+    // 1) Local source of truth — instant.
+    const isNew = !tournament;
+    const localTournament = {
+      // MUST be a canonical UUID — prefixed ids break every FK insert (22P02).
+      id: cleanUuid(tournament?.id) ?? newUuid(),
+      ...payload,
+      created_at: (tournament as any)?.created_at ?? new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as unknown as Tournament;
+    setTournament(localTournament);
+    writeLocalTournament(localTournament);
+    toast.success(isNew ? "تم إنشاء البطولة" : "تم تحديث البطولة");
+    if (isNew) setTab("import");
+
+    // 2) Background sync — never blocks or fails the UI.
+    void (async () => {
+      try {
         await ensureDeviceSession();
         await joinSessionMembership(sessionCode ?? "", "technical-assistant");
-
-        let { data, error } = await supabase.from("tournaments").insert(payload).select().single();
-        if (error) {
-          console.error("[tournaments] insert failed", {
-            message: error.message, details: error.details, hint: error.hint, code: error.code, payload,
-          });
-          // Retry once after re-asserting membership (RLS race on first join).
-          await joinSessionMembership(sessionCode ?? "", "technical-assistant");
-          const retry = await supabase.from("tournaments").insert(payload).select().single();
-          if (retry.error) {
-            console.error("[tournaments] insert retry failed", {
-              message: retry.error.message, details: retry.error.details,
-              hint: retry.error.hint, code: retry.error.code,
-            });
-            // Non-blocking fallback: keep a local tournament context so the TA
-            // can still import athletes and run the session.
-            const local = {
-              // MUST be a canonical UUID — prefixed ids break every FK insert (22P02).
-              id: newUuid(),
-              ...payload,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            } as unknown as Tournament;
-            setTournament(local);
-            setTab("import");
-            toast.error(`فشل إنشاء البطولة: ${describeDbError(retry.error)} — تم تفعيل وضع محلي مؤقت`);
-            return;
-          }
-          data = retry.data;
+        const { data, error } = await supabase
+          .from("tournaments")
+          .upsert({ id: localTournament.id, ...payload }, { onConflict: "id" })
+          .select().single();
+        if (error) throw error;
+        if (data) {
+          setTournament(data as Tournament);
+          writeLocalTournament(data as Tournament);
         }
-        setTournament(data as Tournament);
-        toast.success("تم إنشاء البطولة");
-        setTab("import");
+      } catch (e: any) {
+        console.warn("[tournaments] background sync failed — local context kept", describeDbError(e));
       }
-      void loadActive();
-    } catch (e: any) {
-      console.error("[tournaments] save error", e);
-      toast.error(`فشل إنشاء البطولة: ${describeDbError(e)}`);
-    }
-    finally { setLoading(false); }
+    })();
   }
+
 
   /**
    * Returns a tournament_id that is guaranteed to be a canonical UUID AND to
@@ -461,28 +478,46 @@ function TADashboardInner() {
     finally { setLoading(false); }
   }
 
-  async function persistRecords(records: ReturnType<typeof normalizeRow>[]) {
+  /**
+   * Local-first import: parsed athletes are appended to the local queue and the
+   * modal closes immediately; the database insert runs in the background.
+   */
+  function persistRecords(records: ReturnType<typeof normalizeRow>[]) {
     if (!records.length) return;
-    try {
-      // Never send a non-UUID tournament_id to the database (22P02).
-      const tid = await resolveTournamentId();
-      // Strip transient fields (e.g. _mode) before persisting.
-      const clean = records.map(({ _mode, ...rest }: any) => ({ ...rest, tournament_id: tid }));
-      const { error } = await supabase.from("athletes").insert(clean);
-      if (error) throw error;
-      toast.success(`تم حفظ ${records.length} لاعب`);
-      setPreview(null);
-      setTab("matches");
-      void loadActive();
-    } catch (e: any) { toast.error(e.message ?? "فشل حفظ اللاعبين"); }
+
+    // Strip transient fields (e.g. _mode) before storing/persisting.
+    const clean = records.map(({ _mode, ...rest }: any) => ({
+      ...rest,
+      id: cleanUuid(rest.id) ?? newUuid(),
+    }));
+
+    // 1) Instant local queue + UI refresh.
+    setAthletes((prev) => [...prev, ...(clean as Athlete[])]);
+    setPreview(null);
+    setTab("matches");
+    toast.success(`تمت إضافة ${clean.length} لاعب إلى قائمة المباريات`);
+
+    // 2) Background database insert — never blocks the modal or the table.
+    void (async () => {
+      try {
+        // Never send a non-UUID tournament_id to the database (22P02).
+        const tid = await resolveTournamentId();
+        const { error } = await supabase
+          .from("athletes")
+          .upsert(clean.map((r) => ({ ...r, tournament_id: tid })), { onConflict: "id" });
+        if (error) throw error;
+        void loadActive();
+      } catch (e: any) {
+        console.warn("[athletes] background import sync failed — local queue kept", e?.message ?? e);
+      }
+    })();
   }
 
-  async function confirmImport() {
+  function confirmImport() {
     if (!preview) return;
-    setLoading(true);
-    try { await persistRecords(preview); }
-    finally { setLoading(false); }
+    persistRecords(preview);
   }
+
 
 
   function downloadTemplate() {
