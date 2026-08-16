@@ -478,28 +478,46 @@ function TADashboardInner() {
     finally { setLoading(false); }
   }
 
-  async function persistRecords(records: ReturnType<typeof normalizeRow>[]) {
+  /**
+   * Local-first import: parsed athletes are appended to the local queue and the
+   * modal closes immediately; the database insert runs in the background.
+   */
+  function persistRecords(records: ReturnType<typeof normalizeRow>[]) {
     if (!records.length) return;
-    try {
-      // Never send a non-UUID tournament_id to the database (22P02).
-      const tid = await resolveTournamentId();
-      // Strip transient fields (e.g. _mode) before persisting.
-      const clean = records.map(({ _mode, ...rest }: any) => ({ ...rest, tournament_id: tid }));
-      const { error } = await supabase.from("athletes").insert(clean);
-      if (error) throw error;
-      toast.success(`تم حفظ ${records.length} لاعب`);
-      setPreview(null);
-      setTab("matches");
-      void loadActive();
-    } catch (e: any) { toast.error(e.message ?? "فشل حفظ اللاعبين"); }
+
+    // Strip transient fields (e.g. _mode) before storing/persisting.
+    const clean = records.map(({ _mode, ...rest }: any) => ({
+      ...rest,
+      id: cleanUuid(rest.id) ?? newUuid(),
+    }));
+
+    // 1) Instant local queue + UI refresh.
+    setAthletes((prev) => [...prev, ...(clean as Athlete[])]);
+    setPreview(null);
+    setTab("matches");
+    toast.success(`تمت إضافة ${clean.length} لاعب إلى قائمة المباريات`);
+
+    // 2) Background database insert — never blocks the modal or the table.
+    void (async () => {
+      try {
+        // Never send a non-UUID tournament_id to the database (22P02).
+        const tid = await resolveTournamentId();
+        const { error } = await supabase
+          .from("athletes")
+          .upsert(clean.map((r) => ({ ...r, tournament_id: tid })), { onConflict: "id" });
+        if (error) throw error;
+        void loadActive();
+      } catch (e: any) {
+        console.warn("[athletes] background import sync failed — local queue kept", e?.message ?? e);
+      }
+    })();
   }
 
-  async function confirmImport() {
+  function confirmImport() {
     if (!preview) return;
-    setLoading(true);
-    try { await persistRecords(preview); }
-    finally { setLoading(false); }
+    persistRecords(preview);
   }
+
 
 
   function downloadTemplate() {
