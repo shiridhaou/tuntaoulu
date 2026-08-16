@@ -1931,36 +1931,27 @@ function StatCard({ label, value, color, icon }: { label: string; value: number;
   );
 }
 
-function ActionButtons({ a, onStart, onFinish, onDelete, onCall }: {
+function ActionButtons({ a, onFinish, onDelete, onSelect, isSelected }: {
   a: Athlete;
-  onStart: (a: Athlete) => void;
   onFinish: (a: Athlete) => void;
   onDelete: (id: string) => void;
-  onCall: (a: Athlete) => void;
+  onSelect: (a: Athlete) => void;
+  isSelected: boolean;
 }) {
   return (
     <div className="flex gap-1.5 flex-wrap">
-      {a.status === "waiting" && (
-        <Button size="sm" variant="outline" onClick={() => onCall(a)}
-          className="h-8 border-fed-blue/40 text-fed-blue hover:bg-fed-blue/10">
-          <Megaphone className="h-3.5 w-3.5 ml-1" /> نداء
-        </Button>
-      )}
-      {a.status !== "judging" && a.status !== "done" && (
-        <Button size="sm" onClick={() => onStart(a)}
-          className="h-8 bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/30">
-          <Play className="h-3.5 w-3.5 ml-1" /> ابدأ
+      {a.status !== "judging" && (
+        <Button size="sm" variant={isSelected ? "default" : "outline"} onClick={() => onSelect(a)}
+          className={isSelected
+            ? "h-8 bg-fed-blue hover:bg-fed-blue/90 text-white"
+            : "h-8 border-fed-blue/40 text-fed-blue hover:bg-fed-blue/10"}>
+          <Megaphone className="h-3.5 w-3.5 ml-1" /> اختيار / Select
         </Button>
       )}
       {a.status === "judging" && (
         <Button size="sm" onClick={() => onFinish(a)}
           className="h-8 bg-fed-blue hover:bg-fed-blue/90 text-white shadow-md shadow-fed-blue/30">
           <CheckCircle2 className="h-3.5 w-3.5 ml-1" /> إنهاء
-        </Button>
-      )}
-      {a.status === "done" && (
-        <Button size="sm" variant="outline" onClick={() => onStart(a)} className="h-8">
-          <Play className="h-3.5 w-3.5 ml-1" /> إعادة
         </Button>
       )}
       <Button size="sm" variant="ghost" onClick={() => onDelete(a.id)}
