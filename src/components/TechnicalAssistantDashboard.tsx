@@ -20,6 +20,7 @@ import { joinSessionMembership, ensureDeviceSession } from "@/lib/sessionMembers
 import { matchControl, useMatchSync, broadcastSessionState } from "@/hooks/useMatchSync";
 import { getWebhookSettings, saveWebhookSettings, isValidWebhookUrl, type WebhookSettings } from "@/lib/resultsWebhook";
 import { dateInputProps, fmtClock, toWesternDigits } from "@/lib/numFormat";
+import { cleanUuid, newUuid } from "@/lib/uuid";
 
 import { FederationLogo } from "./FederationLogo";
 import { Button } from "./ui/button";
