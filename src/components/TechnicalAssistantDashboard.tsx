@@ -1620,7 +1620,7 @@ function TADashboardInner() {
                               </Badge>
                             </td>
                             <td className="p-2.5">
-                              <ActionButtons a={a} onStart={startMatch} onFinish={finishMatch} onDelete={deleteAthlete} onCall={callAthlete} />
+                              <ActionButtons a={a} onFinish={finishMatch} onDelete={deleteAthlete} onSelect={selectAthlete} isSelected={selectedId === a.id} />
                             </td>
                           </tr>
                         );
@@ -1651,7 +1651,7 @@ function TADashboardInner() {
                           {cat && <Badge variant="outline" className={AGE_CATEGORY_COLORS[cat]}>{cat}</Badge>}
                           <span>{a.club ?? "—"} · {a.country ?? "—"}</span>
                         </div>
-                        <ActionButtons a={a} onStart={startMatch} onFinish={finishMatch} onDelete={deleteAthlete} onCall={callAthlete} />
+                        <ActionButtons a={a} onFinish={finishMatch} onDelete={deleteAthlete} onSelect={selectAthlete} isSelected={selectedId === a.id} />
                       </div>
                     );
                   })}
