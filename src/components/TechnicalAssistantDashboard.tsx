@@ -890,7 +890,22 @@ function TADashboardInner() {
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   const liveAthlete = athletes.find((a) => a.status === "judging") ?? null;
-  const nextAthlete = athletes.find((a) => a.status === "waiting") ?? null;
+  const selectedAthlete = selectedId ? (athletes.find((a) => a.id === selectedId) ?? null) : null;
+  const nextAthlete = selectedAthlete ?? athletes.find((a) => a.status === "waiting") ?? null;
+
+  // Queue selection — announce the athlete and make them the "up next" target
+  // for the Group C difficulty box (does NOT start the match).
+  function selectAthlete(a: Athlete) {
+    setSelectedId(a.id);
+    void callAthlete(a);
+    pushLog("match", `🎯 اختيار: ${a.full_name}`);
+  }
+
+  // Unified call + start for the up-next athlete.
+  async function callAndStart(a: Athlete) {
+    await callAthlete(a);
+    await startMatch(a);
+  }
 
   // ── State machine: pre → live → post ─────────────────────────────
   const matchPhase: "pre" | "live" | "post" =
