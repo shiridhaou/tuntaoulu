@@ -2018,6 +2018,18 @@ function DifficultyManager({
     })();
   }, [targetAthlete?.id]);
 
+  // AUTO-PUSH — as soon as a live athlete's sheet is available, broadcast it to
+  // the Group C judges (no manual tap required). Guarded per athlete.
+  const autoPushRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!targetAthlete || !isLive || !sessionCode) return;
+    if (sheet.length === 0) return;
+    if (autoPushRef.current === targetAthlete.id) return;
+    autoPushRef.current = targetAthlete.id;
+    void saveSheet(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetAthlete?.id, isLive, sessionCode, sheet.length]);
+
   const total = useMemo(() => sheet.reduce((s, d) => s + (Number(d.value) || 0), 0), [sheet]);
   const cJudgesSent = useMemo(
     () => judgeStatuses.filter((s) => s.judge_slot.startsWith("C") && s.state === "sent").length,
