@@ -171,7 +171,12 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
       }
     } catch { /* ignore */ }
 
-    const storedSession = lsGet(LS_KEYS.session);
+    const rawSession = lsGet(LS_KEYS.session);
+    // Only a well-formed session code counts as an active session; anything else
+    // (empty, malformed, "local-…") sends the user back to Role Selection.
+    const storedSession = rawSession && /^[A-Za-z0-9]{4,10}$/.test(rawSession.trim())
+      ? rawSession.trim().toUpperCase()
+      : null;
     const storedJudgeId = lsGet(LS_KEYS.judgeId);
     const storedRole = lsGet(LS_KEYS.role) as UserRole;
 
