@@ -931,12 +931,19 @@ function TADashboardInner() {
                         <Field label="المكان" icon={<MapPin className="h-3 w-3" />}>
                           <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="تونس" />
                         </Field>
-                        <Field label="تاريخ البداية" icon={<Calendar className="h-3 w-3" />}>
-                          <Input type="date" {...dateInputProps} value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
+                        <Field label="تاريخ البداية (YYYY-MM-DD)" icon={<Calendar className="h-3 w-3" />}>
+                          <Input type="text" inputMode="numeric" lang="en-GB" dir="ltr"
+                            placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}" maxLength={10}
+                            value={form.start_date}
+                            onChange={(e) => setForm({ ...form, start_date: toWesternDigits(e.target.value) })} />
                         </Field>
-                        <Field label="تاريخ النهاية" icon={<Calendar className="h-3 w-3" />}>
-                          <Input type="date" {...dateInputProps} value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
+                        <Field label="تاريخ النهاية (YYYY-MM-DD)" icon={<Calendar className="h-3 w-3" />}>
+                          <Input type="text" inputMode="numeric" lang="en-GB" dir="ltr"
+                            placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}" maxLength={10}
+                            value={form.end_date}
+                            onChange={(e) => setForm({ ...form, end_date: toWesternDigits(e.target.value) })} />
                         </Field>
+
                       </div>
                       <div className="flex justify-end pt-2">
                         <Button onClick={saveTournament} disabled={loading}
