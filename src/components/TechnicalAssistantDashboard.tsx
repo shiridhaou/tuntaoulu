@@ -1433,15 +1433,15 @@ function TADashboardInner() {
 
             <div className="flex gap-1.5 mt-2">
               {!timerRunning ? (
-                <Button onClick={timerStart} size="sm" className="flex-1 h-8 bg-emerald-500 hover:bg-emerald-600 text-white">
+                <Button type="button" onClick={() => void timerStart()} size="sm" className="flex-1 h-8 bg-emerald-500 hover:bg-emerald-600 text-white">
                   <Play className="h-3 w-3 ml-1" /> Start
                 </Button>
               ) : (
-                <Button onClick={timerStop} size="sm" className="flex-1 h-8 bg-orange-500 hover:bg-orange-600 text-white">
+                <Button type="button" onClick={() => void timerStop()} size="sm" className="flex-1 h-8 bg-orange-500 hover:bg-orange-600 text-white">
                   <Pause className="h-3 w-3 ml-1" /> Stop
                 </Button>
               )}
-              <Button onClick={timerReset} size="sm" variant="outline" className="h-8 px-2 border-white/20 text-white hover:bg-white/10">
+              <Button type="button" onClick={() => void timerReset()} size="sm" variant="outline" className="h-8 px-2 border-white/20 text-white hover:bg-white/10">
                 <RotateCcw className="h-3 w-3" />
               </Button>
             </div>
@@ -2128,7 +2128,7 @@ function DifficultyManager({
   // the Group C judges (no manual tap required). Guarded per athlete.
   const autoPushRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!targetAthlete || !isLive || !sessionCode) return;
+    if (!targetAthlete || !sessionCode) return;
     if (sheet.length === 0) return;
     if (autoPushRef.current === targetAthlete.id) return;
     autoPushRef.current = targetAthlete.id;
@@ -2187,7 +2187,7 @@ function DifficultyManager({
         .eq("id", targetAthlete.id);
       if (error) throw error;
 
-      if (broadcastNow && sessionCode && isLive) {
+      if (broadcastNow && sessionCode) {
         // Update the live current_match payload so all C judges receive immediately.
         const { data: existing } = await supabase
           .from("current_match").select("payload, athlete_id, style")
@@ -2197,13 +2197,16 @@ function DifficultyManager({
           session_code: sessionCode,
           athlete_id: existing?.athlete_id ?? targetAthlete.id,
           style: (existing as any)?.style ?? null,
-          payload: { ...prevPayload, difficultySheet: clean } as never,
+          payload: { ...prevPayload, difficultySheet: clean, movements: clean } as never,
           updated_at: new Date().toISOString(),
         }, { onConflict: "session_code" });
         await supabase.from("match_events").insert({
           session_code: sessionCode,
           event_type: "difficulty_pushed",
           payload: { athlete_id: targetAthlete.id, count: clean.length, total },
+        });
+        await broadcastSessionState(sessionCode, {
+          payload: { difficultySheet: clean, movements: clean },
         });
         setPushed(true);
         toast.success(`📤 تم دفع ${clean.length} حركة إلى حكام المجموعة C`);
@@ -2277,7 +2280,7 @@ function DifficultyManager({
             className="h-8 border-white/20 text-white/80 hover:bg-white/10 text-xs">
             <CheckCircle2 className="h-3 w-3 ml-1" /> حفظ
           </Button>
-          <Button onClick={() => saveSheet(true)} size="sm" disabled={loading || !isLive || sheet.length === 0}
+          <Button type="button" onClick={() => void saveSheet(true)} size="sm" disabled={loading || !sessionCode || sheet.length === 0}
             className="h-8 bg-cyber-orange text-black hover:brightness-110 font-bold text-xs disabled:opacity-40">
             <Send className="h-3 w-3 ml-1" /> دفع لحكام C
           </Button>
@@ -2298,7 +2301,7 @@ function DifficultyManager({
                 <Input
                   value={d.code}
                   onChange={(e) => updateRow(i, { code: e.target.value.toUpperCase() })}
-                  className="col-span-2 h-7 text-xs font-mono font-bold text-cyber-orange bg-black border-white/10"
+                  className="col-span-2 h-7 text-xs font-mono font-bold text-cyber-orange bg-black border-white/10 num-west"
                   dir="ltr"
                 />
                 <Input
@@ -2311,7 +2314,7 @@ function DifficultyManager({
                   type="number" step="0.05" min="0" max="1"
                   value={d.value}
                   onChange={(e) => updateRow(i, { value: parseFloat(e.target.value) || 0 })}
-                  className="col-span-1 h-7 text-xs text-center font-mono font-bold text-emerald-400 bg-black border-white/10"
+                  className="col-span-1 h-7 text-xs text-center font-mono font-bold text-emerald-400 bg-black border-white/10 num-west"
                   dir="ltr"
                 />
                 <Button onClick={() => removeRow(i)} size="icon" variant="ghost"
