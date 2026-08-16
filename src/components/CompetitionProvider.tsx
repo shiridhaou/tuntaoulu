@@ -150,6 +150,27 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
       if (typeof window !== "undefined") window.sessionStorage.setItem("taolu.tab", "1");
     } catch { /* ignore */ }
 
+    // STALE STATE GUARD: older builds stored fabricated ids prefixed with
+    // "local-". Those are invalid UUIDs and poison every DB write, so wipe the
+    // whole persisted namespace and start from Role Selection.
+    try {
+      if (typeof window !== "undefined") {
+        const poisoned: string[] = [];
+        for (let i = 0; i < window.localStorage.length; i++) {
+          const k = window.localStorage.key(i);
+          if (!k || !k.startsWith("taolu.")) continue;
+          if ((window.localStorage.getItem(k) ?? "").includes("local-")) poisoned.push(k);
+        }
+        if (poisoned.length) {
+          for (let i = 0; i < window.localStorage.length; i++) {
+            const k = window.localStorage.key(i);
+            if (k?.startsWith("taolu.")) poisoned.push(k);
+          }
+          [...new Set(poisoned)].forEach((k) => window.localStorage.removeItem(k));
+        }
+      }
+    } catch { /* ignore */ }
+
     const storedSession = lsGet(LS_KEYS.session);
     const storedJudgeId = lsGet(LS_KEYS.judgeId);
     const storedRole = lsGet(LS_KEYS.role) as UserRole;
