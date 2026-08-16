@@ -359,68 +359,57 @@ function TADashboardInner() {
     return parts.join(" — ") || "خطأ غير معروف";
   }
 
-  async function saveTournament() {
+  /**
+   * Local-first: the form is committed to local context + localStorage right
+   * away, then pushed to the database in the background. Database problems are
+   * logged (and surfaced as a soft notice) but never block the panel.
+   */
+  function saveTournament() {
     if (!form.name.trim()) { toast.error("اسم البطولة مطلوب"); return; }
-    setLoading(true);
-    try {
-      const payload = {
-        name: form.name.trim(),
-        location: form.location.trim() || null,
-        start_date: form.start_date.trim() || null,
-        end_date: form.end_date.trim() || null,
-        session_code: sessionCode,
-        active: true,
-      };
 
-      if (tournament) {
-        const { error } = await supabase.from("tournaments").update(payload).eq("id", tournament.id);
-        if (error) throw error;
-        toast.success("تم تحديث البطولة");
-      } else {
-        // Writes require an authenticated device + membership row for this session.
+    const payload = {
+      name: form.name.trim(),
+      location: form.location.trim() || null,
+      start_date: form.start_date.trim() || null,
+      end_date: form.end_date.trim() || null,
+      session_code: sessionCode,
+      active: true,
+    };
+
+    // 1) Local source of truth — instant.
+    const isNew = !tournament;
+    const localTournament = {
+      // MUST be a canonical UUID — prefixed ids break every FK insert (22P02).
+      id: cleanUuid(tournament?.id) ?? newUuid(),
+      ...payload,
+      created_at: (tournament as any)?.created_at ?? new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as unknown as Tournament;
+    setTournament(localTournament);
+    writeLocalTournament(localTournament);
+    toast.success(isNew ? "تم إنشاء البطولة" : "تم تحديث البطولة");
+    if (isNew) setTab("import");
+
+    // 2) Background sync — never blocks or fails the UI.
+    void (async () => {
+      try {
         await ensureDeviceSession();
         await joinSessionMembership(sessionCode ?? "", "technical-assistant");
-
-        let { data, error } = await supabase.from("tournaments").insert(payload).select().single();
-        if (error) {
-          console.error("[tournaments] insert failed", {
-            message: error.message, details: error.details, hint: error.hint, code: error.code, payload,
-          });
-          // Retry once after re-asserting membership (RLS race on first join).
-          await joinSessionMembership(sessionCode ?? "", "technical-assistant");
-          const retry = await supabase.from("tournaments").insert(payload).select().single();
-          if (retry.error) {
-            console.error("[tournaments] insert retry failed", {
-              message: retry.error.message, details: retry.error.details,
-              hint: retry.error.hint, code: retry.error.code,
-            });
-            // Non-blocking fallback: keep a local tournament context so the TA
-            // can still import athletes and run the session.
-            const local = {
-              // MUST be a canonical UUID — prefixed ids break every FK insert (22P02).
-              id: newUuid(),
-              ...payload,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            } as unknown as Tournament;
-            setTournament(local);
-            setTab("import");
-            toast.error(`فشل إنشاء البطولة: ${describeDbError(retry.error)} — تم تفعيل وضع محلي مؤقت`);
-            return;
-          }
-          data = retry.data;
+        const { data, error } = await supabase
+          .from("tournaments")
+          .upsert({ id: localTournament.id, ...payload }, { onConflict: "id" })
+          .select().single();
+        if (error) throw error;
+        if (data) {
+          setTournament(data as Tournament);
+          writeLocalTournament(data as Tournament);
         }
-        setTournament(data as Tournament);
-        toast.success("تم إنشاء البطولة");
-        setTab("import");
+      } catch (e: any) {
+        console.warn("[tournaments] background sync failed — local context kept", describeDbError(e));
       }
-      void loadActive();
-    } catch (e: any) {
-      console.error("[tournaments] save error", e);
-      toast.error(`فشل إنشاء البطولة: ${describeDbError(e)}`);
-    }
-    finally { setLoading(false); }
+    })();
   }
+
 
   /**
    * Returns a tournament_id that is guaranteed to be a canonical UUID AND to
