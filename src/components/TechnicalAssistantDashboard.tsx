@@ -1411,6 +1411,26 @@ function TADashboardInner() {
                 ⏯ ابدأ المؤقت لتفعيل الخصومات · Start timer to enable
               </p>
             )}
+
+            {/* Live event log (compact) */}
+            <div className="mt-2 border-t border-white/10 pt-1.5">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[9px] uppercase tracking-widest font-bold text-white/50" dir="ltr">Live Log</p>
+                <button onClick={() => setDrawerOpen(true)} className="text-[9px] text-fed-blue hover:underline">
+                  الكل ({eventLog.length})
+                </button>
+              </div>
+              <div className="h-[74px] overflow-y-auto space-y-0.5 pr-1">
+                {eventLog.length === 0 ? (
+                  <p className="text-[10px] text-muted-foreground italic text-center py-3">لا توجد أحداث بعد</p>
+                ) : eventLog.slice(0, 12).map((e, i) => (
+                  <div key={i} className="flex items-center justify-between gap-2 text-[10px]">
+                    <span className="text-white/70 truncate">{e.label}</span>
+                    <span className="text-white/35 font-mono shrink-0 num-west">{fmtClock(e.ts)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Athlete Call Box — bound to LIVE athlete (master state) */}
