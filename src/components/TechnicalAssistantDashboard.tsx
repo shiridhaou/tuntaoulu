@@ -20,6 +20,7 @@ import { joinSessionMembership, ensureDeviceSession } from "@/lib/sessionMembers
 import { matchControl, useMatchSync, broadcastSessionState } from "@/hooks/useMatchSync";
 import { getWebhookSettings, saveWebhookSettings, isValidWebhookUrl, type WebhookSettings } from "@/lib/resultsWebhook";
 import { dateInputProps, fmtClock, toWesternDigits } from "@/lib/numFormat";
+import { cleanUuid, newUuid } from "@/lib/uuid";
 
 import { FederationLogo } from "./FederationLogo";
 import { Button } from "./ui/button";
@@ -368,7 +369,8 @@ function TADashboardInner() {
             // Non-blocking fallback: keep a local tournament context so the TA
             // can still import athletes and run the session.
             const local = {
-              id: `local-${crypto.randomUUID()}`,
+              // MUST be a canonical UUID — prefixed ids break every FK insert (22P02).
+              id: newUuid(),
               ...payload,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
@@ -392,6 +394,37 @@ function TADashboardInner() {
     finally { setLoading(false); }
   }
 
+  /**
+   * Returns a tournament_id that is guaranteed to be a canonical UUID AND to
+   * exist in the database, so athlete inserts never hit 22P02 or an FK error.
+   * Falls back to `null` (unlinked athletes) instead of blocking the import.
+   */
+  async function resolveTournamentId(): Promise<string | null> {
+    const id = cleanUuid(tournament?.id) ?? newUuid();
+    try {
+      const { data: existing } = await supabase
+        .from("tournaments").select("id").eq("id", id).maybeSingle();
+      if (existing) return id;
+
+      await ensureDeviceSession();
+      await joinSessionMembership(sessionCode ?? "", "technical-assistant");
+      const { data: created, error } = await supabase.from("tournaments").insert({
+        id,
+        name: tournament?.name || form.name.trim() || "بطولة",
+        location: tournament?.location ?? (form.location.trim() || null),
+        start_date: tournament?.start_date ?? (form.start_date.trim() || null),
+        end_date: tournament?.end_date ?? (form.end_date.trim() || null),
+        session_code: sessionCode,
+        active: true,
+      }).select().single();
+      if (error) throw error;
+      setTournament(created as Tournament);
+      return id;
+    } catch (e) {
+      console.error("[tournaments] could not materialize tournament row", e);
+      return null;
+    }
+  }
 
   async function processFile(file: File) {
     if (!tournament) { toast.error("أنشئ البطولة أولاً"); return; }
@@ -431,8 +464,10 @@ function TADashboardInner() {
   async function persistRecords(records: ReturnType<typeof normalizeRow>[]) {
     if (!records.length) return;
     try {
+      // Never send a non-UUID tournament_id to the database (22P02).
+      const tid = await resolveTournamentId();
       // Strip transient fields (e.g. _mode) before persisting.
-      const clean = records.map(({ _mode, ...rest }: any) => rest);
+      const clean = records.map(({ _mode, ...rest }: any) => ({ ...rest, tournament_id: tid }));
       const { error } = await supabase.from("athletes").insert(clean);
       if (error) throw error;
       toast.success(`تم حفظ ${records.length} لاعب`);
@@ -494,8 +529,9 @@ function TADashboardInner() {
     setManualSaving(true);
     try {
       const cat = manualForm.category || (manualForm.birth_date ? classifyAge(manualForm.birth_date) : null);
+      const tid = await resolveTournamentId();
       const { data: inserted, error } = await supabase.from("athletes").insert({
-        tournament_id: tournament.id,
+        tournament_id: tid,
         bib_number: manualForm.bib.trim() || null,
         full_name: manualForm.name.trim(),
         gender: manualForm.gender || null,
