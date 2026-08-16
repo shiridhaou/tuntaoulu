@@ -290,6 +290,22 @@ function TADashboardInner() {
 
   // Timer ticks are driven by useMatchSync (1Hz local extrapolation while running).
 
+  const localTournamentKey = () => `ta:tournament:${sessionCode ?? "none"}`;
+
+  function readLocalTournament(): Tournament | null {
+    try {
+      const raw = localStorage.getItem(localTournamentKey());
+      return raw ? (JSON.parse(raw) as Tournament) : null;
+    } catch { return null; }
+  }
+
+  function writeLocalTournament(t: Tournament | null) {
+    try {
+      if (t) localStorage.setItem(localTournamentKey(), JSON.stringify(t));
+      else localStorage.removeItem(localTournamentKey());
+    } catch { /* storage unavailable — local context still holds the value */ }
+  }
+
   async function loadActive() {
     if (!sessionCode) return;
     const { data: t } = await supabase
@@ -297,6 +313,7 @@ function TADashboardInner() {
       .order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (t) {
       setTournament(t as Tournament);
+      writeLocalTournament(t as Tournament);
       setForm({
         name: t.name, location: t.location ?? "",
         start_date: t.start_date ?? "", end_date: t.end_date ?? "",
@@ -304,13 +321,24 @@ function TADashboardInner() {
       const { data: a } = await supabase
         .from("athletes").select("*").eq("tournament_id", t.id)
         .order("bib_number", { ascending: true });
-      setAthletes((a ?? []) as Athlete[]);
+      // Merge: never drop locally queued athletes that haven't synced yet.
+      setAthletes((prev) => {
+        const remote = (a ?? []) as Athlete[];
+        const ids = new Set(remote.map((x) => x.id));
+        return [...remote, ...prev.filter((x) => !ids.has(x.id))];
+      });
     } else {
-      setTournament(null);
-      setAthletes([]);
-      setForm({ name: "", location: "", start_date: "", end_date: "" });
+      const local = readLocalTournament();
+      if (local) {
+        setTournament(local);
+        setForm({
+          name: local.name, location: local.location ?? "",
+          start_date: local.start_date ?? "", end_date: local.end_date ?? "",
+        });
+      }
     }
   }
+
 
   async function loadJudgeStatuses() {
     if (!sessionCode) return;
