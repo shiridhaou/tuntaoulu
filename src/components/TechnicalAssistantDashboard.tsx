@@ -916,9 +916,9 @@ function TADashboardInner() {
   const deductionsEnabled = matchPhase !== "pre";
 
   return (
-    <div className="min-h-screen p-2 md:p-3 relative font-arabic" dir="rtl">
+    <div className="h-screen max-h-screen overflow-hidden p-2 md:p-3 relative font-arabic flex flex-col" dir="rtl">
       <div className="mesh-gradient-bg" />
-      <div className="max-w-[1600px] w-full mx-auto relative z-10 flex flex-col gap-2">
+      <div className="max-w-[1600px] w-full mx-auto relative z-10 flex flex-col gap-2 flex-1 min-h-0">
 
         {/* ===== STANDARDIZED HEADER ===== */}
         <motion.header
