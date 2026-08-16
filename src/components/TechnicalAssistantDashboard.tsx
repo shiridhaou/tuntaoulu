@@ -1952,8 +1952,12 @@ function DifficultyManager({
       const { data } = await supabase
         .from("athletes").select("difficulty_codes, difficulty_sheet")
         .eq("id", targetAthlete.id).maybeSingle();
-      const curated = (data as any)?.difficulty_sheet as DifficultyItem[] | null;
-      const codes = (data as any)?.difficulty_codes as string[] | null;
+      // Locally-imported athletes may not exist in the DB yet — fall back to the
+      // sheet parsed from the Excel file and held in the local queue.
+      const curated = ((data as any)?.difficulty_sheet
+        ?? targetAthlete.difficulty_sheet) as DifficultyItem[] | null;
+      const codes = ((data as any)?.difficulty_codes
+        ?? targetAthlete.difficulty_codes) as string[] | null;
       if (Array.isArray(curated) && curated.length > 0) {
         setSheet(curated.map((d: any) => ({
           code: String(d.code ?? "").toUpperCase(),
