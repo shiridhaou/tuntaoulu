@@ -387,21 +387,27 @@ function TADashboardInner() {
     finally { setLoading(false); }
   }
 
-  async function confirmImport() {
-    if (!preview) return;
-    setLoading(true);
+  async function persistRecords(records: ReturnType<typeof normalizeRow>[]) {
+    if (!records.length) return;
     try {
       // Strip transient fields (e.g. _mode) before persisting.
-      const clean = preview.map(({ _mode, ...rest }: any) => rest);
+      const clean = records.map(({ _mode, ...rest }: any) => rest);
       const { error } = await supabase.from("athletes").insert(clean);
       if (error) throw error;
-      toast.success(`تم حفظ ${preview.length} لاعب`);
+      toast.success(`تم حفظ ${records.length} لاعب`);
       setPreview(null);
       setTab("matches");
       void loadActive();
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) { toast.error(e.message ?? "فشل حفظ اللاعبين"); }
+  }
+
+  async function confirmImport() {
+    if (!preview) return;
+    setLoading(true);
+    try { await persistRecords(preview); }
     finally { setLoading(false); }
   }
+
 
   function downloadTemplate() {
     const sample = [
