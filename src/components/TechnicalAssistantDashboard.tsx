@@ -1493,6 +1493,9 @@ function TADashboardInner() {
           </div>
         </motion.section>
 
+        {/* ===== SCROLLABLE WORKSPACE (page itself never scrolls) ===== */}
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 pl-1">
+
         {/* ===== DYNAMIC JUDGES MANAGEMENT (team size +/-) ===== */}
         <div className="shrink-0">
           <TeamSizeControls team={team} onChange={setTeamConfig} />
