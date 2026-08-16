@@ -462,17 +462,18 @@ function TADashboardInner() {
       }
       const records = rows.map((r) => normalizeRow(r, tournament.id)).filter((r) => r.full_name);
       if (!records.length) { toast.error("لا يوجد لاعبون صالحون في الملف"); return; }
+      // Show the confirmation preview — nothing is committed until "تأكيد".
       setPreview(records);
       const compCount = records.filter((r) => (r as any)._mode === "compulsory").length;
       const optCount = records.filter((r) => (r as any)._mode === "optional").length;
       const unsetCount = records.length - compCount - optCount;
+      const moves = records.reduce((s, r) => s + (r.difficulty_sheet?.length ?? 0), 0);
       toast.success(
-        `تم استيراد ${records.length} لاعب — إلزامي: ${compCount} • اختياري: ${optCount}` +
-        (unsetCount ? ` • غير محدد: ${unsetCount}` : "")
+        `تمت قراءة ${records.length} لاعب — إلزامي: ${compCount} • اختياري: ${optCount}` +
+        (unsetCount ? ` • غير محدد: ${unsetCount}` : "") +
+        (moves ? ` • ${moves} حركة صعوبة` : "") + " — راجع ثم اضغط تأكيد"
       );
-      // Auto-persist: athletes + their pre-assigned Group C difficulty sheets go
-      // straight into the session queue on upload.
-      await persistRecords(records);
+
 
     } catch (err: any) { toast.error(err.message ?? "فشل قراءة الملف"); }
     finally { setLoading(false); }
@@ -607,8 +608,10 @@ function TADashboardInner() {
     // the simple `difficulty_codes` array + IWUF catalog.
     const { data: aRow } = await supabase
       .from("athletes").select("difficulty_codes, difficulty_sheet").eq("id", athlete.id).maybeSingle();
-    const curated = (aRow as { difficulty_sheet?: DifficultyItem[] | null } | null)?.difficulty_sheet ?? [];
-    const codes = (aRow as { difficulty_codes?: string[] } | null)?.difficulty_codes ?? [];
+    const curated = (aRow as { difficulty_sheet?: DifficultyItem[] | null } | null)?.difficulty_sheet
+      ?? athlete.difficulty_sheet ?? [];
+    const codes = (aRow as { difficulty_codes?: string[] } | null)?.difficulty_codes
+      ?? athlete.difficulty_codes ?? [];
     let difficultySheet: DifficultyItem[] = [];
     if (Array.isArray(curated) && curated.length > 0) {
       difficultySheet = curated.map((d: any) => ({
@@ -1202,6 +1205,7 @@ function TADashboardInner() {
                                     <th className="p-2 text-right">الاسم</th>
                                     <th className="p-2 text-right">الفئة</th>
                                     <th className="p-2 text-right">النادي</th>
+                                    <th className="p-2 text-right">حركات الصعوبة</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -1213,6 +1217,11 @@ function TADashboardInner() {
                                         {r.age_category && <Badge variant="outline" className={AGE_CATEGORY_COLORS[r.age_category as AgeCategory]}>{r.age_category}</Badge>}
                                       </td>
                                       <td className="p-2 text-muted-foreground">{r.club ?? "—"}</td>
+                                      <td className="p-2 font-mono">
+                                        {r.difficulty_sheet?.length
+                                          ? <span className="text-emerald-400">{r.difficulty_sheet.length}</span>
+                                          : <span className="text-muted-foreground">0</span>}
+                                      </td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -1945,8 +1954,12 @@ function DifficultyManager({
       const { data } = await supabase
         .from("athletes").select("difficulty_codes, difficulty_sheet")
         .eq("id", targetAthlete.id).maybeSingle();
-      const curated = (data as any)?.difficulty_sheet as DifficultyItem[] | null;
-      const codes = (data as any)?.difficulty_codes as string[] | null;
+      // Locally-imported athletes may not exist in the DB yet — fall back to the
+      // sheet parsed from the Excel file and held in the local queue.
+      const curated = ((data as any)?.difficulty_sheet
+        ?? targetAthlete.difficulty_sheet) as DifficultyItem[] | null;
+      const codes = ((data as any)?.difficulty_codes
+        ?? targetAthlete.difficulty_codes) as string[] | null;
       if (Array.isArray(curated) && curated.length > 0) {
         setSheet(curated.map((d: any) => ({
           code: String(d.code ?? "").toUpperCase(),
