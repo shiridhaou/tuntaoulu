@@ -44,7 +44,7 @@ export const sessionStateChannel = (code: string) => `session-state-${code}`;
  */
 export async function broadcastSessionState(
   sessionCode: string,
-  patch: { style?: string | null; payload?: Record<string, unknown> },
+  patch: { style?: string | null; athlete_id?: string | null; payload?: Record<string, unknown> },
 ) {
   const ch = supabase.channel(sessionStateChannel(sessionCode));
   await new Promise<void>((resolve) => {
