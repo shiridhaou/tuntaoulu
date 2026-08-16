@@ -634,26 +634,33 @@ function TADashboardInner() {
     await supabase.from("current_match").upsert({
       session_code: sessionCode,
       athlete_id: athlete.id,
-      style: styleCategory,
+      style: normalizeStyle(athlete.style ?? styleCategory, styleCategory),
       timer_state: "idle",
       started_at: null,
       elapsed_ms: 0,
       payload: {
         match_mode: matchMode,
-        style: styleCategory,
+        style: normalizeStyle(athlete.style ?? styleCategory, styleCategory),
         time_rule: timeRuleId,
         locked: configLocked,
+        status: "LIVE",
+        category: athlete.age_category ?? null,
         difficultySheet,
+        movements: difficultySheet,
         athlete: {
           id: athlete.id,
           name: athlete.full_name,
           bib: athlete.bib_number,
           club: athlete.club,
           country: athlete.country,
+          category: athlete.age_category ?? null,
         },
       } as never,
       updated_at: new Date().toISOString(),
     }, { onConflict: "session_code" });
+
+    // Instant MATCH_STATE_CHANGE fan-out (Chief, A/B/C, VAR) + C-sheet push.
+    await publishMatchState(athlete, "LIVE", difficultySheet);
 
     // Reset all existing judge slots to judging for this athlete
     await supabase.from("judge_status")
