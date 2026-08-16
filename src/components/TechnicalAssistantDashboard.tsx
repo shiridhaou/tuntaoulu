@@ -369,7 +369,8 @@ function TADashboardInner() {
             // Non-blocking fallback: keep a local tournament context so the TA
             // can still import athletes and run the session.
             const local = {
-              id: `local-${crypto.randomUUID()}`,
+              // MUST be a canonical UUID — prefixed ids break every FK insert (22P02).
+              id: newUuid(),
               ...payload,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
