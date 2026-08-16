@@ -19,7 +19,7 @@ import { joinSessionMembership } from "@/lib/sessionMembership";
 
 import { matchControl, useMatchSync, broadcastSessionState } from "@/hooks/useMatchSync";
 import { getWebhookSettings, saveWebhookSettings, isValidWebhookUrl, type WebhookSettings } from "@/lib/resultsWebhook";
-import { dateInputProps, fmtClock } from "@/lib/numFormat";
+import { dateInputProps, fmtClock, toWesternDigits } from "@/lib/numFormat";
 
 import { FederationLogo } from "./FederationLogo";
 import { Button } from "./ui/button";
