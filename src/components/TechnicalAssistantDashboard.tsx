@@ -462,17 +462,18 @@ function TADashboardInner() {
       }
       const records = rows.map((r) => normalizeRow(r, tournament.id)).filter((r) => r.full_name);
       if (!records.length) { toast.error("لا يوجد لاعبون صالحون في الملف"); return; }
+      // Show the confirmation preview — nothing is committed until "تأكيد".
       setPreview(records);
       const compCount = records.filter((r) => (r as any)._mode === "compulsory").length;
       const optCount = records.filter((r) => (r as any)._mode === "optional").length;
       const unsetCount = records.length - compCount - optCount;
+      const moves = records.reduce((s, r) => s + (r.difficulty_sheet?.length ?? 0), 0);
       toast.success(
-        `تم استيراد ${records.length} لاعب — إلزامي: ${compCount} • اختياري: ${optCount}` +
-        (unsetCount ? ` • غير محدد: ${unsetCount}` : "")
+        `تمت قراءة ${records.length} لاعب — إلزامي: ${compCount} • اختياري: ${optCount}` +
+        (unsetCount ? ` • غير محدد: ${unsetCount}` : "") +
+        (moves ? ` • ${moves} حركة صعوبة` : "") + " — راجع ثم اضغط تأكيد"
       );
-      // Auto-persist: athletes + their pre-assigned Group C difficulty sheets go
-      // straight into the session queue on upload.
-      await persistRecords(records);
+
 
     } catch (err: any) { toast.error(err.message ?? "فشل قراءة الملف"); }
     finally { setLoading(false); }
