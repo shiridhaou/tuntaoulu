@@ -394,6 +394,37 @@ function TADashboardInner() {
     finally { setLoading(false); }
   }
 
+  /**
+   * Returns a tournament_id that is guaranteed to be a canonical UUID AND to
+   * exist in the database, so athlete inserts never hit 22P02 or an FK error.
+   * Falls back to `null` (unlinked athletes) instead of blocking the import.
+   */
+  async function resolveTournamentId(): Promise<string | null> {
+    const id = cleanUuid(tournament?.id) ?? newUuid();
+    try {
+      const { data: existing } = await supabase
+        .from("tournaments").select("id").eq("id", id).maybeSingle();
+      if (existing) return id;
+
+      await ensureDeviceSession();
+      await joinSessionMembership(sessionCode ?? "", "technical-assistant");
+      const { data: created, error } = await supabase.from("tournaments").insert({
+        id,
+        name: tournament?.name || form.name.trim() || "بطولة",
+        location: tournament?.location ?? (form.location.trim() || null),
+        start_date: tournament?.start_date ?? (form.start_date.trim() || null),
+        end_date: tournament?.end_date ?? (form.end_date.trim() || null),
+        session_code: sessionCode,
+        active: true,
+      }).select().single();
+      if (error) throw error;
+      setTournament(created as Tournament);
+      return id;
+    } catch (e) {
+      console.error("[tournaments] could not materialize tournament row", e);
+      return null;
+    }
+  }
 
   async function processFile(file: File) {
     if (!tournament) { toast.error("أنشئ البطولة أولاً"); return; }
