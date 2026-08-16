@@ -663,10 +663,14 @@ function TADashboardInner() {
     setOobPoints(0);
     // Timer state already reset to idle by the upsert above (timer_state: 'idle', elapsed_ms: 0).
     await emitEvent("timer_reset");
+    // Unified "ابدأ": the authoritative countdown starts with the match so all
+    // judge panels, chief and the public display run the same clock.
+    await matchControl.start(sessionCode);
     await emitEvent("match_started", {
       athlete_id: athlete.id, name: athlete.full_name,
       match_mode: matchMode, style: styleCategory,
       difficulty_count: difficultySheet.length,
+      difficulty_sheet: difficultySheet,
     });
     pushLog("match", `▶ ${athlete.full_name} • ${styleCategory} • ${matchMode}`);
     toast.success(`بدأت مباراة ${athlete.full_name}`);
