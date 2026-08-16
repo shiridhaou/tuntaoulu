@@ -19,7 +19,7 @@ import { joinSessionMembership } from "@/lib/sessionMembership";
 
 import { matchControl, useMatchSync, broadcastSessionState } from "@/hooks/useMatchSync";
 import { getWebhookSettings, saveWebhookSettings, isValidWebhookUrl, type WebhookSettings } from "@/lib/resultsWebhook";
-import { dateInputProps, fmtClock } from "@/lib/numFormat";
+import { dateInputProps, fmtClock, toWesternDigits } from "@/lib/numFormat";
 
 import { FederationLogo } from "./FederationLogo";
 import { Button } from "./ui/button";
@@ -379,25 +379,35 @@ function TADashboardInner() {
         `تم استيراد ${records.length} لاعب — إلزامي: ${compCount} • اختياري: ${optCount}` +
         (unsetCount ? ` • غير محدد: ${unsetCount}` : "")
       );
+      // Auto-persist: athletes + their pre-assigned Group C difficulty sheets go
+      // straight into the session queue on upload.
+      await persistRecords(records);
+
     } catch (err: any) { toast.error(err.message ?? "فشل قراءة الملف"); }
     finally { setLoading(false); }
+  }
+
+  async function persistRecords(records: ReturnType<typeof normalizeRow>[]) {
+    if (!records.length) return;
+    try {
+      // Strip transient fields (e.g. _mode) before persisting.
+      const clean = records.map(({ _mode, ...rest }: any) => rest);
+      const { error } = await supabase.from("athletes").insert(clean);
+      if (error) throw error;
+      toast.success(`تم حفظ ${records.length} لاعب`);
+      setPreview(null);
+      setTab("matches");
+      void loadActive();
+    } catch (e: any) { toast.error(e.message ?? "فشل حفظ اللاعبين"); }
   }
 
   async function confirmImport() {
     if (!preview) return;
     setLoading(true);
-    try {
-      // Strip transient fields (e.g. _mode) before persisting.
-      const clean = preview.map(({ _mode, ...rest }: any) => rest);
-      const { error } = await supabase.from("athletes").insert(clean);
-      if (error) throw error;
-      toast.success(`تم حفظ ${preview.length} لاعب`);
-      setPreview(null);
-      setTab("matches");
-      void loadActive();
-    } catch (e: any) { toast.error(e.message); }
+    try { await persistRecords(preview); }
     finally { setLoading(false); }
   }
+
 
   function downloadTemplate() {
     const sample = [
@@ -931,12 +941,19 @@ function TADashboardInner() {
                         <Field label="المكان" icon={<MapPin className="h-3 w-3" />}>
                           <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="تونس" />
                         </Field>
-                        <Field label="تاريخ البداية" icon={<Calendar className="h-3 w-3" />}>
-                          <Input type="date" {...dateInputProps} value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
+                        <Field label="تاريخ البداية (YYYY-MM-DD)" icon={<Calendar className="h-3 w-3" />}>
+                          <Input type="text" inputMode="numeric" lang="en-GB" dir="ltr"
+                            placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}" maxLength={10}
+                            value={form.start_date}
+                            onChange={(e) => setForm({ ...form, start_date: toWesternDigits(e.target.value) })} />
                         </Field>
-                        <Field label="تاريخ النهاية" icon={<Calendar className="h-3 w-3" />}>
-                          <Input type="date" {...dateInputProps} value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
+                        <Field label="تاريخ النهاية (YYYY-MM-DD)" icon={<Calendar className="h-3 w-3" />}>
+                          <Input type="text" inputMode="numeric" lang="en-GB" dir="ltr"
+                            placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}" maxLength={10}
+                            value={form.end_date}
+                            onChange={(e) => setForm({ ...form, end_date: toWesternDigits(e.target.value) })} />
                         </Field>
+
                       </div>
                       <div className="flex justify-end pt-2">
                         <Button onClick={saveTournament} disabled={loading}

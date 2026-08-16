@@ -110,6 +110,8 @@ export interface TeamConfig {
 export const DEFAULT_TEAM: TeamConfig = { numA: 3, numB: 5, numC: 3 };
 
 export interface CompetitionState {
+  /** True once role/session/slot have been restored from localStorage. */
+  storageHydrated: boolean;
   isAuthenticated: boolean;
   selectedRole: UserRole;
   competitionStyle: CompetitionStyle;

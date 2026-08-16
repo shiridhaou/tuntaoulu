@@ -141,26 +141,20 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // SESSION PERSISTENCE (v3): a REFRESH inside the same tab must never destroy an
-    // active station (role + session code stay put). But opening the portal fresh
-    // (new tab, new device, or after "خروج") must ALWAYS land on Role Selection —
-    // never auto-force the previously saved role.
-    //
-    // The distinction is a tab-scoped marker: sessionStorage survives reloads but
-    // not a new tab / new visit.
-    let sameTabReload = false;
+    // SESSION + ROLE PERSISTENCE: the assigned station (role + session code + slot)
+    // is restored from localStorage on EVERY load — reload, new tab, or a websocket
+    // reconnect that remounts the tree. This is what keeps a judge locked on their
+    // own screen instead of falling back to the default/VAR view.
+    // Only an explicit "خروج" (logout) clears the stored role.
     try {
-      if (typeof window !== "undefined") {
-        sameTabReload = window.sessionStorage.getItem("taolu.tab") === "1";
-        window.sessionStorage.setItem("taolu.tab", "1");
-      }
+      if (typeof window !== "undefined") window.sessionStorage.setItem("taolu.tab", "1");
     } catch { /* ignore */ }
 
     const storedSession = lsGet(LS_KEYS.session);
     const storedJudgeId = lsGet(LS_KEYS.judgeId);
     const storedRole = lsGet(LS_KEYS.role) as UserRole;
 
-    if (storedSession && sameTabReload) {
+    if (storedSession) {
       setSessionCodeState(storedSession);
       if (storedJudgeId) setJudgeIdState(storedJudgeId);
       // Prefer the explicitly stored role; otherwise derive it from the judge slot.
@@ -176,8 +170,7 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
       setSelectedRole(derived);
       setSetupCompleteState(lsGet("taolu.setupComplete") === "1");
     } else {
-      // Fresh visit (or no session) → clean slate on RoleSelection. The session code
-      // stays in localStorage only as a convenience prefill on the join screens.
+      // No stored session → clean slate on RoleSelection.
       lsSet(LS_KEYS.role, null);
       lsSet(LS_KEYS.judgeId, null);
       lsSet("taolu.setupComplete", null);
@@ -188,6 +181,7 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
     }
     setStorageHydrated(true);
   }, []);
+
 
 
 
@@ -754,6 +748,7 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
   return (
     <CompetitionContext.Provider
       value={{
+        storageHydrated,
         isAuthenticated, selectedRole, competitionStyle, athletes, currentAthleteIndex,
         timerRunning, timerElapsed, continuityPause,
         sessionCode, judgeId,
