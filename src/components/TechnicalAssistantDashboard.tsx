@@ -200,6 +200,9 @@ function TADashboardInner() {
   // Out-of-bounds points stepper (IWUF: 0.1 per OOB)
   const [oobPoints, setOobPoints] = useState(0);
 
+  // Manually selected athlete (from the queue table "اختيار / Select" action).
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
   // Match config (broadcast to judges via current_match.payload)
   const [matchMode, setMatchMode] = useState<"compulsory" | "optional">("optional");
   const [styleCategory, setStyleCategory] = useState<"changquan" | "nanquan" | "taijiquan" | "traditional">("changquan");
@@ -660,10 +663,14 @@ function TADashboardInner() {
     setOobPoints(0);
     // Timer state already reset to idle by the upsert above (timer_state: 'idle', elapsed_ms: 0).
     await emitEvent("timer_reset");
+    // Unified "ابدأ": the authoritative countdown starts with the match so all
+    // judge panels, chief and the public display run the same clock.
+    await matchControl.start(sessionCode);
     await emitEvent("match_started", {
       athlete_id: athlete.id, name: athlete.full_name,
       match_mode: matchMode, style: styleCategory,
       difficulty_count: difficultySheet.length,
+      difficulty_sheet: difficultySheet,
     });
     pushLog("match", `▶ ${athlete.full_name} • ${styleCategory} • ${matchMode}`);
     toast.success(`بدأت مباراة ${athlete.full_name}`);
@@ -883,7 +890,22 @@ function TADashboardInner() {
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   const liveAthlete = athletes.find((a) => a.status === "judging") ?? null;
-  const nextAthlete = athletes.find((a) => a.status === "waiting") ?? null;
+  const selectedAthlete = selectedId ? (athletes.find((a) => a.id === selectedId) ?? null) : null;
+  const nextAthlete = selectedAthlete ?? athletes.find((a) => a.status === "waiting") ?? null;
+
+  // Queue selection — announce the athlete and make them the "up next" target
+  // for the Group C difficulty box (does NOT start the match).
+  function selectAthlete(a: Athlete) {
+    setSelectedId(a.id);
+    void callAthlete(a);
+    pushLog("match", `🎯 اختيار: ${a.full_name}`);
+  }
+
+  // Unified call + start for the up-next athlete.
+  async function callAndStart(a: Athlete) {
+    await callAthlete(a);
+    await startMatch(a);
+  }
 
   // ── State machine: pre → live → post ─────────────────────────────
   const matchPhase: "pre" | "live" | "post" =
@@ -894,9 +916,9 @@ function TADashboardInner() {
   const deductionsEnabled = matchPhase !== "pre";
 
   return (
-    <div className="min-h-screen p-2 md:p-3 relative font-arabic" dir="rtl">
+    <div className="h-screen max-h-screen overflow-hidden p-2 md:p-3 relative font-arabic flex flex-col" dir="rtl">
       <div className="mesh-gradient-bg" />
-      <div className="max-w-[1600px] w-full mx-auto relative z-10 flex flex-col gap-2">
+      <div className="max-w-[1600px] w-full mx-auto relative z-10 flex flex-col gap-2 flex-1 min-h-0">
 
         {/* ===== STANDARDIZED HEADER ===== */}
         <motion.header
@@ -1249,7 +1271,7 @@ function TADashboardInner() {
 
         {/* ===== FIXED TOP BAR: Timer | OOB | Sync + Athlete Call ===== */}
         <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl p-3 grid grid-cols-12 gap-3 border border-foreground/10 shrink-0"
+          className="num-west rounded-2xl p-3 grid grid-cols-12 gap-3 border border-foreground/10 shrink-0"
           style={{ background: "#000" }}
         >
           {/* Official Timer — Phase-aware (PRE / LIVE / POST) */}
@@ -1389,6 +1411,26 @@ function TADashboardInner() {
                 ⏯ ابدأ المؤقت لتفعيل الخصومات · Start timer to enable
               </p>
             )}
+
+            {/* Live event log (compact) */}
+            <div className="mt-2 border-t border-white/10 pt-1.5">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[9px] uppercase tracking-widest font-bold text-white/50" dir="ltr">Live Log</p>
+                <button onClick={() => setDrawerOpen(true)} className="text-[9px] text-fed-blue hover:underline">
+                  الكل ({eventLog.length})
+                </button>
+              </div>
+              <div className="h-[74px] overflow-y-auto space-y-0.5 pr-1">
+                {eventLog.length === 0 ? (
+                  <p className="text-[10px] text-muted-foreground italic text-center py-3">لا توجد أحداث بعد</p>
+                ) : eventLog.slice(0, 12).map((e, i) => (
+                  <div key={i} className="flex items-center justify-between gap-2 text-[10px]">
+                    <span className="text-white/70 truncate">{e.label}</span>
+                    <span className="text-white/35 font-mono shrink-0 num-west">{fmtClock(e.ts)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Athlete Call Box — bound to LIVE athlete (master state) */}
@@ -1430,9 +1472,9 @@ function TADashboardInner() {
                   <p className="text-xs font-bold text-white truncate">{nextAthlete.full_name}</p>
                   <p className="text-[10px] text-gold font-mono">#{nextAthlete.bib_number ?? "—"} · {nextAthlete.club ?? "—"}</p>
                 </div>
-                <Button onClick={() => callAthlete(nextAthlete)} size="sm"
-                  className="h-7 px-2 bg-fed-blue hover:bg-fed-blue/90 text-white text-xs">
-                  <Megaphone className="h-3 w-3 ml-1" /> نداء
+                <Button onClick={() => void callAndStart(nextAthlete)} size="sm"
+                  className="h-8 px-3 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold">
+                  <Megaphone className="h-3 w-3 ml-1" /> نداء / ابدأ
                 </Button>
               </div>
             ) : (
@@ -1450,6 +1492,9 @@ function TADashboardInner() {
             </Button>
           </div>
         </motion.section>
+
+        {/* ===== SCROLLABLE WORKSPACE (page itself never scrolls) ===== */}
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 pl-1">
 
         {/* ===== DYNAMIC JUDGES MANAGEMENT (team size +/-) ===== */}
         <div className="shrink-0">
@@ -1496,7 +1541,7 @@ function TADashboardInner() {
 
         {/* ===== MAIN WORKSPACE: MATCH MANAGEMENT ===== */}
         <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          className="glass-card rounded-xl p-3 flex flex-col gap-3">
+          className="num-west glass-card rounded-xl p-3 flex flex-col gap-3">
 
           <div className="flex items-center justify-between flex-wrap gap-2 shrink-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -1575,7 +1620,7 @@ function TADashboardInner() {
                               </Badge>
                             </td>
                             <td className="p-2.5">
-                              <ActionButtons a={a} onStart={startMatch} onFinish={finishMatch} onDelete={deleteAthlete} onCall={callAthlete} />
+                              <ActionButtons a={a} onFinish={finishMatch} onDelete={deleteAthlete} onSelect={selectAthlete} isSelected={selectedId === a.id} />
                             </td>
                           </tr>
                         );
@@ -1606,7 +1651,7 @@ function TADashboardInner() {
                           {cat && <Badge variant="outline" className={AGE_CATEGORY_COLORS[cat]}>{cat}</Badge>}
                           <span>{a.club ?? "—"} · {a.country ?? "—"}</span>
                         </div>
-                        <ActionButtons a={a} onStart={startMatch} onFinish={finishMatch} onDelete={deleteAthlete} onCall={callAthlete} />
+                        <ActionButtons a={a} onFinish={finishMatch} onDelete={deleteAthlete} onSelect={selectAthlete} isSelected={selectedId === a.id} />
                       </div>
                     );
                   })}
@@ -1615,6 +1660,7 @@ function TADashboardInner() {
             )}
           </div>
         </motion.section>
+        </div>
       </div>
 
       <style>{`
@@ -1623,6 +1669,12 @@ function TADashboardInner() {
           50% { box-shadow: inset 0 0 0 2px hsl(var(--fed-blue) / 0.8), 0 0 20px hsl(var(--fed-blue) / 0.3); }
         }
         .animate-pulse-row { animation: pulse-row 2s ease-in-out infinite; }
+        /* Western (Latin) digits everywhere — never Eastern-Arabic numerals */
+        .num-west, .num-west * {
+          font-variant-numeric: tabular-nums lining-nums;
+          font-feature-settings: "tnum" 1, "lnum" 1;
+          unicode-bidi: plaintext;
+        }
       `}</style>
 
       {/* ===== MANUAL ADD ATHLETE DIALOG ===== */}
@@ -1879,36 +1931,27 @@ function StatCard({ label, value, color, icon }: { label: string; value: number;
   );
 }
 
-function ActionButtons({ a, onStart, onFinish, onDelete, onCall }: {
+function ActionButtons({ a, onFinish, onDelete, onSelect, isSelected }: {
   a: Athlete;
-  onStart: (a: Athlete) => void;
   onFinish: (a: Athlete) => void;
   onDelete: (id: string) => void;
-  onCall: (a: Athlete) => void;
+  onSelect: (a: Athlete) => void;
+  isSelected: boolean;
 }) {
   return (
     <div className="flex gap-1.5 flex-wrap">
-      {a.status === "waiting" && (
-        <Button size="sm" variant="outline" onClick={() => onCall(a)}
-          className="h-8 border-fed-blue/40 text-fed-blue hover:bg-fed-blue/10">
-          <Megaphone className="h-3.5 w-3.5 ml-1" /> نداء
-        </Button>
-      )}
-      {a.status !== "judging" && a.status !== "done" && (
-        <Button size="sm" onClick={() => onStart(a)}
-          className="h-8 bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/30">
-          <Play className="h-3.5 w-3.5 ml-1" /> ابدأ
+      {a.status !== "judging" && (
+        <Button size="sm" variant={isSelected ? "default" : "outline"} onClick={() => onSelect(a)}
+          className={isSelected
+            ? "h-8 bg-fed-blue hover:bg-fed-blue/90 text-white"
+            : "h-8 border-fed-blue/40 text-fed-blue hover:bg-fed-blue/10"}>
+          <Megaphone className="h-3.5 w-3.5 ml-1" /> اختيار / Select
         </Button>
       )}
       {a.status === "judging" && (
         <Button size="sm" onClick={() => onFinish(a)}
           className="h-8 bg-fed-blue hover:bg-fed-blue/90 text-white shadow-md shadow-fed-blue/30">
           <CheckCircle2 className="h-3.5 w-3.5 ml-1" /> إنهاء
-        </Button>
-      )}
-      {a.status === "done" && (
-        <Button size="sm" variant="outline" onClick={() => onStart(a)} className="h-8">
-          <Play className="h-3.5 w-3.5 ml-1" /> إعادة
         </Button>
       )}
       <Button size="sm" variant="ghost" onClick={() => onDelete(a.id)}
@@ -1974,6 +2017,18 @@ function DifficultyManager({
       }
     })();
   }, [targetAthlete?.id]);
+
+  // AUTO-PUSH — as soon as a live athlete's sheet is available, broadcast it to
+  // the Group C judges (no manual tap required). Guarded per athlete.
+  const autoPushRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!targetAthlete || !isLive || !sessionCode) return;
+    if (sheet.length === 0) return;
+    if (autoPushRef.current === targetAthlete.id) return;
+    autoPushRef.current = targetAthlete.id;
+    void saveSheet(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetAthlete?.id, isLive, sessionCode, sheet.length]);
 
   const total = useMemo(() => sheet.reduce((s, d) => s + (Number(d.value) || 0), 0), [sheet]);
   const cJudgesSent = useMemo(
@@ -2069,7 +2124,7 @@ function DifficultyManager({
   return (
     <motion.section
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl p-3 border-2 border-cyber-orange/40 bg-black shadow-[0_0_24px_rgba(251,146,60,0.15)]"
+      className="num-west rounded-2xl p-3 border-2 border-cyber-orange/40 bg-black shadow-[0_0_24px_rgba(251,146,60,0.15)]"
     >
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
