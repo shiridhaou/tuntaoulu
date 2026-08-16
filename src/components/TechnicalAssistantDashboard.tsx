@@ -838,8 +838,29 @@ function TADashboardInner() {
   // so Chief, Judges and Public Display all see the same authoritative timer.
   async function timerStart() {
     if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
-    await matchControl.start(sessionCode);
-    await emitEvent("timer_start", { at: timerSec });
+    try {
+      // matchControl.start() UPDATEs the row — make sure it exists first,
+      // otherwise the click silently does nothing and the clock never moves.
+      const { data: existing } = await supabase
+        .from("current_match").select("session_code")
+        .eq("session_code", sessionCode).maybeSingle();
+      if (!existing) {
+        await supabase.from("current_match").upsert({
+          session_code: sessionCode,
+          athlete_id: liveAthlete?.id ?? null,
+          style: styleCategory,
+          timer_state: "idle",
+          started_at: null,
+          elapsed_ms: 0,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "session_code" });
+      }
+      await matchControl.start(sessionCode);
+      await emitEvent("timer_start", { at: timerSec });
+      pushLog("time", "▶ تشغيل المؤقت");
+    } catch (e: any) {
+      toast.error(e?.message ?? "تعذّر تشغيل المؤقت");
+    }
   }
   async function timerStop() {
     if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
