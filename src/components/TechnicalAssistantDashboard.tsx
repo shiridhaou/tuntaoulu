@@ -1472,9 +1472,9 @@ function TADashboardInner() {
                   <p className="text-xs font-bold text-white truncate">{nextAthlete.full_name}</p>
                   <p className="text-[10px] text-gold font-mono">#{nextAthlete.bib_number ?? "—"} · {nextAthlete.club ?? "—"}</p>
                 </div>
-                <Button onClick={() => callAthlete(nextAthlete)} size="sm"
-                  className="h-7 px-2 bg-fed-blue hover:bg-fed-blue/90 text-white text-xs">
-                  <Megaphone className="h-3 w-3 ml-1" /> نداء
+                <Button onClick={() => void callAndStart(nextAthlete)} size="sm"
+                  className="h-8 px-3 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold">
+                  <Megaphone className="h-3 w-3 ml-1" /> نداء / ابدأ
                 </Button>
               </div>
             ) : (
