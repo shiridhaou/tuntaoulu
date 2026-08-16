@@ -717,15 +717,91 @@ function TADashboardInner() {
     void loadJudgeStatuses();
   }
 
+  /** Resolve the athlete's Group C movements (curated sheet → codes → []). */
+  async function resolveMovements(athlete: Athlete): Promise<DifficultyItem[]> {
+    const { data: aRow } = await supabase
+      .from("athletes").select("difficulty_codes, difficulty_sheet").eq("id", athlete.id).maybeSingle();
+    const curated = ((aRow as any)?.difficulty_sheet ?? athlete.difficulty_sheet ?? []) as DifficultyItem[];
+    const codes = ((aRow as any)?.difficulty_codes ?? athlete.difficulty_codes ?? []) as string[];
+    if (Array.isArray(curated) && curated.length > 0) {
+      return curated.map((d: any) => ({
+        code: String(d.code ?? "").toUpperCase(),
+        label: String(d.label ?? d.code ?? ""),
+        value: Number(d.value ?? 0),
+      })).filter((d) => d.code);
+    }
+    if (codes.length) {
+      const { buildDifficultySheet } = await import("@/lib/difficultyCodes");
+      return buildDifficultySheet(codes) as DifficultyItem[];
+    }
+    return [];
+  }
+
+  /**
+   * Publish the full match state to every subscriber (Chief, A/B/C, VAR) —
+   * writes the authoritative `current_match` row AND fires an instant
+   * broadcast so panels flip off "WAITING FOR TA" without waiting for
+   * postgres replication.
+   */
+  async function publishMatchState(
+    athlete: Athlete,
+    status: "CALLED" | "LIVE",
+    movements: DifficultyItem[],
+  ) {
+    if (!sessionCode) return;
+    const style = normalizeStyle(athlete.style ?? styleCategory, styleCategory);
+    const athletePayload = {
+      id: athlete.id,
+      name: athlete.full_name,
+      bib: athlete.bib_number,
+      club: athlete.club,
+      country: athlete.country,
+      category: athlete.age_category ?? null,
+    };
+    const payload = {
+      match_mode: matchMode,
+      style,
+      time_rule: timeRuleId,
+      locked: configLocked,
+      status,
+      category: athlete.age_category ?? null,
+      athlete: athletePayload,
+      activeAthlete: athletePayload,
+      movements,
+      difficultySheet: movements,
+    };
+
+    await supabase.from("current_match").upsert({
+      session_code: sessionCode,
+      athlete_id: athlete.id,
+      style,
+      payload: payload as never,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "session_code" });
+
+    // Instant fan-out (MATCH_STATE_CHANGE) to all connected panels.
+    await broadcastSessionState(sessionCode, { style, athlete_id: athlete.id, payload });
+    await emitEvent("match_state_change", {
+      activeAthlete: athletePayload,
+      status,
+      category: athlete.age_category ?? null,
+      style,
+      movements,
+    });
+  }
+
   async function callAthlete(athlete: Athlete) {
+    const movements = await resolveMovements(athlete);
+    await publishMatchState(athlete, "CALLED", movements);
     await emitEvent("call_next", {
       athlete_id: athlete.id,
       name: athlete.full_name,
       bib: athlete.bib_number,
       club: athlete.club,
       country: athlete.country,
+      movements,
     });
-    toast.success(`تم نداء اللاعب: ${athlete.full_name}`);
+    toast.success(`تم نداء اللاعب: ${athlete.full_name} — تم إرسال ${movements.length} حركة لحكام C`);
   }
 
   // ──────────────────────────────────────────────────────────────────────
