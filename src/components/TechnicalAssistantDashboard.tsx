@@ -15,7 +15,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { supabase } from "@/integrations/supabase/client";
-import { joinSessionMembership } from "@/lib/sessionMembership";
+import { joinSessionMembership, ensureDeviceSession } from "@/lib/sessionMembership";
 
 import { matchControl, useMatchSync, broadcastSessionState } from "@/hooks/useMatchSync";
 import { getWebhookSettings, saveWebhookSettings, isValidWebhookUrl, type WebhookSettings } from "@/lib/resultsWebhook";
@@ -324,33 +324,74 @@ function TADashboardInner() {
     await supabase.from("match_events").insert({ session_code: sessionCode, event_type, payload });
   }
 
+  function describeDbError(e: any): string {
+    const parts = [e?.message, e?.details, e?.hint, e?.code ? `code=${e.code}` : null]
+      .filter(Boolean);
+    return parts.join(" — ") || "خطأ غير معروف";
+  }
+
   async function saveTournament() {
     if (!form.name.trim()) { toast.error("اسم البطولة مطلوب"); return; }
     setLoading(true);
     try {
+      const payload = {
+        name: form.name.trim(),
+        location: form.location.trim() || null,
+        start_date: form.start_date.trim() || null,
+        end_date: form.end_date.trim() || null,
+        session_code: sessionCode,
+        active: true,
+      };
+
       if (tournament) {
-        const { error } = await supabase.from("tournaments").update({
-          name: form.name, location: form.location || null,
-          start_date: form.start_date || null, end_date: form.end_date || null,
-          session_code: sessionCode,
-        }).eq("id", tournament.id);
+        const { error } = await supabase.from("tournaments").update(payload).eq("id", tournament.id);
         if (error) throw error;
         toast.success("تم تحديث البطولة");
       } else {
-        const { data, error } = await supabase.from("tournaments").insert({
-          name: form.name, location: form.location || null,
-          start_date: form.start_date || null, end_date: form.end_date || null,
-          active: true, session_code: sessionCode,
-        }).select().single();
-        if (error) throw error;
+        // Writes require an authenticated device + membership row for this session.
+        await ensureDeviceSession();
+        await joinSessionMembership(sessionCode ?? "", "technical-assistant");
+
+        let { data, error } = await supabase.from("tournaments").insert(payload).select().single();
+        if (error) {
+          console.error("[tournaments] insert failed", {
+            message: error.message, details: error.details, hint: error.hint, code: error.code, payload,
+          });
+          // Retry once after re-asserting membership (RLS race on first join).
+          await joinSessionMembership(sessionCode ?? "", "technical-assistant");
+          const retry = await supabase.from("tournaments").insert(payload).select().single();
+          if (retry.error) {
+            console.error("[tournaments] insert retry failed", {
+              message: retry.error.message, details: retry.error.details,
+              hint: retry.error.hint, code: retry.error.code,
+            });
+            // Non-blocking fallback: keep a local tournament context so the TA
+            // can still import athletes and run the session.
+            const local = {
+              id: `local-${crypto.randomUUID()}`,
+              ...payload,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            } as unknown as Tournament;
+            setTournament(local);
+            setTab("import");
+            toast.error(`فشل إنشاء البطولة: ${describeDbError(retry.error)} — تم تفعيل وضع محلي مؤقت`);
+            return;
+          }
+          data = retry.data;
+        }
         setTournament(data as Tournament);
         toast.success("تم إنشاء البطولة");
         setTab("import");
       }
       void loadActive();
-    } catch (e: any) { toast.error(e.message ?? "خطأ في الحفظ"); }
+    } catch (e: any) {
+      console.error("[tournaments] save error", e);
+      toast.error(`فشل إنشاء البطولة: ${describeDbError(e)}`);
+    }
     finally { setLoading(false); }
   }
+
 
   async function processFile(file: File) {
     if (!tournament) { toast.error("أنشئ البطولة أولاً"); return; }
