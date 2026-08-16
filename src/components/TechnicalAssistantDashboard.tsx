@@ -1669,6 +1669,12 @@ function TADashboardInner() {
           50% { box-shadow: inset 0 0 0 2px hsl(var(--fed-blue) / 0.8), 0 0 20px hsl(var(--fed-blue) / 0.3); }
         }
         .animate-pulse-row { animation: pulse-row 2s ease-in-out infinite; }
+        /* Western (Latin) digits everywhere — never Eastern-Arabic numerals */
+        .num-west, .num-west * {
+          font-variant-numeric: tabular-nums lining-nums;
+          font-feature-settings: "tnum" 1, "lnum" 1;
+          unicode-bidi: plaintext;
+        }
       `}</style>
 
       {/* ===== MANUAL ADD ATHLETE DIALOG ===== */}
