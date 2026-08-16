@@ -529,8 +529,9 @@ function TADashboardInner() {
     setManualSaving(true);
     try {
       const cat = manualForm.category || (manualForm.birth_date ? classifyAge(manualForm.birth_date) : null);
+      const tid = await resolveTournamentId();
       const { data: inserted, error } = await supabase.from("athletes").insert({
-        tournament_id: tournament.id,
+        tournament_id: tid,
         bib_number: manualForm.bib.trim() || null,
         full_name: manualForm.name.trim(),
         gender: manualForm.gender || null,
