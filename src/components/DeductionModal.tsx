@@ -65,7 +65,9 @@ export function DeductionModal({ open, decade, rules, onPick, onClose }: Props) 
           {rules.map(r => (
             <button
               key={r.errorCode}
-              onClick={() => onPick(r)}
+              type="button"
+              onPointerDown={(e) => { e.stopPropagation(); }}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPick(r); }}
               className="rounded-2xl border border-white/10 bg-black/60 p-3 text-right active:scale-[0.97] transition-all hover:border-emerald-500/50"
             >
               <div className="flex items-center justify-between gap-2">

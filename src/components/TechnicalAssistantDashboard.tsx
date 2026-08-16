@@ -1112,6 +1112,9 @@ function TADashboardInner() {
                 <SelectItem value="traditional">Traditional</SelectItem>
               </SelectContent>
             </Select>
+            <span className="hidden xl:inline-flex items-center px-2 h-7 rounded-lg border border-fed-blue/30 bg-background/60 text-[11px] font-bold text-fed-blue">
+              {styleLabelAr(styleCategory)}
+            </span>
             {!configLocked ? (
               <Button onClick={lockAndStart} size="sm" className="h-7 px-2 text-xs bg-gold text-navy hover:bg-gold/90 font-bold">
                 <Lock className="h-3 w-3 ml-1" /> Lock

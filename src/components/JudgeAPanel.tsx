@@ -10,6 +10,7 @@ import { modeCaps, type MatchMode } from "@/lib/matchMode";
 import { type CodeEntry } from "@/lib/deductionCodes";
 import { enabledKeysForStyle, rulesForKey, type GroupARule } from "@/config/groupARulesEngine";
 import { GroupAKeypad } from "@/components/GroupAKeypad";
+import { styleShort, styleLabelAr } from "@/lib/styleNames";
 import { DeductionModal } from "@/components/DeductionModal";
 
 const toEntry = (r: GroupARule): CodeEntry => ({
@@ -81,7 +82,7 @@ export function JudgeAPanel() {
     if (lastCfgRef.current === sig) return;
     lastCfgRef.current = sig;
     toast.info(
-      `تحديث من المساعد التقني: ${liveMode === "compulsory" ? "إجبارية" : "اختيارية"} · ${liveStyle ?? "—"} — الدرجة من ${modeCaps(liveMode).maxA.toFixed(2)}`,
+      `تحديث من المساعد التقني: ${liveMode === "compulsory" ? "إجبارية" : "اختيارية"} · ${styleLabelAr(liveStyle)} — الدرجة من ${modeCaps(liveMode).maxA.toFixed(2)}`,
     );
   }, [liveMode, liveStyle]);
 
@@ -155,7 +156,7 @@ export function JudgeAPanel() {
             dir="ltr"
             title="النمط والأسلوب المبثوثان من المساعد التقني"
           >
-            {liveMode === "compulsory" ? "COMP 7.00" : "OPT 5.00"} · {(liveStyle ?? "—").toUpperCase()}
+            {liveMode === "compulsory" ? "COMP 7.00" : "OPT 5.00"} · {styleShort(liveStyle)}
           </span>
 
           <span className={`shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${online ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"}`}>
@@ -248,7 +249,9 @@ export function JudgeAPanel() {
           {subRules.map(r => (
             <button
               key={r.errorCode}
-              onClick={() => addCode(toEntry(r))}
+              type="button"
+              onPointerDown={(e) => { e.stopPropagation(); }}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); addCode(toEntry(r)); }}
               className="rounded-2xl border border-white/10 bg-black/60 p-3 text-right active:scale-[0.97] transition-all hover:border-emerald-500/50"
               style={{ backdropFilter: "blur(14px)" }}
             >
