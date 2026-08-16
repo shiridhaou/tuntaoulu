@@ -1203,6 +1203,7 @@ function TADashboardInner() {
                                     <th className="p-2 text-right">الاسم</th>
                                     <th className="p-2 text-right">الفئة</th>
                                     <th className="p-2 text-right">النادي</th>
+                                    <th className="p-2 text-right">حركات الصعوبة</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -1214,6 +1215,11 @@ function TADashboardInner() {
                                         {r.age_category && <Badge variant="outline" className={AGE_CATEGORY_COLORS[r.age_category as AgeCategory]}>{r.age_category}</Badge>}
                                       </td>
                                       <td className="p-2 text-muted-foreground">{r.club ?? "—"}</td>
+                                      <td className="p-2 font-mono">
+                                        {r.difficulty_sheet?.length
+                                          ? <span className="text-emerald-400">{r.difficulty_sheet.length}</span>
+                                          : <span className="text-muted-foreground">0</span>}
+                                      </td>
                                     </tr>
                                   ))}
                                 </tbody>
