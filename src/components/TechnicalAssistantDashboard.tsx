@@ -379,6 +379,10 @@ function TADashboardInner() {
         `تم استيراد ${records.length} لاعب — إلزامي: ${compCount} • اختياري: ${optCount}` +
         (unsetCount ? ` • غير محدد: ${unsetCount}` : "")
       );
+      // Auto-persist: athletes + their pre-assigned Group C difficulty sheets go
+      // straight into the session queue on upload.
+      await persistRecords(records);
+
     } catch (err: any) { toast.error(err.message ?? "فشل قراءة الملف"); }
     finally { setLoading(false); }
   }
