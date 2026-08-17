@@ -1634,7 +1634,7 @@ function TADashboardInner() {
 
         {/* Event log lives in a floating Sheet triggered by the header "View Logs" button */}
         <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <SheetContent side="right" className="w-full sm:max-w-md" dir="rtl">
+          <SheetContent side="right" className="num-west w-full sm:max-w-md" dir="rtl">
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2 text-fed-blue font-heading">
                 <Activity className="h-5 w-5" /> سجل الأحداث ({eventLog.length})
