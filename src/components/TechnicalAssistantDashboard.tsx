@@ -1796,7 +1796,7 @@ function TADashboardInner() {
 
       {/* ===== MANUAL ADD ATHLETE DIALOG ===== */}
       <Dialog open={manualOpen} onOpenChange={setManualOpen}>
-        <DialogContent className="sm:max-w-lg" dir="rtl">
+        <DialogContent className="num-west sm:max-w-lg" dir="rtl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gold">
               <UserPlus className="h-5 w-5" /> إضافة لاعب يدوياً
