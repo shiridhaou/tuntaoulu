@@ -1,3 +1,4 @@
+import { useAthleteImport, type ImportedAthleteRecord } from "@/hooks/useAthleteImport";
 import { normalizeRow, type NormalizedAthleteRow, type DifficultyItem } from "@/lib/importParsing";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -176,11 +177,11 @@ function TADashboardInner() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [form, setForm] = useState({ name: "", location: "", start_date: "", end_date: "" });
   const [athletes, setAthletes] = useState<Athlete[]>([]);
-  const [loading, setLoading] = useState(false);
+  
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<AgeCategory | "all">("all");
   const [dragOver, setDragOver] = useState(false);
-  const [preview, setPreview] = useState<NormalizedAthleteRow[] | null>(null);
+ 
   const [tab, setTab] = useState("import");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -205,8 +206,8 @@ function TADashboardInner() {
 
   // RC-7 — athletes that live only in the local queue because their background
   // database sync failed. Surfaced as a non-blocking badge with manual retry.
-  const [unsynced, setUnsynced] = useState<Record<string, unknown>[]>([]);
-  const [retrying, setRetrying] = useState(false);
+
+
 
 
   // Manually selected athlete (from the queue table "اختيار / Select" action).
@@ -494,99 +495,16 @@ function TADashboardInner() {
     }
   }
 
-  async function processFile(file: File) {
-    if (!tournament) { toast.error("أنشئ البطولة أولاً"); return; }
-    setLoading(true);
-    try {
-      const ext = file.name.split(".").pop()?.toLowerCase();
-      let rows: any[] = [];
-      if (ext === "csv") {
-        // Force UTF-8 decoding (with BOM stripping) so Arabic names render correctly.
-        const buf = await file.arrayBuffer();
-        let text = new TextDecoder("utf-8").decode(buf);
-        if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
-        rows = (Papa.parse(text, { header: true, skipEmptyLines: true }).data) as any[];
-      } else {
-        const buf = await file.arrayBuffer();
-        const wb = XLSX.read(buf, { type: "array", cellDates: true, codepage: 65001 });
-        rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "", raw: false });
-      }
-      const records = rows.map((r) => normalizeRow(r, tournament.id)).filter((r) => r.full_name);
-      if (!records.length) { toast.error("لا يوجد لاعبون صالحون في الملف"); return; }
-      // Show the confirmation preview — nothing is committed until "تأكيد".
-      setPreview(records);
-      const compCount = records.filter((r) => (r as any)._mode === "compulsory").length;
-      const optCount = records.filter((r) => (r as any)._mode === "optional").length;
-      const unsetCount = records.length - compCount - optCount;
-      const moves = records.reduce((s, r) => s + (r.difficulty_sheet?.length ?? 0), 0);
-      toast.success(
-        `تمت قراءة ${records.length} لاعب — إلزامي: ${compCount} • اختياري: ${optCount}` +
-        (unsetCount ? ` • غير محدد: ${unsetCount}` : "") +
-        (moves ? ` • ${moves} حركة صعوبة` : "") + " — راجع ثم اضغط تأكيد"
-      );
-
-
-    } catch (err: any) { toast.error(err.message ?? "فشل قراءة الملف"); }
-    finally { setLoading(false); }
-  }
-
-  /**
-   * Local-first import: parsed athletes are appended to the local queue and the
-   * modal closes immediately; the database insert runs in the background.
-   */
- function persistRecords(records: NormalizedAthleteRow[]) {
-    if (!records.length) return;
-
-    // Strip transient fields (e.g. _mode) before storing/persisting.
-    const clean = records.map(({ _mode, ...rest }: any) => ({
-      ...rest,
-      id: cleanUuid(rest.id) ?? newUuid(),
-    }));
-
-    // 1) Instant local queue + UI refresh.
-    setAthletes((prev) => [...prev, ...(clean as Athlete[])]);
-    setPreview(null);
-    setTab("matches");
-    toast.success(`تمت إضافة ${clean.length} لاعب إلى قائمة المباريات`);
-
-    // 2) Background database insert — never blocks the modal or the table.
-    void syncRecords(clean as Record<string, unknown>[]);
-  }
-
-  /**
-   * RC-7 — background upsert with a visible, retryable failure state.
-   * The local queue always stays authoritative.
-   */
-  async function syncRecords(records: Record<string, unknown>[]) {
-    if (!records.length) return;
-    setRetrying(true);
-    try {
-      // Never send a non-UUID tournament_id to the database (22P02).
-      const tid = await resolveTournamentId();
-      const { error } = await supabase
-        .from("athletes")
-        .upsert(records.map((r) => ({ ...r, tournament_id: tid })) as never, { onConflict: "id" });
-      if (error) throw error;
-      setUnsynced((prev) => {
-        const ids = new Set(records.map((r) => String(r.id)));
-        return prev.filter((r) => !ids.has(String(r.id)));
-      });
-      void loadActive();
-    } catch (e: any) {
-      console.warn("[athletes] background import sync failed — local queue kept", e?.message ?? e);
-      setUnsynced((prev) => {
-        const ids = new Set(prev.map((r) => String(r.id)));
-        return [...prev, ...records.filter((r) => !ids.has(String(r.id)))];
-      });
-    } finally {
-      setRetrying(false);
-    }
-  }
-
-  function confirmImport() {
-    if (!preview) return;
-    persistRecords(preview);
-  }
+const {
+    preview, isImporting, unsynced, retrying,
+    processFile, confirmImport, cancelImport, retryUnsynced,
+  } = useAthleteImport({
+    resolveTournamentId,
+    onImported: (records: ImportedAthleteRecord[]) => {
+      setAthletes((prev) => [...prev, ...(records as Athlete[])]);
+      setTab("matches");
+    },
+  });
 
 
 
