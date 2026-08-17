@@ -2394,11 +2394,14 @@ function pick(row: Record<string, any>, keys: string[]): string {
     const nk = normalizeKey(rk);
     const idx = normalizedKeys.indexOf(nk);
     if (idx !== -1 && row[rk] != null && String(row[rk]).trim() !== "") {
-      return String(row[rk]).trim();
+      // RC-9: Eastern-Arabic / Persian digits are converted to 0-9 before any
+      // parseFloat / parseDate so federation spreadsheets import cleanly.
+      return toWesternDigits(String(row[rk]).trim()).trim();
     }
   }
   return "";
 }
+
 
 function detectMatchMode(v: string): "compulsory" | "optional" | null {
   if (!v) return null;
