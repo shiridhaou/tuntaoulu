@@ -366,6 +366,37 @@ function TADashboardInner() {
     await supabase.from("match_events").insert({ session_code: sessionCode, event_type, payload });
   }
 
+  /**
+   * RC-2 — deep merge of `current_match.payload`.
+   * Reads the existing payload, spreads the patch over it and writes it back,
+   * so keys owned by other subsystems (payload.team, payload.display, …) are
+   * never wiped when the TA calls or starts an athlete.
+   */
+  async function mergeMatchPayload(
+    code: string,
+    patch: Record<string, unknown>,
+    row: Record<string, unknown> = {},
+  ): Promise<Record<string, unknown>> {
+    const { data: existing } = await supabase
+      .from("current_match")
+      .select("athlete_id, style, payload")
+      .eq("session_code", code)
+      .maybeSingle();
+    const prev = (existing?.payload as Record<string, unknown> | null) ?? {};
+    const merged = { ...prev, ...patch };
+    await supabase.from("current_match").upsert({
+      session_code: code,
+      athlete_id: "athlete_id" in row ? row.athlete_id : (existing?.athlete_id ?? null),
+      style: "style" in row ? row.style : (existing?.style ?? null),
+      ...row,
+      payload: merged as never,
+      updated_at: new Date().toISOString(),
+    } as never, { onConflict: "session_code" });
+    return merged;
+  }
+
+
+
   function describeDbError(e: any): string {
     const parts = [e?.message, e?.details, e?.hint, e?.code ? `code=${e.code}` : null]
       .filter(Boolean);
