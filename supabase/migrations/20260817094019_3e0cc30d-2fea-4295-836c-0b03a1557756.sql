@@ -1,0 +1,16 @@
+ALTER TABLE public.current_match REPLICA IDENTITY FULL;
+ALTER TABLE public.judge_scores REPLICA IDENTITY FULL;
+ALTER TABLE public.match_events REPLICA IDENTITY FULL;
+ALTER TABLE public.athletes REPLICA IDENTITY FULL;
+ALTER TABLE public.judge_requests REPLICA IDENTITY FULL;
+ALTER TABLE public.judge_status REPLICA IDENTITY FULL;
+ALTER TABLE public.match_results REPLICA IDENTITY FULL;
+ALTER TABLE public.session_members REPLICA IDENTITY FULL;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.current_match;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.judge_scores;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.match_events;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.athletes;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.judge_requests;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.judge_status;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.match_results;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.session_members;
