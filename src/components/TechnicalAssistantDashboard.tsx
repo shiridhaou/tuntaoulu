@@ -775,10 +775,10 @@ function TADashboardInner() {
       country: athlete.country,
       category: athlete.age_category ?? null,
     };
-    const payload = {
+    const patch = {
       match_mode: matchMode,
       style,
-      time_rule: timeRuleId,
+      time_rule_id: timeRuleId,
       locked: configLocked,
       status,
       category: athlete.age_category ?? null,
@@ -788,16 +788,15 @@ function TADashboardInner() {
       difficultySheet: movements,
     };
 
-    await supabase.from("current_match").upsert({
-      session_code: sessionCode,
+    // RC-2: deep merge so payload.team / payload.display survive every call.
+    const payload = await mergeMatchPayload(sessionCode, patch, {
       athlete_id: athlete.id,
       style,
-      payload: payload as never,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "session_code" });
+    });
 
     // Instant fan-out (MATCH_STATE_CHANGE) to all connected panels.
     await broadcastSessionState(sessionCode, { style, athlete_id: athlete.id, payload });
+
     await emitEvent("match_state_change", {
       activeAthlete: athletePayload,
       status,
