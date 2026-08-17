@@ -1,3 +1,4 @@
+import { useMatchTimer, computeMatchPhase } from "@/hooks/useMatchTimer";
 import { useAthleteImport, type ImportedAthleteRecord } from "@/hooks/useAthleteImport";
 import { normalizeRow, type NormalizedAthleteRow, type DifficultyItem } from "@/lib/importParsing";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -194,15 +195,7 @@ function TADashboardInner() {
 
   // Official timer — TA is the master. We mirror DB state via useMatchSync so
   // the timer displayed here is the same one Chief / Judges / Public see.
-  const sync = useMatchSync(sessionCode);
-  const timerSec = sync.elapsedSec;
-  const timerRunning = sync.timerState === "running";
-
-  // Judges status
-  const [judgeStatuses, setJudgeStatuses] = useState<JudgeStatusRow[]>([]);
-
-  // Out-of-bounds points stepper (IWUF: 0.1 per OOB)
-  const [oobPoints, setOobPoints] = useState(0);
+ 
 
   // RC-7 — athletes that live only in the local queue because their background
   // database sync failed. Surfaced as a non-blocking badge with manual retry.
@@ -808,116 +801,24 @@ const {
   // ──────────────────────────────────────────────────────────────────────
   // TA-side deduction broadcaster: writes ta_deductions to current_match so
   // every dashboard (Chief, Public, Judges) sees the same automatic numbers.
-  // ──────────────────────────────────────────────────────────────────────
-  async function broadcastTaDeductions(opts: { atSec: number; oob: number; final?: boolean }) {
-    if (!sessionCode) return;
-    const t = opts.final
-      ? checkCategoryTime(timeRuleId, opts.atSec)
-      : { value: 0, reason: "—", direction: "ok" as const, drift: 0, rule: getCategoryRule(timeRuleId) };
-    const oobValue = Math.round(opts.oob * 0.1 * 10) / 10;
-    const total = Math.round((t.value + oobValue) * 10) / 10;
-    const payload = {
-      time: { value: t.value, reason: t.reason, drift: t.drift, direction: t.direction, elapsed: opts.atSec },
-      oob:  { count: opts.oob, value: oobValue },
-      total,
-    };
-    await supabase.from("current_match")
-      .update({ ta_deductions: payload as never, updated_at: new Date().toISOString() })
-      .eq("session_code", sessionCode);
-  }
-
-  // Timer controls — TA is the master. Every transition is written to current_match
-  // so Chief, Judges and Public Display all see the same authoritative timer.
-  async function timerStart() {
-    if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
-    try {
-      // matchControl.start() UPDATEs the row — make sure it exists first,
-      // otherwise the click silently does nothing and the clock never moves.
-      const { data: existing } = await supabase
-        .from("current_match").select("session_code")
-        .eq("session_code", sessionCode).maybeSingle();
-      if (!existing) {
-        await supabase.from("current_match").upsert({
-          session_code: sessionCode,
-          athlete_id: liveAthlete?.id ?? null,
-          style: styleCategory,
-          timer_state: "idle",
-          started_at: null,
-          elapsed_ms: 0,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "session_code" });
-      }
-      await matchControl.start(sessionCode);
-      // Instant unlock for every judge panel — realtime replication can lag,
-      // so the timer transition also rides the low-latency broadcast channel.
-      await broadcastSessionState(sessionCode, {
-        athlete_id: liveAthlete?.id ?? null,
-        style: styleCategory,
-        timer_state: "running",
-        started_at: new Date().toISOString(),
-        payload: { match_started: true, phase: "live" },
-      });
-      await emitEvent("timer_start", { at: timerSec });
-      pushLog("time", "▶ تشغيل المؤقت");
-    } catch (e: any) {
-      toast.error(e?.message ?? "تعذّر تشغيل المؤقت");
-    }
-  }
-  async function timerStop() {
-    if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
-    await matchControl.pause(sessionCode);
-    await broadcastSessionState(sessionCode, {
-      timer_state: "stopped",
-      started_at: null,
-      elapsed_ms: timerSec * 1000,
-      payload: { phase: "post" },
-    });
-    await emitEvent("timer_stop", { at: timerSec });
-    await broadcastTaDeductions({ atSec: timerSec, oob: oobPoints, final: true });
-    const td = checkCategoryTime(timeRuleId, timerSec);
-    if (td.value > 0) {
-      pushLog("time", `⏱ ${td.reason} → −${td.value.toFixed(2)}`);
-      toast.warning(`خصم زمني تلقائي −${td.value.toFixed(2)} · ${td.reason}`);
-    } else if (timerSec > 0) {
-      pushLog("time", `⏱ ضمن الزمن المسموح (${timerSec}s)`);
-    }
-  }
-  async function timerReset() {
-    if (!sessionCode) return;
-    await matchControl.reset(sessionCode);
-    await broadcastSessionState(sessionCode, {
-      timer_state: "idle",
-      started_at: null,
-      elapsed_ms: 0,
-      payload: { phase: "pre", match_started: false },
-    });
-    await emitEvent("timer_reset");
-    await supabase.from("current_match")
-      .update({ ta_deductions: { time: { value: 0 }, oob: { count: 0, value: 0 }, total: 0 } as never })
-      .eq("session_code", sessionCode);
-  }
-
-  // Out of bounds — single counter, +/- stepper. Each OOB = −0.10 IWUF.
-  async function adjustOob(delta: number) {
-    const next = Math.max(0, oobPoints + delta);
-    setOobPoints(next);
-    if (delta > 0) setOobPulse((p) => p + 1); // trigger framer-motion feedback
-    await emitEvent("oob_adjust", { at: timerSec, delta, total: next });
-    pushLog("oob", `OOB ${delta > 0 ? "+" : ""}${delta} (total ${next})`);
-    await broadcastTaDeductions({ atSec: timerSec, oob: next, final: !timerRunning && timerSec > 0 });
-  }
+const timer = useMatchTimer({
+  sessionCode,
+  timeRuleId,
+  styleCategory,
+  onLog: pushLog,
+});
 
   // Signal Chief — emits a high-priority alert event the chief dashboard can surface.
   async function signalChief() {
     if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
-    const td = checkCategoryTime(timeRuleId, timerSec);
+    const td = checkCategoryTime(timeRuleId, timer.timerSec);
     // RC-3: ride the ta_sync channel the Chief already listens to.
     await emitEvent("ta_sync", {
       signal: true,
-      oob_count: oobPoints, oob_deduction: oobPoints * 0.1,
-      time: timerSec, time_deduction: td.value, time_reason: td.reason,
+      oob_count: timer.oobPoints, oob_deduction: timer.oobPoints* 0.1,
+      time: timer.timerSec, time_deduction: td.value, time_reason: td.reason,
     });
-    await emitEvent("ta_signal_chief", { at: timerSec, oob: oobPoints });
+    await emitEvent("ta_signal_chief", { at: timer.timerSec, oob: timer.oobPoints });
     pushLog("signal", "📣 Signaled Chief");
     toast.success("تم إرسال الإشارة للحكم الرئيسي");
   }
@@ -929,14 +830,14 @@ const {
   async function broadcastVar() {
     if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
     await emitEvent("var_review_request", {
-      at: timerSec,
+      at: timer.timerSec,
       athlete_id: liveAthlete?.id ?? null,
       athlete_name: liveAthlete?.full_name ?? null,
       bib: liveAthlete?.bib_number ?? null,
       style: styleCategory,
       match_mode: matchMode,
     });
-    pushLog("var", `🎥 VAR review @ ${Math.floor(timerSec / 60)}:${String(timerSec % 60).padStart(2, "0")}`);
+    pushLog("var", `🎥 VAR review @ ${Math.floor(timer.timerSec / 60)}:${String(timer.timerSec % 60).padStart(2, "0")}`);
     toast.success("تم إرسال طلب مراجعة الفيديو إلى حكم VAR");
   }
 
@@ -978,18 +879,18 @@ const {
 
 
   // Sync deductions/OOB to chief — also re-broadcasts the consolidated ta_deductions
-  async function syncWithChief() {
+async function syncWithChief() {
     if (!sessionCode) return;
-    await broadcastTaDeductions({ atSec: timerSec, oob: oobPoints, final: !timerRunning && timerSec > 0 });
-    const oobDeduction = oobPoints * 0.1;
-    const td = checkCategoryTime(timeRuleId, timerSec);
+    await timer.broadcastTaDeductions({ atSec: timer.timerSec, oob: timer.oobPoints, final: !timer.timerRunning && timer.timerSec > 0 });
+    const oobDeduction = timer.oobPoints * 0.1;
+    const td = checkCategoryTime(timeRuleId, timer.timerSec);
     await emitEvent("ta_sync", {
-      oob_count: oobPoints, oob_deduction: oobDeduction,
-      time: timerSec, time_deduction: td.value, time_reason: td.reason,
+      oob_count: timer.oobPoints, oob_deductions: oobDeduction,
+      time:timer.timerSec, time_deduction: td.value, time_reason: td.reason,
     });
     const total = (oobDeduction + td.value).toFixed(1);
-    pushLog("sync", `Synced → Chief (OOB×${oobPoints} + Time → -${total})`);
-    toast.success(`تمت المزامنة (إجمالي خصومات تلقائية -${total})`);
+    pushLog("sync", `Synced → Chief (OOBx${timer.oobPoints} + Time → -${total})`);
+    toast.success(`تمت المزامنة (إجمالي الخصومات تلقائياً -${total})`);
   }
 
   function copySession() {
@@ -1051,7 +952,7 @@ const {
   const matchPhase: "pre" | "live" | "post" =
     !liveAthlete ? "pre"
     : timerRunning ? "live"
-    : timerSec > 0 ? "post"
+    : timer.timerSec > 0 ? "post"
     : "pre";
   const deductionsEnabled = matchPhase !== "pre";
 
@@ -1446,12 +1347,12 @@ const {
               {liveAthlete && <span className="text-[10px] text-emerald-400 truncate max-w-[120px]">{liveAthlete.full_name}</span>}
             </div>
             <p className={`text-3xl font-heading font-black tabular-nums text-center ${timerRunning ? "text-orange-400 drop-shadow-[0_0_12px_rgba(251,146,60,0.6)]" : "text-white"}`} dir="ltr">
-              {fmt(timerSec)}
+              {fmt(timer.timerSec)}
             </p>
             {/* IWUF required-window hint + live auto-deduction */}
             {(() => {
               const rule = getCategoryRule(timeRuleId);
-              const td = !timerRunning && timerSec > 0 ? checkCategoryTime(timeRuleId, timerSec) : null;
+              const td = !timerRunning && timer.timerSec timerSec > 0 ? checkCategoryTime(timeRuleId, timer.timerSec : null;
               return (
                 <div className="flex items-center justify-between gap-2 text-[9px] mt-1">
                   <span className="text-white/50" dir="ltr">Required: {fmtRuleWindow(rule)}</span>
@@ -1459,7 +1360,7 @@ const {
                     <span className="px-1.5 py-0.5 rounded font-bold bg-fed-red/20 text-fed-red border border-fed-red/40" dir="ltr">
                       Time −{td.value.toFixed(2)}
                     </span>
-                  ) : timerSec > 0 && !timerRunning ? (
+                  ) :timer.timerSec > 0 && !timerRunning ? (
                     <span className="px-1.5 py-0.5 rounded font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40" dir="ltr">
                       ✓ In window
                     </span>
@@ -1510,7 +1411,7 @@ const {
                 transition={{ duration: 0.4 }}
                 className="text-xs font-bold"
               >
-                −{(oobPoints * 0.1).toFixed(1)} pts
+                −{(timer.oobPoints * 0.1).toFixed(1)} pts
               </motion.span>
             </div>
             <div className="flex items-center justify-center gap-3 select-none">
@@ -1518,7 +1419,7 @@ const {
                 type="button"
                 whileTap={{ scale: 0.9 }}
                 onClick={(e) => { e.stopPropagation(); void adjustOob(-1); }}
-                disabled={!deductionsEnabled || oobPoints === 0}
+                disabled={!deductionsEnabled ||timer.oobPoints === 0}
                 className="relative z-20 h-14 w-14 rounded-2xl bg-fed-red/15 hover:bg-fed-red/30 active:bg-fed-red/40 border-2 border-fed-red/40 disabled:opacity-25 disabled:cursor-not-allowed flex items-center justify-center text-fed-red transition-colors cursor-pointer"
                 aria-label="Decrease OOB"
               >
@@ -1527,13 +1428,13 @@ const {
 
               <div className="flex-1 text-center">
                 <motion.p
-                  key={`oob-${oobPoints}`}
+                  key={`oob-${timer.oobPoints}`}
                   initial={{ scale: 1.3, opacity: 0.6 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: "spring", stiffness: 400, damping: 18 }}
                   className="text-4xl font-heading font-black text-fed-red tabular-nums leading-none"
                 >
-                  {oobPoints}
+                  {timer.oobPoints}
                 </motion.p>
                 <p className="text-[10px] text-muted-foreground mt-1">events</p>
               </div>
