@@ -278,9 +278,16 @@ function TADashboardInner() {
 
   useEffect(() => {
     void loadActive();
+    const tid = tournament?.id ?? null;
     const ch = supabase
-      .channel(`ta-${sessionCode}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "athletes" }, () => loadActive())
+      .channel(`ta-${sessionCode}-${tid ?? "all"}`)
+      // RC-6: scope athlete changes to this tournament so concurrent events
+      // don't trigger a full refetch on this screen.
+      .on("postgres_changes",
+        tid
+          ? { event: "*", schema: "public", table: "athletes", filter: `tournament_id=eq.${tid}` }
+          : { event: "*", schema: "public", table: "athletes" },
+        () => loadActive())
       .on("postgres_changes",
         { event: "*", schema: "public", table: "tournaments", filter: `session_code=eq.${sessionCode}` },
         () => loadActive())
@@ -291,7 +298,8 @@ function TADashboardInner() {
     void loadJudgeStatuses();
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [tournament?.id]);
+
 
   // Timer ticks are driven by useMatchSync (1Hz local extrapolation while running).
 
