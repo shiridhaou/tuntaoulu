@@ -1764,6 +1764,8 @@ function TADashboardInner() {
                   {unsynced.length} لاعبين محليين — {retrying ? "جاري إعادة المحاولة…" : "إعادة المحاولة"}
                 </button>
               )}
+            </div>
+
 
             <div className="flex gap-2 items-center flex-wrap">
               <Button onClick={() => setManualOpen(true)} size="sm" disabled={!tournament}
