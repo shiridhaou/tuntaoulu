@@ -2276,17 +2276,17 @@ function DifficultyManager({
             <span className="text-[9px] text-cyber-orange/80" dir="ltr">Total</span>
             <span className="text-sm font-heading font-black text-cyber-orange tabular-nums">{total.toFixed(2)}</span>
           </div>
-          {isLive && (
-            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
-              pushed
-                ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
-                : "border-amber-500/50 bg-amber-500/10 text-amber-300"
-            }`}>
-              <span className="text-[9px] font-bold">
-                {pushed ? `✓ تم الإرسال — ${cJudgesSent}/${cJudgesActive || "C"} قيّموا` : "بانتظار الإرسال"}
-              </span>
-            </div>
-          )}
+          {/* RC-8: receipt is shown for pre-match pushes too, not just LIVE. */}
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
+            pushed
+              ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
+              : "border-amber-500/50 bg-amber-500/10 text-amber-300"
+          }`}>
+            <span className="text-[9px] font-bold">
+              {pushed ? `✓ تم الإرسال — ${cJudgesSent}/${cJudgesActive || "C"} قيّموا` : "بانتظار الإرسال"}
+            </span>
+          </div>
+
           <Button onClick={() => saveSheet(false)} size="sm" variant="outline" disabled={loading}
             className="h-8 border-white/20 text-white/80 hover:bg-white/10 text-xs">
             <CheckCircle2 className="h-3 w-3 ml-1" /> حفظ
