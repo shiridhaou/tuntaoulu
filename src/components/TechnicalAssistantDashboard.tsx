@@ -543,25 +543,44 @@ function TADashboardInner() {
     toast.success(`تمت إضافة ${clean.length} لاعب إلى قائمة المباريات`);
 
     // 2) Background database insert — never blocks the modal or the table.
-    void (async () => {
-      try {
-        // Never send a non-UUID tournament_id to the database (22P02).
-        const tid = await resolveTournamentId();
-        const { error } = await supabase
-          .from("athletes")
-          .upsert(clean.map((r) => ({ ...r, tournament_id: tid })), { onConflict: "id" });
-        if (error) throw error;
-        void loadActive();
-      } catch (e: any) {
-        console.warn("[athletes] background import sync failed — local queue kept", e?.message ?? e);
-      }
-    })();
+    void syncRecords(clean as Record<string, unknown>[]);
+  }
+
+  /**
+   * RC-7 — background upsert with a visible, retryable failure state.
+   * The local queue always stays authoritative.
+   */
+  async function syncRecords(records: Record<string, unknown>[]) {
+    if (!records.length) return;
+    setRetrying(true);
+    try {
+      // Never send a non-UUID tournament_id to the database (22P02).
+      const tid = await resolveTournamentId();
+      const { error } = await supabase
+        .from("athletes")
+        .upsert(records.map((r) => ({ ...r, tournament_id: tid })) as never, { onConflict: "id" });
+      if (error) throw error;
+      setUnsynced((prev) => {
+        const ids = new Set(records.map((r) => String(r.id)));
+        return prev.filter((r) => !ids.has(String(r.id)));
+      });
+      void loadActive();
+    } catch (e: any) {
+      console.warn("[athletes] background import sync failed — local queue kept", e?.message ?? e);
+      setUnsynced((prev) => {
+        const ids = new Set(prev.map((r) => String(r.id)));
+        return [...prev, ...records.filter((r) => !ids.has(String(r.id)))];
+      });
+    } finally {
+      setRetrying(false);
+    }
   }
 
   function confirmImport() {
     if (!preview) return;
     persistRecords(preview);
   }
+
 
 
 
