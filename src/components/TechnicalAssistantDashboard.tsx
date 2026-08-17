@@ -1003,7 +1003,13 @@ function TADashboardInner() {
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
-  const liveAthlete = athletes.find((a) => a.status === "judging") ?? null;
+  // RC-1: the authoritative current_match pointer wins; local status is the
+  // fallback so locally-imported (not yet synced) athletes still go live.
+  const liveAthlete =
+    (sync.athleteId ? athletes.find((a) => a.id === sync.athleteId) : undefined)
+    ?? athletes.find((a) => a.status === "judging")
+    ?? null;
+
   const selectedAthlete = selectedId ? (athletes.find((a) => a.id === selectedId) ?? null) : null;
   const nextAthlete = selectedAthlete ?? athletes.find((a) => a.status === "waiting") ?? null;
 
