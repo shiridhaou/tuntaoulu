@@ -611,6 +611,12 @@ function TADashboardInner() {
 
   async function startMatch(athlete: Athlete) {
     if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
+    // RC-1: optimistic local status authority — the queue, the call box and the
+    // match phase flip instantly even for athletes that only exist locally.
+    setAthletes((prev) => prev.map((a) =>
+      a.id === athlete.id
+        ? ({ ...a, status: "judging" } as Athlete)
+        : a.status === "judging" ? ({ ...a, status: "waiting" } as Athlete) : a));
     if (tournament) {
       await supabase.from("athletes").update({ status: "waiting" }).eq("tournament_id", tournament.id).eq("status", "judging");
     }
@@ -637,35 +643,35 @@ function TADashboardInner() {
       difficultySheet = buildDifficultySheet(codes) as DifficultyItem[];
     }
 
-    // SINGLE source of truth — one full row with athlete + style + match_mode + sheet.
+    // SINGLE source of truth — merged payload (team / display settings kept).
     // Reset timer to idle so all followers start clean.
-    await supabase.from("current_match").upsert({
-      session_code: sessionCode,
+    const liveStyle = normalizeStyle(athlete.style ?? styleCategory, styleCategory);
+    const athletePayload = {
+      id: athlete.id,
+      name: athlete.full_name,
+      bib: athlete.bib_number,
+      club: athlete.club,
+      country: athlete.country,
+      category: athlete.age_category ?? null,
+    };
+    await mergeMatchPayload(sessionCode, {
+      match_mode: matchMode,
+      style: liveStyle,
+      time_rule_id: timeRuleId,
+      locked: configLocked,
+      status: "LIVE",
+      category: athlete.age_category ?? null,
+      difficultySheet,
+      movements: difficultySheet,
+      athlete: athletePayload,
+      activeAthlete: athletePayload,
+    }, {
       athlete_id: athlete.id,
-      style: normalizeStyle(athlete.style ?? styleCategory, styleCategory),
+      style: liveStyle,
       timer_state: "idle",
       started_at: null,
       elapsed_ms: 0,
-      payload: {
-        match_mode: matchMode,
-        style: normalizeStyle(athlete.style ?? styleCategory, styleCategory),
-        time_rule: timeRuleId,
-        locked: configLocked,
-        status: "LIVE",
-        category: athlete.age_category ?? null,
-        difficultySheet,
-        movements: difficultySheet,
-        athlete: {
-          id: athlete.id,
-          name: athlete.full_name,
-          bib: athlete.bib_number,
-          club: athlete.club,
-          country: athlete.country,
-          category: athlete.age_category ?? null,
-        },
-      } as never,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "session_code" });
+    });
 
     // Instant MATCH_STATE_CHANGE fan-out (Chief, A/B/C, VAR) + C-sheet push.
     await publishMatchState(athlete, "LIVE", difficultySheet);
@@ -696,6 +702,7 @@ function TADashboardInner() {
   }
 
   async function finishMatch(athlete: Athlete) {
+    setAthletes((prev) => prev.map((a) => a.id === athlete.id ? ({ ...a, status: "done" } as Athlete) : a));
     await supabase.from("athletes").update({ status: "done" }).eq("id", athlete.id);
     if (sessionCode) {
       await supabase.from("current_match").update({ athlete_id: null }).eq("session_code", sessionCode);
@@ -711,12 +718,15 @@ function TADashboardInner() {
   async function nextAthleteGlobalReset() {
     if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
     if (liveAthlete) {
-      await supabase.from("athletes").update({ status: "done" }).eq("id", liveAthlete.id);
+      const doneId = liveAthlete.id;
+      setAthletes((prev) => prev.map((a) => a.id === doneId ? ({ ...a, status: "done" } as Athlete) : a));
+      await supabase.from("athletes").update({ status: "done" }).eq("id", doneId);
     }
     // 1) Clear the live athlete pointer (followers reset locally)
     await supabase.from("current_match")
       .update({ athlete_id: null, ta_deductions: { time: { value: 0 }, oob: { count: 0, value: 0 }, total: 0 } as never })
       .eq("session_code", sessionCode);
+
     // 2) Reset authoritative timer
     await matchControl.reset(sessionCode);
     // 3) Wipe judge scores for this session
