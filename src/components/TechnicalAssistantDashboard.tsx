@@ -905,10 +905,18 @@ function TADashboardInner() {
   // Signal Chief — emits a high-priority alert event the chief dashboard can surface.
   async function signalChief() {
     if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
+    const td = checkCategoryTime(timeRuleId, timerSec);
+    // RC-3: ride the ta_sync channel the Chief already listens to.
+    await emitEvent("ta_sync", {
+      signal: true,
+      oob_count: oobPoints, oob_deduction: oobPoints * 0.1,
+      time: timerSec, time_deduction: td.value, time_reason: td.reason,
+    });
     await emitEvent("ta_signal_chief", { at: timerSec, oob: oobPoints });
     pushLog("signal", "📣 Signaled Chief");
     toast.success("تم إرسال الإشارة للحكم الرئيسي");
   }
+
 
 
   // Broadcast VAR — asks the VAR referee to review the current athlete at the
