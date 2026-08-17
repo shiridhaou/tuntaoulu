@@ -929,6 +929,15 @@ function TADashboardInner() {
         }, { onConflict: "session_code" });
       }
       await matchControl.start(sessionCode);
+      // Instant unlock for every judge panel — realtime replication can lag,
+      // so the timer transition also rides the low-latency broadcast channel.
+      await broadcastSessionState(sessionCode, {
+        athlete_id: liveAthlete?.id ?? null,
+        style: styleCategory,
+        timer_state: "running",
+        started_at: new Date().toISOString(),
+        payload: { match_started: true, phase: "live" },
+      });
       await emitEvent("timer_start", { at: timerSec });
       pushLog("time", "▶ تشغيل المؤقت");
     } catch (e: any) {
@@ -938,6 +947,12 @@ function TADashboardInner() {
   async function timerStop() {
     if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
     await matchControl.pause(sessionCode);
+    await broadcastSessionState(sessionCode, {
+      timer_state: "stopped",
+      started_at: null,
+      elapsed_ms: timerSec * 1000,
+      payload: { phase: "post" },
+    });
     await emitEvent("timer_stop", { at: timerSec });
     await broadcastTaDeductions({ atSec: timerSec, oob: oobPoints, final: true });
     const td = checkCategoryTime(timeRuleId, timerSec);
@@ -951,6 +966,12 @@ function TADashboardInner() {
   async function timerReset() {
     if (!sessionCode) return;
     await matchControl.reset(sessionCode);
+    await broadcastSessionState(sessionCode, {
+      timer_state: "idle",
+      started_at: null,
+      elapsed_ms: 0,
+      payload: { phase: "pre", match_started: false },
+    });
     await emitEvent("timer_reset");
     await supabase.from("current_match")
       .update({ ta_deductions: { time: { value: 0 }, oob: { count: 0, value: 0 }, total: 0 } as never })
