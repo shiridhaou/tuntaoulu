@@ -1,15 +1,9 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
-import { useCompetition, type UserRole } from "@/store/competition-store";
+import { useCompetition } from "@/store/competition-store";
 
 import { RoleSelection } from "@/components/RoleSelection";
-import { ChiefRefereeDashboard } from "@/components/ChiefRefereeDashboard";
-import { ChiefSetupGate } from "@/components/ChiefSetupGate";
-import { JudgeAPanel } from "@/components/JudgeAPanel";
-import { JudgeBPanel } from "@/components/JudgeBPanel";
-import { JudgeCPanel } from "@/components/JudgeCPanel";
-import { AssistantRefereePanel } from "@/components/AssistantRefereePanel";
-import { TechnicalAssistantDashboard } from "@/components/TechnicalAssistantDashboard";
-import { SessionGuard } from "@/components/SessionGuard";
+import { pathForRole } from "@/components/RolePanel";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
