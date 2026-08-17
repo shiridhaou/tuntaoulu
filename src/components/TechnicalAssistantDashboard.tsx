@@ -1336,7 +1336,7 @@ function TADashboardInner() {
                                 </Button>
                               </div>
                             </div>
-                            <div className="overflow-x-auto rounded-lg border border-border/50 max-h-72">
+                            <div className="num-west overflow-x-auto rounded-lg border border-border/50 max-h-72">
                               <table className="w-full text-xs">
                                 <thead className="bg-muted/30 sticky top-0">
                                   <tr>
