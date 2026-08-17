@@ -67,6 +67,9 @@ const DICT: Record<string, { pinyin: string; ar: string; en: string; value?: num
   "34": { pinyin: "Lián Jiē", ar: "الربط بعد القفزة غير سليم", en: "Poor linking after jump" },
 
   "40": { pinyin: "Qì Xiè Fǎ", ar: "تقنية السلاح غير صحيحة", en: "Incorrect weapon technique" },
+  "41": { pinyin: "Jiàn Fǎ", ar: "تقنية السيف المستقيم غير صحيحة", en: "Incorrect straightsword method" },
+  "43": { pinyin: "Qiāng Fǎ", ar: "تقنية الرمح غير صحيحة", en: "Incorrect spear method" },
+  "44": { pinyin: "Qì Xiè Xié Tiáo", ar: "تناسق السلاح مع الجسم غير صحيح", en: "Weapon–body coordination fault" },
   "42": { pinyin: "Dāo · Gùn Fǎ", ar: "طريقة السيف/العصا غير صحيحة", en: "Incorrect broadsword / cudgel method" },
 
   "50": { pinyin: "Bù Fǎ", ar: "الخطوة غير صحيحة", en: "Incorrect footwork" },
@@ -117,7 +120,7 @@ const STYLE_CODES: Record<GroupAStyle, string[]> = {
     "10", "12", "13", "14", "15", "16",
     "20", "21", "22", "23", "24", "25", "26",
     "30", "31", "32", "33", "34",
-    "40", "42",
+    "40", "41", "42", "43", "44",
     "50", "51", "52", "53", "54", "58",
     "60", "61", "62", "63", "64",
     ...GENERAL_CODES,
@@ -126,7 +129,7 @@ const STYLE_CODES: Record<GroupAStyle, string[]> = {
     "01", "02", "03", "04",
     "20", "23", "25", "26", "27",
     "30", "32",
-    "40", "42",
+    "40", "42", "44",
     "50", "51", "52", "53", "55", "56", "57",
     "62", "65", "66", "67",
     ...GENERAL_CODES,
