@@ -202,6 +202,12 @@ function TADashboardInner() {
   // Out-of-bounds points stepper (IWUF: 0.1 per OOB)
   const [oobPoints, setOobPoints] = useState(0);
 
+  // RC-7 — athletes that live only in the local queue because their background
+  // database sync failed. Surfaced as a non-blocking badge with manual retry.
+  const [unsynced, setUnsynced] = useState<Record<string, unknown>[]>([]);
+  const [retrying, setRetrying] = useState(false);
+
+
   // Manually selected athlete (from the queue table "اختيار / Select" action).
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
