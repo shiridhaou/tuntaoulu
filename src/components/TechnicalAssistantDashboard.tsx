@@ -202,6 +202,12 @@ function TADashboardInner() {
   // Out-of-bounds points stepper (IWUF: 0.1 per OOB)
   const [oobPoints, setOobPoints] = useState(0);
 
+  // RC-7 — athletes that live only in the local queue because their background
+  // database sync failed. Surfaced as a non-blocking badge with manual retry.
+  const [unsynced, setUnsynced] = useState<Record<string, unknown>[]>([]);
+  const [retrying, setRetrying] = useState(false);
+
+
   // Manually selected athlete (from the queue table "اختيار / Select" action).
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -278,9 +284,16 @@ function TADashboardInner() {
 
   useEffect(() => {
     void loadActive();
+    const tid = tournament?.id ?? null;
     const ch = supabase
-      .channel(`ta-${sessionCode}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "athletes" }, () => loadActive())
+      .channel(`ta-${sessionCode}-${tid ?? "all"}`)
+      // RC-6: scope athlete changes to this tournament so concurrent events
+      // don't trigger a full refetch on this screen.
+      .on("postgres_changes",
+        tid
+          ? { event: "*", schema: "public", table: "athletes", filter: `tournament_id=eq.${tid}` }
+          : { event: "*", schema: "public", table: "athletes" },
+        () => loadActive())
       .on("postgres_changes",
         { event: "*", schema: "public", table: "tournaments", filter: `session_code=eq.${sessionCode}` },
         () => loadActive())
@@ -291,7 +304,8 @@ function TADashboardInner() {
     void loadJudgeStatuses();
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [tournament?.id]);
+
 
   // Timer ticks are driven by useMatchSync (1Hz local extrapolation while running).
 
@@ -357,6 +371,37 @@ function TADashboardInner() {
     if (!sessionCode) return;
     await supabase.from("match_events").insert({ session_code: sessionCode, event_type, payload });
   }
+
+  /**
+   * RC-2 — deep merge of `current_match.payload`.
+   * Reads the existing payload, spreads the patch over it and writes it back,
+   * so keys owned by other subsystems (payload.team, payload.display, …) are
+   * never wiped when the TA calls or starts an athlete.
+   */
+  async function mergeMatchPayload(
+    code: string,
+    patch: Record<string, unknown>,
+    row: Record<string, unknown> = {},
+  ): Promise<Record<string, unknown>> {
+    const { data: existing } = await supabase
+      .from("current_match")
+      .select("athlete_id, style, payload")
+      .eq("session_code", code)
+      .maybeSingle();
+    const prev = (existing?.payload as Record<string, unknown> | null) ?? {};
+    const merged = { ...prev, ...patch };
+    await supabase.from("current_match").upsert({
+      session_code: code,
+      athlete_id: "athlete_id" in row ? row.athlete_id : (existing?.athlete_id ?? null),
+      style: "style" in row ? row.style : (existing?.style ?? null),
+      ...row,
+      payload: merged as never,
+      updated_at: new Date().toISOString(),
+    } as never, { onConflict: "session_code" });
+    return merged;
+  }
+
+
 
   function describeDbError(e: any): string {
     const parts = [e?.message, e?.details, e?.hint, e?.code ? `code=${e.code}` : null]
@@ -504,25 +549,44 @@ function TADashboardInner() {
     toast.success(`تمت إضافة ${clean.length} لاعب إلى قائمة المباريات`);
 
     // 2) Background database insert — never blocks the modal or the table.
-    void (async () => {
-      try {
-        // Never send a non-UUID tournament_id to the database (22P02).
-        const tid = await resolveTournamentId();
-        const { error } = await supabase
-          .from("athletes")
-          .upsert(clean.map((r) => ({ ...r, tournament_id: tid })), { onConflict: "id" });
-        if (error) throw error;
-        void loadActive();
-      } catch (e: any) {
-        console.warn("[athletes] background import sync failed — local queue kept", e?.message ?? e);
-      }
-    })();
+    void syncRecords(clean as Record<string, unknown>[]);
+  }
+
+  /**
+   * RC-7 — background upsert with a visible, retryable failure state.
+   * The local queue always stays authoritative.
+   */
+  async function syncRecords(records: Record<string, unknown>[]) {
+    if (!records.length) return;
+    setRetrying(true);
+    try {
+      // Never send a non-UUID tournament_id to the database (22P02).
+      const tid = await resolveTournamentId();
+      const { error } = await supabase
+        .from("athletes")
+        .upsert(records.map((r) => ({ ...r, tournament_id: tid })) as never, { onConflict: "id" });
+      if (error) throw error;
+      setUnsynced((prev) => {
+        const ids = new Set(records.map((r) => String(r.id)));
+        return prev.filter((r) => !ids.has(String(r.id)));
+      });
+      void loadActive();
+    } catch (e: any) {
+      console.warn("[athletes] background import sync failed — local queue kept", e?.message ?? e);
+      setUnsynced((prev) => {
+        const ids = new Set(prev.map((r) => String(r.id)));
+        return [...prev, ...records.filter((r) => !ids.has(String(r.id)))];
+      });
+    } finally {
+      setRetrying(false);
+    }
   }
 
   function confirmImport() {
     if (!preview) return;
     persistRecords(preview);
   }
+
 
 
 
@@ -603,6 +667,12 @@ function TADashboardInner() {
 
   async function startMatch(athlete: Athlete) {
     if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
+    // RC-1: optimistic local status authority — the queue, the call box and the
+    // match phase flip instantly even for athletes that only exist locally.
+    setAthletes((prev) => prev.map((a) =>
+      a.id === athlete.id
+        ? ({ ...a, status: "judging" } as Athlete)
+        : a.status === "judging" ? ({ ...a, status: "waiting" } as Athlete) : a));
     if (tournament) {
       await supabase.from("athletes").update({ status: "waiting" }).eq("tournament_id", tournament.id).eq("status", "judging");
     }
@@ -629,35 +699,35 @@ function TADashboardInner() {
       difficultySheet = buildDifficultySheet(codes) as DifficultyItem[];
     }
 
-    // SINGLE source of truth — one full row with athlete + style + match_mode + sheet.
+    // SINGLE source of truth — merged payload (team / display settings kept).
     // Reset timer to idle so all followers start clean.
-    await supabase.from("current_match").upsert({
-      session_code: sessionCode,
+    const liveStyle = normalizeStyle(athlete.style ?? styleCategory, styleCategory);
+    const athletePayload = {
+      id: athlete.id,
+      name: athlete.full_name,
+      bib: athlete.bib_number,
+      club: athlete.club,
+      country: athlete.country,
+      category: athlete.age_category ?? null,
+    };
+    await mergeMatchPayload(sessionCode, {
+      match_mode: matchMode,
+      style: liveStyle,
+      time_rule_id: timeRuleId,
+      locked: configLocked,
+      status: "LIVE",
+      category: athlete.age_category ?? null,
+      difficultySheet,
+      movements: difficultySheet,
+      athlete: athletePayload,
+      activeAthlete: athletePayload,
+    }, {
       athlete_id: athlete.id,
-      style: normalizeStyle(athlete.style ?? styleCategory, styleCategory),
+      style: liveStyle,
       timer_state: "idle",
       started_at: null,
       elapsed_ms: 0,
-      payload: {
-        match_mode: matchMode,
-        style: normalizeStyle(athlete.style ?? styleCategory, styleCategory),
-        time_rule: timeRuleId,
-        locked: configLocked,
-        status: "LIVE",
-        category: athlete.age_category ?? null,
-        difficultySheet,
-        movements: difficultySheet,
-        athlete: {
-          id: athlete.id,
-          name: athlete.full_name,
-          bib: athlete.bib_number,
-          club: athlete.club,
-          country: athlete.country,
-          category: athlete.age_category ?? null,
-        },
-      } as never,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "session_code" });
+    });
 
     // Instant MATCH_STATE_CHANGE fan-out (Chief, A/B/C, VAR) + C-sheet push.
     await publishMatchState(athlete, "LIVE", difficultySheet);
@@ -688,6 +758,7 @@ function TADashboardInner() {
   }
 
   async function finishMatch(athlete: Athlete) {
+    setAthletes((prev) => prev.map((a) => a.id === athlete.id ? ({ ...a, status: "done" } as Athlete) : a));
     await supabase.from("athletes").update({ status: "done" }).eq("id", athlete.id);
     if (sessionCode) {
       await supabase.from("current_match").update({ athlete_id: null }).eq("session_code", sessionCode);
@@ -703,12 +774,15 @@ function TADashboardInner() {
   async function nextAthleteGlobalReset() {
     if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
     if (liveAthlete) {
-      await supabase.from("athletes").update({ status: "done" }).eq("id", liveAthlete.id);
+      const doneId = liveAthlete.id;
+      setAthletes((prev) => prev.map((a) => a.id === doneId ? ({ ...a, status: "done" } as Athlete) : a));
+      await supabase.from("athletes").update({ status: "done" }).eq("id", doneId);
     }
     // 1) Clear the live athlete pointer (followers reset locally)
     await supabase.from("current_match")
       .update({ athlete_id: null, ta_deductions: { time: { value: 0 }, oob: { count: 0, value: 0 }, total: 0 } as never })
       .eq("session_code", sessionCode);
+
     // 2) Reset authoritative timer
     await matchControl.reset(sessionCode);
     // 3) Wipe judge scores for this session
@@ -767,10 +841,10 @@ function TADashboardInner() {
       country: athlete.country,
       category: athlete.age_category ?? null,
     };
-    const payload = {
+    const patch = {
       match_mode: matchMode,
       style,
-      time_rule: timeRuleId,
+      time_rule_id: timeRuleId,
       locked: configLocked,
       status,
       category: athlete.age_category ?? null,
@@ -780,16 +854,15 @@ function TADashboardInner() {
       difficultySheet: movements,
     };
 
-    await supabase.from("current_match").upsert({
-      session_code: sessionCode,
+    // RC-2: deep merge so payload.team / payload.display survive every call.
+    const payload = await mergeMatchPayload(sessionCode, patch, {
       athlete_id: athlete.id,
       style,
-      payload: payload as never,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "session_code" });
+    });
 
     // Instant fan-out (MATCH_STATE_CHANGE) to all connected panels.
     await broadcastSessionState(sessionCode, { style, athlete_id: athlete.id, payload });
+
     await emitEvent("match_state_change", {
       activeAthlete: athletePayload,
       status,
@@ -897,10 +970,18 @@ function TADashboardInner() {
   // Signal Chief — emits a high-priority alert event the chief dashboard can surface.
   async function signalChief() {
     if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
+    const td = checkCategoryTime(timeRuleId, timerSec);
+    // RC-3: ride the ta_sync channel the Chief already listens to.
+    await emitEvent("ta_sync", {
+      signal: true,
+      oob_count: oobPoints, oob_deduction: oobPoints * 0.1,
+      time: timerSec, time_deduction: td.value, time_reason: td.reason,
+    });
     await emitEvent("ta_signal_chief", { at: timerSec, oob: oobPoints });
     pushLog("signal", "📣 Signaled Chief");
     toast.success("تم إرسال الإشارة للحكم الرئيسي");
   }
+
 
 
   // Broadcast VAR — asks the VAR referee to review the current athlete at the
@@ -944,10 +1025,17 @@ function TADashboardInner() {
     toast.success("تم قفل الإعدادات وبثّها للحكام");
   }
 
-  function unlockConfig() {
+  // RC-4: unlocking must reach every judge screen, not just local state.
+  async function unlockConfig() {
     setConfigLocked(false);
     pushLog("config", "Unlocked config");
+    if (!sessionCode) return;
+    const payload = await mergeMatchPayload(sessionCode, { locked: false });
+    await broadcastSessionState(sessionCode, { style: styleCategory, payload });
+    await emitEvent("config_locked", { match_mode: matchMode, style: styleCategory, locked: false });
+    toast.success("تم فتح الإعدادات للحكام");
   }
+
 
   // Sync deductions/OOB to chief — also re-broadcasts the consolidated ta_deductions
   async function syncWithChief() {
@@ -995,7 +1083,13 @@ function TADashboardInner() {
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
-  const liveAthlete = athletes.find((a) => a.status === "judging") ?? null;
+  // RC-1: the authoritative current_match pointer wins; local status is the
+  // fallback so locally-imported (not yet synced) athletes still go live.
+  const liveAthlete =
+    (sync.athleteId ? athletes.find((a) => a.id === sync.athleteId) : undefined)
+    ?? athletes.find((a) => a.status === "judging")
+    ?? null;
+
   const selectedAthlete = selectedId ? (athletes.find((a) => a.id === selectedId) ?? null) : null;
   const nextAthlete = selectedAthlete ?? athletes.find((a) => a.status === "waiting") ?? null;
 
@@ -1029,7 +1123,7 @@ function TADashboardInner() {
         {/* ===== STANDARDIZED HEADER ===== */}
         <motion.header
           initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-          className="glass-card rounded-xl px-3 py-2 border border-fed-blue/20 flex items-center justify-between gap-3 shrink-0"
+          className="num-west glass-card rounded-xl px-3 py-2 border border-fed-blue/20 flex items-center justify-between gap-3 shrink-0"
         >
           <div className="flex items-center gap-3 min-w-0">
             <FederationLogo size="header" />
@@ -1328,7 +1422,7 @@ function TADashboardInner() {
                                 </Button>
                               </div>
                             </div>
-                            <div className="overflow-x-auto rounded-lg border border-border/50 max-h-72">
+                            <div className="num-west overflow-x-auto rounded-lg border border-border/50 max-h-72">
                               <table className="w-full text-xs">
                                 <thead className="bg-muted/30 sticky top-0">
                                   <tr>
@@ -1626,7 +1720,7 @@ function TADashboardInner() {
 
         {/* Event log lives in a floating Sheet triggered by the header "View Logs" button */}
         <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <SheetContent side="right" className="w-full sm:max-w-md" dir="rtl">
+          <SheetContent side="right" className="num-west w-full sm:max-w-md" dir="rtl">
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2 text-fed-blue font-heading">
                 <Activity className="h-5 w-5" /> سجل الأحداث ({eventLog.length})
@@ -1663,7 +1757,16 @@ function TADashboardInner() {
                 <span className="px-2 py-0.5 rounded bg-muted/30">انتظار: <b className="text-muted-foreground">{stats.waiting ?? 0}</b></span>
                 <span className="px-2 py-0.5 rounded bg-fed-blue/15">جاري: <b className="text-fed-blue">{stats.judging ?? 0}</b></span>
               </div>
+              {unsynced.length > 0 && (
+                <button type="button" disabled={retrying}
+                  onClick={() => void syncRecords(unsynced)}
+                  className="px-2 py-0.5 rounded text-[11px] border border-amber-500/50 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 disabled:opacity-50">
+                  {unsynced.length} لاعبين محليين — {retrying ? "جاري إعادة المحاولة…" : "إعادة المحاولة"}
+                </button>
+              )}
             </div>
+
+
             <div className="flex gap-2 items-center flex-wrap">
               <Button onClick={() => setManualOpen(true)} size="sm" disabled={!tournament}
                 className="h-8 bg-emerald-500 hover:bg-emerald-600 text-white shadow shadow-emerald-500/20">
@@ -1788,7 +1891,7 @@ function TADashboardInner() {
 
       {/* ===== MANUAL ADD ATHLETE DIALOG ===== */}
       <Dialog open={manualOpen} onOpenChange={setManualOpen}>
-        <DialogContent className="sm:max-w-lg" dir="rtl">
+        <DialogContent className="num-west sm:max-w-lg" dir="rtl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gold">
               <UserPlus className="h-5 w-5" /> إضافة لاعب يدوياً
@@ -2268,17 +2371,17 @@ function DifficultyManager({
             <span className="text-[9px] text-cyber-orange/80" dir="ltr">Total</span>
             <span className="text-sm font-heading font-black text-cyber-orange tabular-nums">{total.toFixed(2)}</span>
           </div>
-          {isLive && (
-            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
-              pushed
-                ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
-                : "border-amber-500/50 bg-amber-500/10 text-amber-300"
-            }`}>
-              <span className="text-[9px] font-bold">
-                {pushed ? `✓ تم الإرسال — ${cJudgesSent}/${cJudgesActive || "C"} قيّموا` : "بانتظار الإرسال"}
-              </span>
-            </div>
-          )}
+          {/* RC-8: receipt is shown for pre-match pushes too, not just LIVE. */}
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
+            pushed
+              ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
+              : "border-amber-500/50 bg-amber-500/10 text-amber-300"
+          }`}>
+            <span className="text-[9px] font-bold">
+              {pushed ? `✓ تم الإرسال — ${cJudgesSent}/${cJudgesActive || "C"} قيّموا` : "بانتظار الإرسال"}
+            </span>
+          </div>
+
           <Button onClick={() => saveSheet(false)} size="sm" variant="outline" disabled={loading}
             className="h-8 border-white/20 text-white/80 hover:bg-white/10 text-xs">
             <CheckCircle2 className="h-3 w-3 ml-1" /> حفظ
@@ -2386,11 +2489,14 @@ function pick(row: Record<string, any>, keys: string[]): string {
     const nk = normalizeKey(rk);
     const idx = normalizedKeys.indexOf(nk);
     if (idx !== -1 && row[rk] != null && String(row[rk]).trim() !== "") {
-      return String(row[rk]).trim();
+      // RC-9: Eastern-Arabic / Persian digits are converted to 0-9 before any
+      // parseFloat / parseDate so federation spreadsheets import cleanly.
+      return toWesternDigits(String(row[rk]).trim()).trim();
     }
   }
   return "";
 }
+
 
 function detectMatchMode(v: string): "compulsory" | "optional" | null {
   if (!v) return null;
@@ -2402,13 +2508,10 @@ function detectMatchMode(v: string): "compulsory" | "optional" | null {
 
 function detectStyle(v: string): string | null {
   if (!v) return null;
-  const s = v.toLowerCase();
-  if (/(changquan|chang|طويلة|تشانغ|شانغ)/i.test(s)) return "changquan";
-  if (/(nanquan|nan|جنوبية|نان)/i.test(s)) return "nanquan";
-  if (/(taiji|tai chi|تاي|تايجي)/i.test(s)) return "taijiquan";
-  if (/(traditional|تقليد)/i.test(s)) return "traditional";
-  return v.trim().toLowerCase();
+  // RC-10: single source of truth — "Northern", "CQ", "شمالي" → changquan, etc.
+  return normalizeStyle(v);
 }
+
 
 function parseDate(v: string): string | null {
   if (!v) return null;
