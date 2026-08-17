@@ -1,3 +1,4 @@
+import { normalizeRow, type NormalizedAthleteRow, type DifficultyItem } from "@/lib/importParsing";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -44,7 +45,7 @@ interface Tournament {
   session_code: string | null;
 }
 
-interface DifficultyItem { code: string; label: string; value: number }
+
 
 interface Athlete {
   id: string;
@@ -179,7 +180,7 @@ function TADashboardInner() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<AgeCategory | "all">("all");
   const [dragOver, setDragOver] = useState(false);
-  const [preview, setPreview] = useState<ReturnType<typeof normalizeRow>[] | null>(null);
+  const [preview, setPreview] = useState<NormalizedAthleteRow[] | null>(null);
   const [tab, setTab] = useState("import");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -533,7 +534,7 @@ function TADashboardInner() {
    * Local-first import: parsed athletes are appended to the local queue and the
    * modal closes immediately; the database insert runs in the background.
    */
-  function persistRecords(records: ReturnType<typeof normalizeRow>[]) {
+ function persistRecords(records: NormalizedAthleteRow[]) {
     if (!records.length) return;
 
     // Strip transient fields (e.g. _mode) before storing/persisting.
@@ -2491,18 +2492,6 @@ function DifficultyManager({
   );
 }
 
-// ============ Helpers ============
-function normalizeKey(s: string): string {
-  return s
-    .toString()
-    .replace(/[\u064B-\u0652\u0670]/g, "") // strip Arabic diacritics
-    .replace(/[إأآا]/g, "ا")
-    .replace(/ى/g, "ي")
-    .replace(/ة/g, "ه")
-    .replace(/[\s_\-./\\]+/g, "")
-    .toLowerCase()
-    .trim();
-}
 
 function pick(row: Record<string, any>, keys: string[]): string {
   const normalizedKeys = keys.map(normalizeKey);
