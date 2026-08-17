@@ -1037,7 +1037,7 @@ function TADashboardInner() {
         {/* ===== STANDARDIZED HEADER ===== */}
         <motion.header
           initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-          className="glass-card rounded-xl px-3 py-2 border border-fed-blue/20 flex items-center justify-between gap-3 shrink-0"
+          className="num-west glass-card rounded-xl px-3 py-2 border border-fed-blue/20 flex items-center justify-between gap-3 shrink-0"
         >
           <div className="flex items-center gap-3 min-w-0">
             <FederationLogo size="header" />
