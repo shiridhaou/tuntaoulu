@@ -1757,7 +1757,14 @@ function TADashboardInner() {
                 <span className="px-2 py-0.5 rounded bg-muted/30">انتظار: <b className="text-muted-foreground">{stats.waiting ?? 0}</b></span>
                 <span className="px-2 py-0.5 rounded bg-fed-blue/15">جاري: <b className="text-fed-blue">{stats.judging ?? 0}</b></span>
               </div>
-            </div>
+              {unsynced.length > 0 && (
+                <button type="button" disabled={retrying}
+                  onClick={() => void syncRecords(unsynced)}
+                  className="px-2 py-0.5 rounded text-[11px] border border-amber-500/50 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 disabled:opacity-50">
+                  {unsynced.length} لاعبين محليين — {retrying ? "جاري إعادة المحاولة…" : "إعادة المحاولة"}
+                </button>
+              )}
+
             <div className="flex gap-2 items-center flex-wrap">
               <Button onClick={() => setManualOpen(true)} size="sm" disabled={!tournament}
                 className="h-8 bg-emerald-500 hover:bg-emerald-600 text-white shadow shadow-emerald-500/20">
