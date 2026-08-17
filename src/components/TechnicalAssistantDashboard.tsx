@@ -952,10 +952,17 @@ function TADashboardInner() {
     toast.success("تم قفل الإعدادات وبثّها للحكام");
   }
 
-  function unlockConfig() {
+  // RC-4: unlocking must reach every judge screen, not just local state.
+  async function unlockConfig() {
     setConfigLocked(false);
     pushLog("config", "Unlocked config");
+    if (!sessionCode) return;
+    const payload = await mergeMatchPayload(sessionCode, { locked: false });
+    await broadcastSessionState(sessionCode, { style: styleCategory, payload });
+    await emitEvent("config_locked", { match_mode: matchMode, style: styleCategory, locked: false });
+    toast.success("تم فتح الإعدادات للحكام");
   }
+
 
   // Sync deductions/OOB to chief — also re-broadcasts the consolidated ta_deductions
   async function syncWithChief() {
