@@ -2413,13 +2413,10 @@ function detectMatchMode(v: string): "compulsory" | "optional" | null {
 
 function detectStyle(v: string): string | null {
   if (!v) return null;
-  const s = v.toLowerCase();
-  if (/(changquan|chang|طويلة|تشانغ|شانغ)/i.test(s)) return "changquan";
-  if (/(nanquan|nan|جنوبية|نان)/i.test(s)) return "nanquan";
-  if (/(taiji|tai chi|تاي|تايجي)/i.test(s)) return "taijiquan";
-  if (/(traditional|تقليد)/i.test(s)) return "traditional";
-  return v.trim().toLowerCase();
+  // RC-10: single source of truth — "Northern", "CQ", "شمالي" → changquan, etc.
+  return normalizeStyle(v);
 }
+
 
 function parseDate(v: string): string | null {
   if (!v) return null;
