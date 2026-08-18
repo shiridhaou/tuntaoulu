@@ -1743,8 +1743,10 @@ async function syncWithChief() {
           </Dialog>
         </div>
       </div>
-    );
+    </div>
+  );
 }
+
 
 
     // ============ Judges Status Grid (compact dots) ============
