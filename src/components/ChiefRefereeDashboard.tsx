@@ -60,7 +60,7 @@ export function ChiefRefereeDashboard() {
 
 function ChiefRefereeDashboardInner() {
   const {
-    competitionStyle, setCompetitionStyle, athletes, setSelectedRole, logout,
+    competitionStyle, setCompetitionStyle, athletes, setSelectedRole,
     judgeAScore, judgeBScores, judgeCScore, finalScore,
     scoreRevealed, setScoreRevealed,
     sessionCode, generateSessionCode, currentAthleteIndex, setCurrentAthleteIndex,
@@ -72,6 +72,8 @@ function ChiefRefereeDashboardInner() {
     leaderboardMode, setLeaderboardMode, commitCurrentResult, getLeaderboard, clearResults,
     isVarLiveOnPublic, setIsVarLiveOnPublic,
   } = useCompetition();
+  const logout = useLogout();
+
 
   // EMERGENCY SESSION GENERATION: Chief is the session owner — if for any reason
   // we land on the dashboard with no sessionCode, generate one immediately so the
