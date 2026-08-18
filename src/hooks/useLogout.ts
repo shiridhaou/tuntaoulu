@@ -14,6 +14,7 @@ export function useLogout() {
 
   return useCallback(() => {
     // 1) clear in-memory state first
+    console.log("[useLogout] invoked");
     logout();
 
     // 2) wipe all app storage keys (local + session) — keep Supabase auth device session intact
@@ -32,19 +33,23 @@ export function useLogout() {
         }
         keysToRemove.forEach((key) => window.localStorage.removeItem(key));
         window.sessionStorage.removeItem("taolu.tab");
-      } catch { /* ignore */ }
+      } catch (e) { console.error("[useLogout] storage wipe error", e); }
     }
 
     // 3) redirect to root with empty search params. Fall back to window.location
     //    if the router navigate is not available in this context.
+    console.log("[useLogout] navigating, nav type:", typeof navigate, "router:", typeof router, "window:", typeof window);
     try {
       if (typeof navigate === "function") {
         navigate({ to: "/", search: {}, replace: true });
+        console.log("[useLogout] navigate() called");
       } else if (router?.navigate) {
         router.navigate({ to: "/", search: {}, replace: true });
+        console.log("[useLogout] router.navigate() called");
       } else if (typeof window !== "undefined") {
         window.location.replace("/");
+        console.log("[useLogout] window.location.replace called");
       }
-    } catch { /* ignore */ }
+    } catch (e) { console.error("[useLogout] navigation error", e); }
   }, [logout, navigate, router]);
 }
