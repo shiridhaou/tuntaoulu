@@ -12,11 +12,16 @@ export function useLogout() {
   const navigate = useNavigate();
 
   return useCallback(() => {
-    // 1) clear in-memory state first
     console.log("[useLogout] invoked");
+    // 1) redirect to root with empty search params first (before state changes unmount the caller)
+    console.log("[useLogout] navigating to /");
+    navigate({ to: "/", search: {}, replace: true });
+    console.log("[useLogout] navigate dispatched");
+
+    // 2) clear in-memory state
     logout();
 
-    // 2) wipe all app storage keys (local + session) — keep Supabase auth device session intact
+    // 3) wipe all app storage keys (local + session) — keep Supabase auth device session intact
     if (typeof window !== "undefined") {
       try {
         const keysToRemove: string[] = [];
@@ -33,14 +38,6 @@ export function useLogout() {
         keysToRemove.forEach((key) => window.localStorage.removeItem(key));
         window.sessionStorage.removeItem("taolu.tab");
       } catch { /* ignore */ }
-    }
-
-    // 3) redirect to root with empty search params and replace history entry
-    console.log("[useLogout] navigating to /", typeof navigate);
-    const result = navigate({ to: "/", search: {}, replace: true });
-    console.log("[useLogout] navigate result:", result);
-    if (result && typeof result.then === "function") {
-      result.then((v: unknown) => console.log("[useLogout] navigate resolved:", v)).catch((e: unknown) => console.error("[useLogout] navigate rejected:", e));
     }
   }, [logout, navigate]);
 }
