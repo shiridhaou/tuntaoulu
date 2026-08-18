@@ -1,3 +1,4 @@
+import { useTournament } from "@/hooks/useTournament";
 import { useMatchTimer, computeMatchPhase } from "@/hooks/useMatchTimer";
 import { useAthleteImport, type ImportedAthleteRecord } from "@/hooks/useAthleteImport";
 import { normalizeRow, type NormalizedAthleteRow, type DifficultyItem } from "@/lib/importParsing";
@@ -37,15 +38,7 @@ import { useCompetition } from "@/store/competition-store";
 import { classifyAge, AGE_CATEGORY_COLORS, type AgeCategory } from "@/lib/ageCategories";
 import { CATEGORY_TIME_RULES, DEFAULT_CATEGORY_RULE_ID, checkCategoryTime, getCategoryRule, fmtRuleWindow } from "@/lib/categoryTimeRules";
 
-interface Tournament {
-  id: string;
-  name: string;
-  location: string | null;
-  start_date: string | null;
-  end_date: string | null;
-  active: boolean;
-  session_code: string | null;
-}
+
 
 
 
@@ -175,8 +168,8 @@ export function TechnicalAssistantDashboard() {
 
 function TADashboardInner() {
   const { logout, sessionCode, setSessionCode, team, setTeamConfig } = useCompetition();
-  const [tournament, setTournament] = useState<Tournament | null>(null);
-  const [form, setForm] = useState({ name: "", location: "", start_date: "", end_date: "" });
+ 
+ 
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   
   const [search, setSearch] = useState("");
@@ -304,54 +297,23 @@ function TADashboardInner() {
 
   // Timer ticks are driven by useMatchSync (1Hz local extrapolation while running).
 
-  const localTournamentKey = () => `ta:tournament:${sessionCode ?? "none"}`;
 
-  function readLocalTournament(): Tournament | null {
-    try {
-      const raw = localStorage.getItem(localTournamentKey());
-      return raw ? (JSON.parse(raw) as Tournament) : null;
-    } catch { return null; }
-  }
 
-  function writeLocalTournament(t: Tournament | null) {
-    try {
-      if (t) localStorage.setItem(localTournamentKey(), JSON.stringify(t));
-      else localStorage.removeItem(localTournamentKey());
-    } catch { /* storage unavailable — local context still holds the value */ }
-  }
 
-  async function loadActive() {
-    if (!sessionCode) return;
-    const { data: t } = await supabase
-      .from("tournaments").select("*").eq("session_code", sessionCode)
-      .order("created_at", { ascending: false }).limit(1).maybeSingle();
-    if (t) {
-      setTournament(t as Tournament);
-      writeLocalTournament(t as Tournament);
-      setForm({
-        name: t.name, location: t.location ?? "",
-        start_date: t.start_date ?? "", end_date: t.end_date ?? "",
-      });
-      const { data: a } = await supabase
-        .from("athletes").select("*").eq("tournament_id", t.id)
-        .order("bib_number", { ascending: true });
-      // Merge: never drop locally queued athletes that haven't synced yet.
-      setAthletes((prev) => {
-        const remote = (a ?? []) as Athlete[];
-        const ids = new Set(remote.map((x) => x.id));
-        return [...remote, ...prev.filter((x) => !ids.has(x.id))];
-      });
-    } else {
-      const local = readLocalTournament();
-      if (local) {
-        setTournament(local);
-        setForm({
-          name: local.name, location: local.location ?? "",
-          start_date: local.start_date ?? "", end_date: local.end_date ?? "",
-        });
-      }
-    }
+
+async function loadActive() {
+    const t = await reloadTournament();
+    if (!t) return;
+    const { data: a } = await supabase
+      .from("athletes").select("*").eq("tournament_id", t.id)
+      .order("bib_number", { ascending: true });
+    setAthletes((prev) => {
+      const remote = (a ?? []) as Athlete[];
+      const ids = new Set(remote.map((x) => x.id));
+      return [...remote, ...prev.filter((x) => !ids.has(x.id))];
+    });
   }
+      
 
 
   async function loadJudgeStatuses() {
@@ -409,17 +371,7 @@ function TADashboardInner() {
    * away, then pushed to the database in the background. Database problems are
    * logged (and surfaced as a soft notice) but never block the panel.
    */
-  function saveTournament() {
-    if (!form.name.trim()) { toast.error("اسم البطولة مطلوب"); return; }
 
-    const payload = {
-      name: form.name.trim(),
-      location: form.location.trim() || null,
-      start_date: form.start_date.trim() || null,
-      end_date: form.end_date.trim() || null,
-      session_code: sessionCode,
-      active: true,
-    };
 
     // 1) Local source of truth — instant.
     const isNew = !tournament;
@@ -461,32 +413,8 @@ function TADashboardInner() {
    * exist in the database, so athlete inserts never hit 22P02 or an FK error.
    * Falls back to `null` (unlinked athletes) instead of blocking the import.
    */
-  async function resolveTournamentId(): Promise<string | null> {
-    const id = cleanUuid(tournament?.id) ?? newUuid();
-    try {
-      const { data: existing } = await supabase
-        .from("tournaments").select("id").eq("id", id).maybeSingle();
-      if (existing) return id;
-
-      await ensureDeviceSession();
-      await joinSessionMembership(sessionCode ?? "", "technical-assistant");
-      const { data: created, error } = await supabase.from("tournaments").insert({
-        id,
-        name: tournament?.name || form.name.trim() || "بطولة",
-        location: tournament?.location ?? (form.location.trim() || null),
-        start_date: tournament?.start_date ?? (form.start_date.trim() || null),
-        end_date: tournament?.end_date ?? (form.end_date.trim() || null),
-        session_code: sessionCode,
-        active: true,
-      }).select().single();
-      if (error) throw error;
-      setTournament(created as Tournament);
-      return id;
-    } catch (e) {
-      console.error("[tournaments] could not materialize tournament row", e);
-      return null;
-    }
-  }
+const { tournament, form, setForm, reloadTournament, saveTournament, resolveTournamentId } =
+  useTournament({ sessionCode });
 
 const {
     preview, isImporting, unsynced, retrying,
