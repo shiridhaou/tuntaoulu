@@ -34,7 +34,7 @@ export function TeamSizeControls({ team: teamProp, onChange }: TeamSizeControlsP
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => onChange("numA", -1)}
+              onClick={() => change("numA", -1)}
               disabled={team.numA <= 1}
               className="h-5 w-5 text-white/70 hover:bg-white/10"
             >
@@ -46,7 +46,7 @@ export function TeamSizeControls({ team: teamProp, onChange }: TeamSizeControlsP
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => onChange("numA", 1)}
+              onClick={() => change("numA", 1)}
               disabled={team.numA >= 5}
               className="h-5 w-5 text-white/70 hover:bg-white/10"
             >
@@ -62,7 +62,7 @@ export function TeamSizeControls({ team: teamProp, onChange }: TeamSizeControlsP
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => onChange("numB", -1)}
+              onClick={() => change("numB", -1)}
               disabled={team.numB <= 1}
               className="h-5 w-5 text-white/70 hover:bg-white/10"
             >
@@ -74,7 +74,7 @@ export function TeamSizeControls({ team: teamProp, onChange }: TeamSizeControlsP
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => onChange("numB", 1)}
+              onClick={() => change("numB", 1)}
               disabled={team.numB >= 5}
               className="h-5 w-5 text-white/70 hover:bg-white/10"
             >
@@ -90,7 +90,7 @@ export function TeamSizeControls({ team: teamProp, onChange }: TeamSizeControlsP
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => onChange("numC", -1)}
+              onClick={() => change("numC", -1)}
               disabled={team.numC <= 1}
               className="h-5 w-5 text-white/70 hover:bg-white/10"
             >
@@ -102,7 +102,7 @@ export function TeamSizeControls({ team: teamProp, onChange }: TeamSizeControlsP
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => onChange("numC", 1)}
+              onClick={() => change("numC", 1)}
               disabled={team.numC >= 5}
               className="h-5 w-5 text-white/70 hover:bg-white/10"
             >
