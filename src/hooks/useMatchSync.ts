@@ -44,16 +44,31 @@ export const sessionStateChannel = (code: string) => `session-state-${code}`;
  * (e.g. the green Start button) because the TA also *listens* on that topic.
  */
 const stateChannels = new Map<string, ReturnType<typeof supabase.channel>>();
+const stateListeners = new Map<string, Set<(p: Record<string, unknown>) => void>>();
 
 export function getSessionStateChannel(code: string) {
   const topic = sessionStateChannel(code);
   let ch = stateChannels.get(topic);
   if (!ch) {
     ch = supabase.channel(topic, { config: { broadcast: { self: true } } });
+    stateListeners.set(topic, new Set());
+    ch.on("broadcast", { event: SESSION_STATE_EVENT }, ({ payload }) => {
+      stateListeners.get(topic)?.forEach((fn) => fn((payload ?? {}) as Record<string, unknown>));
+    }).subscribe();
     stateChannels.set(topic, ch);
   }
   return ch;
 }
+
+/** Subscribe to session-state broadcasts; returns an unsubscribe fn. */
+export function onSessionState(code: string, fn: (p: Record<string, unknown>) => void) {
+  getSessionStateChannel(code);
+  const topic = sessionStateChannel(code);
+  const set = stateListeners.get(topic)!;
+  set.add(fn);
+  return () => { set.delete(fn); };
+}
+
 
 /**
  * Push an immediate style / match-mode / category change to every connected
