@@ -345,46 +345,8 @@ async function loadActive() {
     return parts.join(" — ") || "خطأ غير معروف";
   }
 
-  /**
-   * Local-first: the form is committed to local context + localStorage right
-   * away, then pushed to the database in the background. Database problems are
-   * logged (and surfaced as a soft notice) but never block the panel.
-   */
 
 
-    // 1) Local source of truth — instant.
-    const isNew = !tournament;
-    const localTournament = {
-      // MUST be a canonical UUID — prefixed ids break every FK insert (22P02).
-      id: cleanUuid(tournament?.id) ?? newUuid(),
-      ...payload,
-      created_at: (tournament as any)?.created_at ?? new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    } as unknown as Tournament;
-    setTournament(localTournament);
-    writeLocalTournament(localTournament);
-    toast.success(isNew ? "تم إنشاء البطولة" : "تم تحديث البطولة");
-    if (isNew) setTab("import");
-
-    // 2) Background sync — never blocks or fails the UI.
-    void (async () => {
-      try {
-        await ensureDeviceSession();
-        await joinSessionMembership(sessionCode ?? "", "technical-assistant");
-        const { data, error } = await supabase
-          .from("tournaments")
-          .upsert({ id: localTournament.id, ...payload }, { onConflict: "id" })
-          .select().single();
-        if (error) throw error;
-        if (data) {
-          setTournament(data as Tournament);
-          writeLocalTournament(data as Tournament);
-        }
-      } catch (e: any) {
-        console.warn("[tournaments] background sync failed — local context kept", describeDbError(e));
-      }
-    })();
-  }
 
 
   /**
