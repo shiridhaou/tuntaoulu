@@ -4,16 +4,16 @@ import { useCompetition } from "@/store/competition-store";
 
 /**
  * Full exit handler: wipes every taolu-prefixed storage key first, then
- * navigates to root with NO search params and clears the in-memory context.
+ * navigates to root with NO search params.
  *
  * The order matters: if we navigate to / before localStorage is cleared, the
  * role/session hydration on reload will immediately redirect back to the same
  * role screen. If we clear context state before navigation, the calling
  * component unmounts and can cancel the navigation. So storage is wiped first,
- * then the browser replaces the URL to /, and finally the context is reset.
+ * then the browser replaces the URL to /, and the context state is discarded
+ * naturally by the page reload.
  */
 export function useLogout() {
-  const { logout } = useCompetition();
   const router = useRouter();
 
   return useCallback(() => {
@@ -36,10 +36,7 @@ export function useLogout() {
       } catch { /* ignore */ }
     }
 
-    // 2) clear in-memory state. The router is still stable here, so this is safe.
-    logout();
-
-    // 3) redirect to root with empty search params. Try TanStack navigation first,
+    // 2) redirect to root with empty search params. Try TanStack navigation first,
     //    but always fall back to a full location replace so the exit is guaranteed.
     try {
       if (router?.navigate) {
@@ -49,5 +46,5 @@ export function useLogout() {
     if (typeof window !== "undefined") {
       window.location.replace("/");
     }
-  }, [logout, router]);
+  }, [router]);
 }
