@@ -1637,10 +1637,8 @@ async function syncWithChief() {
                   </tbody>
                 </table>
               </div>
-            )}
-          </div>
-        </motion.section>
-      </div>
+
+
 
              <div className="md:hidden space-y-2">
                       {filtered.map((a) => {
