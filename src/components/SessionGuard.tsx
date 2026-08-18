@@ -1,7 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompetition } from "@/store/competition-store";
+import { useLogout } from "@/hooks/useLogout";
 import { ShieldAlert, Loader2 } from "lucide-react";
+
 
 const ORANGE = "#FF7A1A";
 

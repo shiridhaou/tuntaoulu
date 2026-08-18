@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useCompetition } from "@/store/competition-store";
+import { useLogout } from "@/hooks/useLogout";
 import { FederationLogo } from "./FederationLogo";
 import { Copy, CheckCircle, Link2, ArrowRight } from "lucide-react";
+
 
 export function SessionCreate() {
   const { sessionCode, generateSessionCode, logout } = useCompetition();

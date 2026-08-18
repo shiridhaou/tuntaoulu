@@ -1,9 +1,11 @@
 import { useEffect, useRef } from "react";
 import { useCompetition, type UserRole } from "@/store/competition-store";
+import { useLogout } from "@/hooks/useLogout";
 import { FederationLogo } from "./FederationLogo";
 import { Shield, Users, Star, Zap, Target, Monitor, LogOut, Cpu, Nfc } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "@tanstack/react-router";
+
 
 /**
  * FAST ACCESS / NFC BRIDGE

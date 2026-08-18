@@ -1,6 +1,8 @@
 import { useCompetition } from "@/store/competition-store";
+import { useLogout } from "@/hooks/useLogout";
 import { FederationLogo } from "./FederationLogo";
 import { ArrowRight } from "lucide-react";
+
 
 const ROLE_LABELS: Record<string, string> = {
   "assistant-referee": "Assistant Referee",

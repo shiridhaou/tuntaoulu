@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCompetition } from "@/store/competition-store";
+import { useLogout } from "@/hooks/useLogout";
 import { FederationLogo } from "@/components/FederationLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureDeviceSession, joinSessionMembership } from "@/lib/sessionMembership";
 import { Monitor, KeyRound, LogIn, LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+
 
 export const Route = createFileRoute("/display-join")({
   head: () => ({

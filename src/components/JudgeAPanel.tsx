@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useCompetition, STYLE_CONFIGS } from "@/store/competition-store";
+import { useLogout } from "@/hooks/useLogout";
 import { submitJudgeScore } from "@/lib/scoreSubmit";
 import { toast } from "sonner";
 import { ArrowRight, Send, Undo2, Wifi, WifiOff, CheckCircle2, RotateCcw } from "lucide-react";
@@ -12,6 +13,7 @@ import { enabledKeysForStyle, rulesForKey, type GroupARule } from "@/config/grou
 import { GroupAKeypad } from "@/components/GroupAKeypad";
 import { styleShort, styleLabelAr } from "@/lib/styleNames";
 import { DeductionModal } from "@/components/DeductionModal";
+
 
 const toEntry = (r: GroupARule): CodeEntry => ({
   code: r.errorCode,

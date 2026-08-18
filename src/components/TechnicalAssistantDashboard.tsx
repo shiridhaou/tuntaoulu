@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { joinSessionMembership, ensureDeviceSession } from "@/lib/sessionMembership";
 
 import { matchControl, useMatchSync, broadcastSessionState } from "@/hooks/useMatchSync";
+import { useLogout } from "@/hooks/useLogout";
 import { getWebhookSettings, saveWebhookSettings, isValidWebhookUrl, type WebhookSettings } from "@/lib/resultsWebhook";
 import { dateInputProps, fmtClock, toWesternDigits } from "@/lib/numFormat";
 import { cleanUuid, newUuid } from "@/lib/uuid";
@@ -31,6 +32,7 @@ import { Badge } from "./ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { toast } from "sonner";
 import { useCompetition } from "@/store/competition-store";
+
 import { classifyAge, AGE_CATEGORY_COLORS, type AgeCategory } from "@/lib/ageCategories";
 import { CATEGORY_TIME_RULES, DEFAULT_CATEGORY_RULE_ID, checkCategoryTime, getCategoryRule, fmtRuleWindow } from "@/lib/categoryTimeRules";
 

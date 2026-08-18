@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useCompetition, STYLE_CONFIGS } from "@/store/competition-store";
+import { useLogout } from "@/hooks/useLogout";
 import { FederationLogo } from "./FederationLogo";
 import { Slider } from "@/components/ui/slider";
 import { submitJudgeScore } from "@/lib/scoreSubmit";
@@ -7,6 +8,7 @@ import { useMatchSync } from "@/hooks/useMatchSync";
 import { effectiveMaxB, type MatchMode } from "@/lib/matchMode";
 import { toast } from "sonner";
 import { ArrowRight, Minus, Plus, Send, AlertTriangle, RotateCcw, CheckCircle2, Delete } from "lucide-react";
+
 
 /** Official Group B performance tiers (out of 3.00). */
 function tierFor(score: number) {
