@@ -1,3 +1,4 @@
+import { useDifficultySheet } from "@/hooks/useDifficultySheet";
 import { useTournament } from "@/hooks/useTournament";
 import { useMatchTimer, computeMatchPhase } from "@/hooks/useMatchTimer";
 import { useAthleteImport, type ImportedAthleteRecord } from "@/hooks/useAthleteImport";
@@ -77,7 +78,7 @@ const CATEGORIES: AgeCategory[] = ["Poussins", "Pupilles", "Benjamins", "Minimes
 function SessionEntryGate({ onConnected }: { onConnected: (code: string) => void }) {
   const { logout } = useCompetition();
   const [code, setCode] = useState("");
-  const [loading, setLoading] = useState(false);
+ 
 
   async function connect() {
     const c = code.trim().toUpperCase();
@@ -1065,7 +1066,7 @@ async function syncWithChief() {
 
                       </div>
                       <div className="flex justify-end pt-2">
-                        <Button onClick={saveTournament} disabled={loading}
+                        <Button onClick={saveTournament} disabled={saving}
                           className="bg-gold text-navy hover:bg-gold/90 font-bold">
                           {tournament ? "تحديث البطولة" : "إنشاء البطولة"}
                         </Button>
@@ -1185,7 +1186,7 @@ async function syncWithChief() {
                                 <Button size="sm" variant="ghost" onClick={() => setPreview(null)}>
                                   <X className="h-4 w-4 ml-1" /> إلغاء
                                 </Button>
-                                <Button size="sm" onClick={confirmImport} disabled={loading}
+                                <Button size="sm" onClick={confirmImport} disabled={saving}
                                   className="bg-emerald-500 hover:bg-emerald-600 text-white">
                                   <CheckCircle2 className="h-4 w-4 ml-1" /> تأكيد
                                 </Button>
@@ -1960,58 +1961,23 @@ function DifficultyManager({
   judgeStatuses: JudgeStatusRow[];
   onSaved: () => void;
 }) {
-  const [sheet, setSheet] = useState<DifficultyItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [pushed, setPushed] = useState(false);
-  const [newCode, setNewCode] = useState("");
-  const [newValue, setNewValue] = useState("0.20");
-  const [newLabel, setNewLabel] = useState("");
-  const lastIdRef = useRef<string | null>(null);
+const { sheet, total, pushed, saving, addRow, removeRow, updateRow, saveSheet } =
+    useDifficultySheet({
+      sessionCode,
+      targetAthlete,
+      isLive,
+      onSaved,
+    });
 
-  // Load the sheet when the target athlete changes
-  useEffect(() => {
-    if (!targetAthlete) { setSheet([]); lastIdRef.current = null; return; }
-    if (lastIdRef.current === targetAthlete.id) return;
-    lastIdRef.current = targetAthlete.id;
-    setPushed(false);
-    void (async () => {
-      const { data } = await supabase
-        .from("athletes").select("difficulty_codes, difficulty_sheet")
-        .eq("id", targetAthlete.id).maybeSingle();
-      // Locally-imported athletes may not exist in the DB yet — fall back to the
-      // sheet parsed from the Excel file and held in the local queue.
-      const curated = ((data as any)?.difficulty_sheet
-        ?? targetAthlete.difficulty_sheet) as DifficultyItem[] | null;
-      const codes = ((data as any)?.difficulty_codes
-        ?? targetAthlete.difficulty_codes) as string[] | null;
-      if (Array.isArray(curated) && curated.length > 0) {
-        setSheet(curated.map((d: any) => ({
-          code: String(d.code ?? "").toUpperCase(),
-          label: String(d.label ?? d.code ?? ""),
-          value: Number(d.value ?? 0),
-        })));
-      } else if (codes && codes.length) {
-        const { buildDifficultySheet } = await import("@/lib/difficultyCodes");
-        setSheet(buildDifficultySheet(codes) as DifficultyItem[]);
-      } else {
-        setSheet([]);
-      }
-    })();
-  }, [targetAthlete?.id]);
+  function handleAddRow() {
+    const v = parseFloat(newValue.replace(",", "."));
+    addRow(newCode, newLabel, isFinite(v) ? v : 0.2);
+    setNewCode(""); setNewValue("0.20"); setNewLabel("");
+  }
 
-  // AUTO-PUSH — as soon as a live athlete's sheet is available, broadcast it to
-  // the Group C judges (no manual tap required). Guarded per athlete.
-  const autoPushRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!targetAthlete || !sessionCode) return;
-    if (sheet.length === 0) return;
-    if (autoPushRef.current === targetAthlete.id) return;
-    autoPushRef.current = targetAthlete.id;
-    void saveSheet(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetAthlete?.id, isLive, sessionCode, sheet.length]);
+ 
 
-  const total = useMemo(() => sheet.reduce((s, d) => s + (Number(d.value) || 0), 0), [sheet]);
+
   const cJudgesSent = useMemo(
     () => judgeStatuses.filter((s) => s.judge_slot.startsWith("C") && s.state === "sent").length,
     [judgeStatuses],
@@ -2151,7 +2117,7 @@ function DifficultyManager({
             </span>
           </div>
 
-          <Button onClick={() => saveSheet(false)} size="sm" variant="outline" disabled={loading}
+          <Button onClick={() => saveSheet(false)} size="sm" variant="outline" disabled={saving}
             className="h-8 border-white/20 text-white/80 hover:bg-white/10 text-xs">
             <CheckCircle2 className="h-3 w-3 ml-1" /> حفظ
           </Button>
@@ -2227,7 +2193,7 @@ function DifficultyManager({
           className="col-span-2 h-8 text-xs text-center font-mono bg-black border-white/15"
           dir="ltr"
         />
-        <Button onClick={addRow} size="sm" className="col-span-1 h-8 bg-emerald-500 hover:bg-emerald-600 text-white">
+        <Button onClick={handleAddRow} size="sm" className="col-span-1 h-8 bg-emerald-500 hover:bg-emerald-600 text-white">
           <Plus className="h-3.5 w-3.5" />
         </Button>
       </div>
