@@ -1,4 +1,6 @@
 import { useCompetition, STYLE_CONFIGS, type Athlete, type DifficultyMovement } from "@/store/competition-store";
+import { useLogout } from "@/hooks/useLogout";
+
 import { FederationLogo } from "./FederationLogo";
 import {
   ArrowRight, RotateCcw, Play, Pause, Bell, AlertTriangle, Zap, FileSpreadsheet,

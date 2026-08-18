@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { sendResultWebhook } from "@/lib/resultsWebhook";
 import { Link } from "@tanstack/react-router";
 import { useCompetition, STYLE_CONFIGS, type CompetitionStyle } from "@/store/competition-store";
+import { useLogout } from "@/hooks/useLogout";
+
 import { FederationLogo } from "./FederationLogo";
 import { AiAssistantSidebar } from "./AiAssistantSidebar";
 // QrCommitModal replaced by FinalScoreSheetModal
