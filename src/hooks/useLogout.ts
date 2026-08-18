@@ -41,8 +41,11 @@ export function useLogout() {
     console.log("[useLogout] navigating, nav type:", typeof navigate, "router:", typeof router, "window:", typeof window);
     try {
       if (typeof navigate === "function") {
-        navigate({ to: "/", search: {}, replace: true });
-        console.log("[useLogout] navigate() called");
+        const result = navigate({ to: "/", search: {}, replace: true });
+        console.log("[useLogout] navigate result:", result);
+        if (result && typeof result.then === "function") {
+          result.then((v: unknown) => console.log("[useLogout] navigate resolved:", v)).catch((e: unknown) => console.error("[useLogout] navigate rejected:", e));
+        }
       } else if (router?.navigate) {
         router.navigate({ to: "/", search: {}, replace: true });
         console.log("[useLogout] router.navigate() called");
