@@ -1493,7 +1493,7 @@ function TADashboardInner() {
             <Button variant="ghost" size="icon" onClick={disconnect} className="h-7 w-7 text-muted-foreground" title="قطع الاتصال بالجلسة">
               <LogIn className="h-4 w-4 rotate-180" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={logout} className="h-7 px-2 text-xs">
+            <Button variant="ghost" size="sm" onClick={() => { console.log("INLINE LOGOUT CLICK"); window.location.replace("/"); }} className="h-7 px-2 text-xs">
               <LogOut className="h-3 w-3 ml-1" /> خروج
             </Button>
           </div>
