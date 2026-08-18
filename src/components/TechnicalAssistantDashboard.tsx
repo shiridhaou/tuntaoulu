@@ -1592,6 +1592,8 @@ async function syncWithChief() {
                   : "لا توجد نتائج مطابقة."}
               </div>
             ) : (
+              <>
+
               <div className="hidden md:block rounded-xl border border-border/50">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/30 text-xs sticky top-0 z-10">
