@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AssistantRouteImport } from './routes/assistant'
 import { Route as ChiefRouteImport } from './routes/chief'
 import { Route as DisplayJoinRouteImport } from './routes/display-join'
+import { Route as JudgeRouteImport } from './routes/judge'
 import { Route as JudgeARouteImport } from './routes/judge-a'
 import { Route as JudgeBRouteImport } from './routes/judge-b'
 import { Route as JudgeCRouteImport } from './routes/judge-c'
@@ -42,6 +43,11 @@ const ChiefRoute = ChiefRouteImport.update({
 const DisplayJoinRoute = DisplayJoinRouteImport.update({
   id: '/display-join',
   path: '/display-join',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JudgeRoute = JudgeRouteImport.update({
+  id: '/judge',
+  path: '/judge',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JudgeARoute = JudgeARouteImport.update({
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/assistant': typeof AssistantRoute
   '/chief': typeof ChiefRoute
   '/display-join': typeof DisplayJoinRoute
+  '/judge': typeof JudgeRoute
   '/judge-a': typeof JudgeARoute
   '/judge-b': typeof JudgeBRoute
   '/judge-c': typeof JudgeCRoute
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/assistant': typeof AssistantRoute
   '/chief': typeof ChiefRoute
   '/display-join': typeof DisplayJoinRoute
+  '/judge': typeof JudgeRoute
   '/judge-a': typeof JudgeARoute
   '/judge-b': typeof JudgeBRoute
   '/judge-c': typeof JudgeCRoute
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/assistant': typeof AssistantRoute
   '/chief': typeof ChiefRoute
   '/display-join': typeof DisplayJoinRoute
+  '/judge': typeof JudgeRoute
   '/judge-a': typeof JudgeARoute
   '/judge-b': typeof JudgeBRoute
   '/judge-c': typeof JudgeCRoute
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/chief'
     | '/display-join'
+    | '/judge'
     | '/judge-a'
     | '/judge-b'
     | '/judge-c'
@@ -167,6 +177,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/chief'
     | '/display-join'
+    | '/judge'
     | '/judge-a'
     | '/judge-b'
     | '/judge-c'
@@ -183,6 +194,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/chief'
     | '/display-join'
+    | '/judge'
     | '/judge-a'
     | '/judge-b'
     | '/judge-c'
@@ -200,6 +212,7 @@ export interface RootRouteChildren {
   AssistantRoute: typeof AssistantRoute
   ChiefRoute: typeof ChiefRoute
   DisplayJoinRoute: typeof DisplayJoinRoute
+  JudgeRoute: typeof JudgeRoute
   JudgeARoute: typeof JudgeARoute
   JudgeBRoute: typeof JudgeBRoute
   JudgeCRoute: typeof JudgeCRoute
@@ -240,6 +253,13 @@ declare module '@tanstack/react-router' {
       path: '/display-join'
       fullPath: '/display-join'
       preLoaderRoute: typeof DisplayJoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/judge': {
+      id: '/judge'
+      path: '/judge'
+      fullPath: '/judge'
+      preLoaderRoute: typeof JudgeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/judge-a': {
@@ -320,6 +340,7 @@ const rootRouteChildren: RootRouteChildren = {
   AssistantRoute: AssistantRoute,
   ChiefRoute: ChiefRoute,
   DisplayJoinRoute: DisplayJoinRoute,
+  JudgeRoute: JudgeRoute,
   JudgeARoute: JudgeARoute,
   JudgeBRoute: JudgeBRoute,
   JudgeCRoute: JudgeCRoute,

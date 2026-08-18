@@ -38,6 +38,39 @@ export const SESSION_STATE_EVENT = "session_state_change";
 export const sessionStateChannel = (code: string) => `session-state-${code}`;
 
 /**
+ * A single shared channel instance per session topic.
+ * Joining the same topic twice on one socket makes supabase-js error out
+ * ("tried to subscribe multiple times"), which silently killed TA broadcasts
+ * (e.g. the green Start button) because the TA also *listens* on that topic.
+ */
+const stateChannels = new Map<string, ReturnType<typeof supabase.channel>>();
+const stateListeners = new Map<string, Set<(p: Record<string, unknown>) => void>>();
+
+export function getSessionStateChannel(code: string) {
+  const topic = sessionStateChannel(code);
+  let ch = stateChannels.get(topic);
+  if (!ch) {
+    ch = supabase.channel(topic, { config: { broadcast: { self: true } } });
+    stateListeners.set(topic, new Set());
+    ch.on("broadcast", { event: SESSION_STATE_EVENT }, ({ payload }) => {
+      stateListeners.get(topic)?.forEach((fn) => fn((payload ?? {}) as Record<string, unknown>));
+    }).subscribe();
+    stateChannels.set(topic, ch);
+  }
+  return ch;
+}
+
+/** Subscribe to session-state broadcasts; returns an unsubscribe fn. */
+export function onSessionState(code: string, fn: (p: Record<string, unknown>) => void) {
+  getSessionStateChannel(code);
+  const topic = sessionStateChannel(code);
+  const set = stateListeners.get(topic)!;
+  set.add(fn);
+  return () => { set.delete(fn); };
+}
+
+
+/**
  * Push an immediate style / match-mode / category change to every connected
  * panel. This is a UI-level broadcast only — the authoritative row in
  * `current_match` is still written by the caller.
@@ -53,17 +86,24 @@ export async function broadcastSessionState(
     elapsed_ms?: number;
   },
 ) {
-  const ch = supabase.channel(sessionStateChannel(sessionCode));
-  await new Promise<void>((resolve) => {
-    ch.subscribe((status) => { if (status === "SUBSCRIBED") resolve(); });
-    setTimeout(resolve, 1500);
-  });
+  const ch = getSessionStateChannel(sessionCode);
+  if (ch.state !== "joined") {
+    await new Promise<void>((resolve) => {
+      const done = () => resolve();
+      if (ch.state === "closed" || ch.state === "errored" || ch.state === "leaving") {
+        ch.subscribe((status) => { if (status === "SUBSCRIBED") done(); });
+      } else {
+        // already joining — just wait a beat for the join to settle
+        ch.subscribe((status) => { if (status === "SUBSCRIBED") done(); });
+      }
+      setTimeout(done, 1500);
+    });
+  }
   try {
     await ch.send({ type: "broadcast", event: SESSION_STATE_EVENT, payload: patch });
-  } finally {
-    setTimeout(() => { try { supabase.removeChannel(ch); } catch { /* ignore */ } }, 500);
-  }
+  } catch { /* never block the operator UI on a broadcast failure */ }
 }
+
 
 
 export function useMatchSync(sessionCode: string | null): MatchSyncSnapshot {
@@ -102,11 +142,10 @@ export function useMatchSync(sessionCode: string | null): MatchSyncSnapshot {
     ).subscribe();
 
     // Low-latency fallback: the Technical Assistant also pushes a lightweight
-    // `session_state_change` broadcast whenever style / mode / category change,
+    // `session_state_change` broadcast whenever style / mode / timer change,
     // so judge panels update even if postgres replication lags.
-    const bc = supabase.channel(sessionStateChannel(sessionCode));
-    bc.on("broadcast", { event: SESSION_STATE_EVENT }, ({ payload }) => {
-      const p = (payload ?? {}) as Partial<MatchSyncRow>;
+    const offState = onSessionState(sessionCode, (raw) => {
+      const p = raw as Partial<MatchSyncRow>;
       setRow((prev) => ({
         session_code: sessionCode,
         athlete_id: p.athlete_id !== undefined ? p.athlete_id : (prev?.athlete_id ?? null),
@@ -117,14 +156,15 @@ export function useMatchSync(sessionCode: string | null): MatchSyncSnapshot {
         payload: { ...(prev?.payload ?? {}), ...((p.payload as Record<string, unknown>) ?? {}) },
         updated_at: new Date().toISOString(),
       }));
-    }).subscribe();
+    });
 
     return () => {
       cancelled = true;
       try { supabase.removeChannel(ch); } catch { /* ignore */ }
-      try { supabase.removeChannel(bc); } catch { /* ignore */ }
+      offState();
     };
   }, [sessionCode]);
+
 
 
   // 2) Local 1Hz tick only while running
