@@ -14,9 +14,13 @@ export function useLogout() {
   return useCallback(() => {
     console.log("[useLogout] invoked");
     // 1) redirect to root with empty search params first (before state changes unmount the caller)
-    console.log("[useLogout] navigating to /");
-    navigate({ to: "/", search: {}, replace: true });
-    console.log("[useLogout] navigate dispatched");
+    console.log("[useLogout] navigating to /", typeof navigate);
+    try {
+      navigate({ to: "/", search: {}, replace: true });
+      console.log("[useLogout] navigate dispatched");
+    } catch (e) {
+      console.error("[useLogout] navigate error:", e);
+    }
 
     // 2) clear in-memory state
     logout();
