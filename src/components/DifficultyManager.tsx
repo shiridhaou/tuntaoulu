@@ -22,11 +22,11 @@ export interface DifficultyManagerAthlete extends DifficultySheetSourceAthlete {
 }
 
 interface DifficultyManagerProps {
-  sessionCode: string | null;
-  targetAthlete: DifficultyManagerAthlete | null;
-  isLive: boolean;
-  judgeStatuses: JudgeStatusRow[];
-  onSaved: () => void;
+  sessionCode?: string | null;
+  targetAthlete?: DifficultyManagerAthlete | null;
+  isLive?: boolean;
+  judgeStatuses?: JudgeStatusRow[] | null;
+  onSaved?: () => void;
 }
 
 // ============================================================================
@@ -38,14 +38,21 @@ interface DifficultyManagerProps {
  * movement sheet for the live (or up-next) athlete and push it to all C judges.
  */
 export function DifficultyManager({
-  sessionCode,
-  targetAthlete,
-  isLive,
+  sessionCode = null,
+  targetAthlete = null,
+  isLive = false,
   judgeStatuses,
   onSaved,
 }: DifficultyManagerProps) {
+  // Defensive: never throw when optional props are missing.
+  const statuses = Array.isArray(judgeStatuses) ? judgeStatuses : [];
   const { sheet, total, pushed, saving, addRow, removeRow, updateRow, saveSheet } =
-    useDifficultySheet({ sessionCode, targetAthlete, isLive, onSaved });
+    useDifficultySheet({
+      sessionCode,
+      targetAthlete,
+      isLive,
+      onSaved: () => { if (typeof onSaved === "function") onSaved(); },
+    });
 
   // Local UI-only state for the "add movement" row — raw text input parsing
   // (comma decimal support) stays here; the hook deals in numbers only.
@@ -59,8 +66,8 @@ export function DifficultyManager({
     setNewCode(""); setNewValue("0.20"); setNewLabel("");
   }
 
-  const cJudgesSent = judgeStatuses.filter((s) => s.judge_slot.startsWith("C") && s.state === "sent").length;
-  const cJudgesActive = judgeStatuses.filter((s) => s.judge_slot.startsWith("C")).length;
+  const cJudgesSent = statuses.filter((s) => s.judge_slot.startsWith("C") && s.state === "sent").length;
+  const cJudgesActive = statuses.filter((s) => s.judge_slot.startsWith("C")).length;
 
   if (!targetAthlete) {
     return (

@@ -8,19 +8,26 @@ export interface JudgeTeamSize {
 }
 
 interface JudgesStatusGridProps {
-  statuses: JudgeStatusRow[];
+  statuses?: JudgeStatusRow[] | null;
   liveAthleteName?: string | null;
-  team: JudgeTeamSize;
+  team?: Partial<JudgeTeamSize> | null;
 }
 
 export function JudgesStatusGrid({
   statuses,
   liveAthleteName,
-  team,
+  team: teamProp,
 }: JudgesStatusGridProps) {
+  // Defensive: tolerate missing/partial props instead of throwing.
+  const rows = Array.isArray(statuses) ? statuses : [];
+  const team = {
+    numA: teamProp?.numA ?? 0,
+    numB: teamProp?.numB ?? 0,
+    numC: teamProp?.numC ?? 0,
+  };
   // Mapping helpers to render panel groups
   const getGroup = (prefix: string) =>
-    statuses.filter((s) => s.judge_slot.startsWith(prefix));
+    rows.filter((s) => typeof s?.judge_slot === "string" && s.judge_slot.startsWith(prefix));
 
   return (
     <div className="num-west rounded-xl p-3 border border-white/10 bg-black/60 backdrop-blur-sm shadow-inner">
