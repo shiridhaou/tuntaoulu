@@ -22,11 +22,11 @@ export interface DifficultyManagerAthlete extends DifficultySheetSourceAthlete {
 }
 
 interface DifficultyManagerProps {
-  sessionCode: string | null;
-  targetAthlete: DifficultyManagerAthlete | null;
-  isLive: boolean;
-  judgeStatuses: JudgeStatusRow[];
-  onSaved: () => void;
+  sessionCode?: string | null;
+  targetAthlete?: DifficultyManagerAthlete | null;
+  isLive?: boolean;
+  judgeStatuses?: JudgeStatusRow[] | null;
+  onSaved?: () => void;
 }
 
 // ============================================================================
