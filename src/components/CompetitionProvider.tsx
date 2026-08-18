@@ -764,10 +764,29 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
     lsSet(LS_KEYS.role, null);
     lsSet(LS_KEYS.session, null);
     lsSet(LS_KEYS.judgeId, null);
+    lsSet("taolu.setupComplete", null);
     // Drop the tab marker so the next load starts on Role Selection, never on the
-    // previously used station.
-    try { if (typeof window !== "undefined") window.sessionStorage.removeItem("taolu.tab"); } catch { /* ignore */ }
+    // previously used station. Also wipe any other app-scoped keys (webhooks,
+    // local TA tournament cache, etc.) without touching the Supabase auth session.
+    try {
+      if (typeof window !== "undefined") {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < window.localStorage.length; i++) {
+          const key = window.localStorage.key(i);
+          if (
+            key?.startsWith("taolu.") ||
+            key?.startsWith("wushu.") ||
+            key?.startsWith("ta:")
+          ) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+        window.sessionStorage.removeItem("taolu.tab");
+      }
+    } catch { /* ignore */ }
   };
+
 
 
 
