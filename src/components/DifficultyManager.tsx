@@ -66,8 +66,8 @@ export function DifficultyManager({
     setNewCode(""); setNewValue("0.20"); setNewLabel("");
   }
 
-  const cJudgesSent = judgeStatuses.filter((s) => s.judge_slot.startsWith("C") && s.state === "sent").length;
-  const cJudgesActive = judgeStatuses.filter((s) => s.judge_slot.startsWith("C")).length;
+  const cJudgesSent = statuses.filter((s) => s.judge_slot.startsWith("C") && s.state === "sent").length;
+  const cJudgesActive = statuses.filter((s) => s.judge_slot.startsWith("C")).length;
 
   if (!targetAthlete) {
     return (
