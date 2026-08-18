@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useCompetition } from "@/store/competition-store";
 
 /**
@@ -10,22 +10,13 @@ import { useCompetition } from "@/store/competition-store";
 export function useLogout() {
   const { logout } = useCompetition();
   const navigate = useNavigate();
+  const router = useRouter();
 
   return useCallback(() => {
-    console.log("[useLogout] invoked");
-    // 1) redirect to root with empty search params first (before state changes unmount the caller)
-    console.log("[useLogout] navigating to /", typeof navigate);
-    try {
-      navigate({ to: "/", search: {}, replace: true });
-      console.log("[useLogout] navigate dispatched");
-    } catch (e) {
-      console.error("[useLogout] navigate error:", e);
-    }
-
-    // 2) clear in-memory state
+    // 1) clear in-memory state first
     logout();
 
-    // 3) wipe all app storage keys (local + session) — keep Supabase auth device session intact
+    // 2) wipe all app storage keys (local + session) — keep Supabase auth device session intact
     if (typeof window !== "undefined") {
       try {
         const keysToRemove: string[] = [];
@@ -43,5 +34,17 @@ export function useLogout() {
         window.sessionStorage.removeItem("taolu.tab");
       } catch { /* ignore */ }
     }
-  }, [logout, navigate]);
+
+    // 3) redirect to root with empty search params. Fall back to window.location
+    //    if the router navigate is not available in this context.
+    try {
+      if (typeof navigate === "function") {
+        navigate({ to: "/", search: {}, replace: true });
+      } else if (router?.navigate) {
+        router.navigate({ to: "/", search: {}, replace: true });
+      } else if (typeof window !== "undefined") {
+        window.location.replace("/");
+      }
+    } catch { /* ignore */ }
+  }, [logout, navigate, router]);
 }
