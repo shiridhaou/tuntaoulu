@@ -6,6 +6,11 @@ import { useCompetition } from "@/store/competition-store";
  * Full exit handler: clears the role/session context, wipes every taolu-prefixed
  * storage key, and navigates to root with NO search params so the session does not
  * auto-hydrate again on redirect or reload.
+ *
+ * Note: we use a hard location.replace() here because TanStack Router's
+ * router.navigate() can be suppressed when the calling component is unmounted
+ * by the preceding logout() state change. A full reload to / is the safest
+ * way to guarantee a clean exit state.
  */
 export function useLogout() {
   const { logout } = useCompetition();
@@ -34,15 +39,15 @@ export function useLogout() {
       } catch { /* ignore */ }
     }
 
-    // 3) redirect to root with empty search params. Use router.navigate when
-    //    available; otherwise fall back to a full location replace so the URL
-    //    is guaranteed to be cleaned and the app state is fully reset.
+    // 3) redirect to root with empty search params. Try router.navigate first,
+    //    but always fall back to window.location.replace so the exit is guaranteed.
     try {
       if (router?.navigate) {
         router.navigate({ to: "/", search: {}, replace: true });
-      } else if (typeof window !== "undefined") {
-        window.location.replace("/");
       }
     } catch { /* ignore */ }
+    if (typeof window !== "undefined") {
+      window.location.replace("/");
+    }
   }, [logout, router]);
 }
