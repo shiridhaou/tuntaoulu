@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { joinSessionMembership, ensureDeviceSession } from "@/lib/sessionMembership";
 
 import { matchControl, useMatchSync, broadcastSessionState } from "@/hooks/useMatchSync";
+import { useLogout } from "@/hooks/useLogout";
 import { getWebhookSettings, saveWebhookSettings, isValidWebhookUrl, type WebhookSettings } from "@/lib/resultsWebhook";
 import { dateInputProps, fmtClock, toWesternDigits } from "@/lib/numFormat";
 import { cleanUuid, newUuid } from "@/lib/uuid";
@@ -31,6 +32,7 @@ import { Badge } from "./ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { toast } from "sonner";
 import { useCompetition } from "@/store/competition-store";
+
 import { classifyAge, AGE_CATEGORY_COLORS, type AgeCategory } from "@/lib/ageCategories";
 import { CATEGORY_TIME_RULES, DEFAULT_CATEGORY_RULE_ID, checkCategoryTime, getCategoryRule, fmtRuleWindow } from "@/lib/categoryTimeRules";
 
@@ -79,7 +81,8 @@ const CATEGORIES: AgeCategory[] = ["Poussins", "Pupilles", "Benjamins", "Minimes
 // SESSION GATE: TA must enter chief's session code before accessing dashboard
 // ============================================================================
 function SessionEntryGate({ onConnected }: { onConnected: (code: string) => void }) {
-  const { logout } = useCompetition();
+  const logout = useLogout();
+
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -160,7 +163,8 @@ function SessionEntryGate({ onConnected }: { onConnected: (code: string) => void
 }
 
 export function TechnicalAssistantDashboard() {
-  const { logout, sessionCode, setSessionCode } = useCompetition();
+  const { sessionCode, setSessionCode } = useCompetition();
+
 
   // STEP 1: Force session entry (no auto-generation)
   if (!sessionCode) {
@@ -171,7 +175,9 @@ export function TechnicalAssistantDashboard() {
 }
 
 function TADashboardInner() {
-  const { logout, sessionCode, setSessionCode, team, setTeamConfig } = useCompetition();
+  const { sessionCode, setSessionCode, team, setTeamConfig } = useCompetition();
+  const logout = useLogout();
+
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [form, setForm] = useState({ name: "", location: "", start_date: "", end_date: "" });
   const [athletes, setAthletes] = useState<Athlete[]>([]);

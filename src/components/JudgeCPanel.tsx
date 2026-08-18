@@ -1,4 +1,5 @@
 import { useCompetition, STYLE_CONFIGS, type DifficultyMovement } from "@/store/competition-store";
+import { useLogout } from "@/hooks/useLogout";
 import { FederationLogo } from "./FederationLogo";
 import { ArrowRight, RotateCcw, Send, Check, X, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7,6 +8,7 @@ import { submitJudgeScore } from "@/lib/scoreSubmit";
 import { useMatchSync } from "@/hooks/useMatchSync";
 import { toast } from "sonner";
 import { QUICK_CODES, CONNECTION_BONUSES, MAX_C_MOVEMENT, MAX_C_CONNECTION, lookupCode, isConnectionCode, lookupConnection, type ConnectionBonus } from "@/lib/difficultyCodes";
+
 
 const DEFAULT_SHEET: DifficultyMovement[] = [
   { code: "323A", label: "Tornado 360°", connection: "Independent", value: 0.2 },
@@ -23,11 +25,13 @@ const DEFAULT_SHEET: DifficultyMovement[] = [
 
 export function JudgeCPanel() {
   const {
-    competitionStyle, setSelectedRole, logout,
+    competitionStyle, setSelectedRole,
     judgeCAttempts, judgeCScore, addJudgeCAttempt, toggleJudgeCAttempt, resetJudgeCAttempts,
     finalScore, athletes, currentAthleteIndex, timerElapsed, timerRunning,
     sessionCode, judgeId,
   } = useCompetition();
+  const logout = useLogout();
+
   const [sending, setSending] = useState(false);
 
   // Silent realtime subscription to current_match — recovers state on reconnect.

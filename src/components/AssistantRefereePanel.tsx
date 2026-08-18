@@ -1,4 +1,6 @@
 import { useCompetition, STYLE_CONFIGS, type Athlete, type DifficultyMovement } from "@/store/competition-store";
+import { useLogout } from "@/hooks/useLogout";
+
 import { FederationLogo } from "./FederationLogo";
 import {
   ArrowRight, RotateCcw, Play, Pause, Bell, AlertTriangle, Zap, FileSpreadsheet,
@@ -39,7 +41,7 @@ interface Clip {
 
 export function AssistantRefereePanel() {
   const {
-    setSelectedRole, logout, competitionStyle,
+    setSelectedRole, competitionStyle,
     judgeAScore, judgeBAverage, judgeCScore, finalScore,
     athletes, currentAthleteIndex, setAthletes,
     timerElapsed, setTimerElapsed, timerRunning, setTimerRunning,
@@ -48,6 +50,8 @@ export function AssistantRefereePanel() {
     ahjReady, signalHeadJudge, clearAhjSignal,
     sessionCode,
   } = useCompetition();
+  const logout = useLogout();
+
 
   const config = competitionStyle ? STYLE_CONFIGS[competitionStyle] : STYLE_CONFIGS.changquan;
   const athlete = athletes[currentAthleteIndex];

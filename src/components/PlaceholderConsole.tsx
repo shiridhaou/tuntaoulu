@@ -1,6 +1,8 @@
 import { useCompetition } from "@/store/competition-store";
+import { useLogout } from "@/hooks/useLogout";
 import { FederationLogo } from "./FederationLogo";
 import { ArrowRight } from "lucide-react";
+
 
 const ROLE_LABELS: Record<string, string> = {
   "assistant-referee": "Assistant Referee",
@@ -17,7 +19,9 @@ const STYLE_LABELS: Record<string, string> = {
 };
 
 export function PlaceholderConsole() {
-  const { selectedRole, competitionStyle, setSelectedRole, logout } = useCompetition();
+  const { selectedRole, competitionStyle, setSelectedRole } = useCompetition();
+  const logout = useLogout();
+
 
   return (
     <div className="min-h-screen bg-background">

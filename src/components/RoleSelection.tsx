@@ -1,9 +1,11 @@
 import { useEffect, useRef } from "react";
 import { useCompetition, type UserRole } from "@/store/competition-store";
+import { useLogout } from "@/hooks/useLogout";
 import { FederationLogo } from "./FederationLogo";
 import { Shield, Users, Star, Zap, Target, Monitor, LogOut, Cpu, Nfc } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "@tanstack/react-router";
+
 
 /**
  * FAST ACCESS / NFC BRIDGE
@@ -118,8 +120,10 @@ const roles: RoleOption[] = [
 ];
 
 export function RoleSelection() {
-  const { setSelectedRole, setJudgeId, setSessionCode, setSetupComplete, logout } = useCompetition();
+  const { setSelectedRole, setJudgeId, setSessionCode, setSetupComplete } = useCompetition();
+  const logout = useLogout();
   const navigate = useNavigate();
+
 
   // --- Quick trigger (URL params / NFC card payload) ------------------------
   const quickDoneRef = useRef(false);

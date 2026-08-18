@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { sendResultWebhook } from "@/lib/resultsWebhook";
 import { Link } from "@tanstack/react-router";
 import { useCompetition, STYLE_CONFIGS, type CompetitionStyle } from "@/store/competition-store";
+import { useLogout } from "@/hooks/useLogout";
+
 import { FederationLogo } from "./FederationLogo";
 import { AiAssistantSidebar } from "./AiAssistantSidebar";
 // QrCommitModal replaced by FinalScoreSheetModal
@@ -58,7 +60,7 @@ export function ChiefRefereeDashboard() {
 
 function ChiefRefereeDashboardInner() {
   const {
-    competitionStyle, setCompetitionStyle, athletes, setSelectedRole, logout,
+    competitionStyle, setCompetitionStyle, athletes, setSelectedRole,
     judgeAScore, judgeBScores, judgeCScore, finalScore,
     scoreRevealed, setScoreRevealed,
     sessionCode, generateSessionCode, currentAthleteIndex, setCurrentAthleteIndex,
@@ -70,6 +72,8 @@ function ChiefRefereeDashboardInner() {
     leaderboardMode, setLeaderboardMode, commitCurrentResult, getLeaderboard, clearResults,
     isVarLiveOnPublic, setIsVarLiveOnPublic,
   } = useCompetition();
+  const logout = useLogout();
+
 
   // EMERGENCY SESSION GENERATION: Chief is the session owner — if for any reason
   // we land on the dashboard with no sessionCode, generate one immediately so the
