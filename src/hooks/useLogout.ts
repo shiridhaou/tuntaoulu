@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useNavigate, useRouter } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
 import { useCompetition } from "@/store/competition-store";
 
 /**
@@ -9,12 +9,10 @@ import { useCompetition } from "@/store/competition-store";
  */
 export function useLogout() {
   const { logout } = useCompetition();
-  const navigate = useNavigate();
   const router = useRouter();
 
   return useCallback(() => {
     // 1) clear in-memory state first
-    console.log("[useLogout] invoked");
     logout();
 
     // 2) wipe all app storage keys (local + session) — keep Supabase auth device session intact
@@ -33,26 +31,18 @@ export function useLogout() {
         }
         keysToRemove.forEach((key) => window.localStorage.removeItem(key));
         window.sessionStorage.removeItem("taolu.tab");
-      } catch (e) { console.error("[useLogout] storage wipe error", e); }
+      } catch { /* ignore */ }
     }
 
-    // 3) redirect to root with empty search params. Fall back to window.location
-    //    if the router navigate is not available in this context.
-    console.log("[useLogout] navigating, nav type:", typeof navigate, "router:", typeof router, "window:", typeof window);
+    // 3) redirect to root with empty search params. Use router.navigate when
+    //    available; otherwise fall back to a full location replace so the URL
+    //    is guaranteed to be cleaned and the app state is fully reset.
     try {
-      if (typeof navigate === "function") {
-        const result = navigate({ to: "/", search: {}, replace: true });
-        console.log("[useLogout] navigate result:", result);
-        if (result && typeof result.then === "function") {
-          result.then((v: unknown) => console.log("[useLogout] navigate resolved:", v)).catch((e: unknown) => console.error("[useLogout] navigate rejected:", e));
-        }
-      } else if (router?.navigate) {
+      if (router?.navigate) {
         router.navigate({ to: "/", search: {}, replace: true });
-        console.log("[useLogout] router.navigate() called");
       } else if (typeof window !== "undefined") {
         window.location.replace("/");
-        console.log("[useLogout] window.location.replace called");
       }
-    } catch (e) { console.error("[useLogout] navigation error", e); }
-  }, [logout, navigate, router]);
+    } catch { /* ignore */ }
+  }, [logout, router]);
 }
