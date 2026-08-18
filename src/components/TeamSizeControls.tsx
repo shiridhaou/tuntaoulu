@@ -3,11 +3,22 @@ import { Button } from "./ui/button";
 import type { JudgeTeamSize } from "./JudgesStatusGrid";
 
 interface TeamSizeControlsProps {
-  team: JudgeTeamSize;
-  onChange: (group: keyof JudgeTeamSize, delta: number) => void;
+  team?: Partial<JudgeTeamSize> | null;
+  onChange?: (group: keyof JudgeTeamSize, delta: number) => void;
 }
 
-export function TeamSizeControls({ team, onChange }: TeamSizeControlsProps) {
+const DEFAULT_TEAM: JudgeTeamSize = { numA: 4, numB: 4, numC: 2 };
+
+export function TeamSizeControls({ team: teamProp, onChange }: TeamSizeControlsProps) {
+  // Defensive: never throw if the parent passes a partial / missing team object.
+  const team: JudgeTeamSize = {
+    numA: Number(teamProp?.numA ?? DEFAULT_TEAM.numA) || DEFAULT_TEAM.numA,
+    numB: Number(teamProp?.numB ?? DEFAULT_TEAM.numB) || DEFAULT_TEAM.numB,
+    numC: Number(teamProp?.numC ?? DEFAULT_TEAM.numC) || DEFAULT_TEAM.numC,
+  };
+  const change = (group: keyof JudgeTeamSize, delta: number) => {
+    if (typeof onChange === "function") onChange(group, delta);
+  };
   return (
     <div className="num-west rounded-xl p-3 border border-white/10 bg-black/40 backdrop-blur-sm">
       <div className="flex items-center gap-1.5 text-xs font-bold text-white/80 mb-2 pb-1 border-b border-white/10">
