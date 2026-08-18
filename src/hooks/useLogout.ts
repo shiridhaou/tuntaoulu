@@ -17,10 +17,20 @@ export function useLogout() {
   const router = useRouter();
 
   return useCallback(() => {
-    // 1) clear in-memory state first
+    // 1) redirect to root with empty search params first (before state changes unmount the caller)
+    try {
+      if (router?.navigate) {
+        router.navigate({ to: "/", search: {}, replace: true });
+      }
+    } catch { /* ignore */ }
+    if (typeof window !== "undefined") {
+      window.location.replace("/");
+    }
+
+    // 2) clear in-memory state
     logout();
 
-    // 2) wipe all app storage keys (local + session) — keep Supabase auth device session intact
+    // 3) wipe all app storage keys (local + session) — keep Supabase auth device session intact
     if (typeof window !== "undefined") {
       try {
         const keysToRemove: string[] = [];
@@ -37,17 +47,6 @@ export function useLogout() {
         keysToRemove.forEach((key) => window.localStorage.removeItem(key));
         window.sessionStorage.removeItem("taolu.tab");
       } catch { /* ignore */ }
-    }
-
-    // 3) redirect to root with empty search params. Try router.navigate first,
-    //    but always fall back to window.location.replace so the exit is guaranteed.
-    try {
-      if (router?.navigate) {
-        router.navigate({ to: "/", search: {}, replace: true });
-      }
-    } catch { /* ignore */ }
-    if (typeof window !== "undefined") {
-      window.location.replace("/");
     }
   }, [logout, router]);
 }
