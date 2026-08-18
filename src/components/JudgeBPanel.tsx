@@ -31,7 +31,6 @@ export function JudgeBPanel() {
     setJudgeBScore,
     resetJudgeBScores,
     setSelectedRole,
-    logout,
     judgeAScore,
     judgeCScore,
     finalScore,
@@ -42,6 +41,8 @@ export function JudgeBPanel() {
     sessionCode,
     judgeId,
   } = useCompetition();
+  const logout = useLogout();
+
 
   const config = competitionStyle ? STYLE_CONFIGS[competitionStyle] : STYLE_CONFIGS.changquan;
   const myIndex = 0;

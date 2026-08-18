@@ -16,8 +16,10 @@ const ORANGE = "#FF7A1A";
  * re-join. The Chief role bypasses this guard (they own / generate the session).
  */
 export function SessionGuard({ children }: { children: ReactNode }) {
-  const { sessionCode, logout } = useCompetition();
+  const { sessionCode } = useCompetition();
+  const logout = useLogout();
   const [state, setState] = useState<"checking" | "ok" | "invalid">("checking");
+
 
   useEffect(() => {
     let cancelled = false;

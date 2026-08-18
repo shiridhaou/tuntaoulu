@@ -21,8 +21,10 @@ export const Route = createFileRoute("/display-join")({
 });
 
 function DisplayJoinPage() {
-  const { setSessionCode, logout } = useCompetition();
+  const { setSessionCode } = useCompetition();
+  const logout = useLogout();
   const navigate = useNavigate();
+
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
 

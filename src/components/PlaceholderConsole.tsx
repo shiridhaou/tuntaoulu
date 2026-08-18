@@ -19,7 +19,9 @@ const STYLE_LABELS: Record<string, string> = {
 };
 
 export function PlaceholderConsole() {
-  const { selectedRole, competitionStyle, setSelectedRole, logout } = useCompetition();
+  const { selectedRole, competitionStyle, setSelectedRole } = useCompetition();
+  const logout = useLogout();
+
 
   return (
     <div className="min-h-screen bg-background">

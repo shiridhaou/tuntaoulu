@@ -120,8 +120,10 @@ const roles: RoleOption[] = [
 ];
 
 export function RoleSelection() {
-  const { setSelectedRole, setJudgeId, setSessionCode, setSetupComplete, logout } = useCompetition();
+  const { setSelectedRole, setJudgeId, setSessionCode, setSetupComplete } = useCompetition();
+  const logout = useLogout();
   const navigate = useNavigate();
+
 
   // --- Quick trigger (URL params / NFC card payload) ------------------------
   const quickDoneRef = useRef(false);

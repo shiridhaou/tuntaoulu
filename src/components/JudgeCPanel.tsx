@@ -25,11 +25,13 @@ const DEFAULT_SHEET: DifficultyMovement[] = [
 
 export function JudgeCPanel() {
   const {
-    competitionStyle, setSelectedRole, logout,
+    competitionStyle, setSelectedRole,
     judgeCAttempts, judgeCScore, addJudgeCAttempt, toggleJudgeCAttempt, resetJudgeCAttempts,
     finalScore, athletes, currentAthleteIndex, timerElapsed, timerRunning,
     sessionCode, judgeId,
   } = useCompetition();
+  const logout = useLogout();
+
   const [sending, setSending] = useState(false);
 
   // Silent realtime subscription to current_match — recovers state on reconnect.

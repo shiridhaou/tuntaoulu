@@ -34,11 +34,13 @@ function fmtTime(total: number) {
 
 export function JudgeAPanel() {
   const {
-    competitionStyle, setSelectedRole, logout,
+    competitionStyle, setSelectedRole,
     judgeAScore, addJudgeADeduction, resetJudgeADeductions,
     athletes, currentAthleteIndex, timerElapsed, timerRunning,
     sessionCode, judgeId,
   } = useCompetition();
+  const logout = useLogout();
+
 
   const aSync = useMatchSync(sessionCode);
   // Live style broadcast by the Technical Assistant wins over the local pick.

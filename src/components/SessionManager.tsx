@@ -6,7 +6,8 @@ import { Copy, CheckCircle, Link2, ArrowRight } from "lucide-react";
 
 
 export function SessionCreate() {
-  const { sessionCode, generateSessionCode, logout } = useCompetition();
+  const { sessionCode, generateSessionCode } = useCompetition();
+
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -44,7 +45,9 @@ export function SessionCreate() {
 }
 
 export function SessionJoin({ onJoined }: { onJoined: () => void }) {
-  const { setSessionCode, setJudgeId, logout } = useCompetition();
+  const { setSessionCode, setJudgeId } = useCompetition();
+  const logout = useLogout();
+
   const [code, setCode] = useState("");
   const [jid, setJid] = useState("");
   const [error, setError] = useState(false);
