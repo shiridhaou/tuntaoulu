@@ -1672,7 +1672,7 @@ async function syncWithChief() {
               </div>
             </motion.section>
           </div>
-        </div>
+
 
 
 
