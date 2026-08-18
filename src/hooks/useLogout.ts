@@ -13,6 +13,7 @@ export function useLogout() {
 
   return useCallback(() => {
     // 1) clear in-memory state first
+    console.log("[useLogout] invoked");
     logout();
 
     // 2) wipe all app storage keys (local + session) — keep Supabase auth device session intact
@@ -35,6 +36,7 @@ export function useLogout() {
     }
 
     // 3) redirect to root with empty search params and replace history entry
+    console.log("[useLogout] navigating to /");
     navigate({ to: "/", search: {}, replace: true });
   }, [logout, navigate]);
 }
