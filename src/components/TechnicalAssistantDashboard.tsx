@@ -1742,8 +1742,10 @@ async function syncWithChief() {
             </DialogContent>
           </Dialog>
         </div>
-      );
-    }
+      </div>
+    );
+}
+
 
     // ============ Judges Status Grid (compact dots) ============
     function JudgesStatusGrid({ statuses, liveAthleteName, team }: {
