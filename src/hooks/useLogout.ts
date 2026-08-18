@@ -3,34 +3,21 @@ import { useRouter } from "@tanstack/react-router";
 import { useCompetition } from "@/store/competition-store";
 
 /**
- * Full exit handler: clears the role/session context, wipes every taolu-prefixed
- * storage key, and navigates to root with NO search params so the session does not
- * auto-hydrate again on redirect or reload.
+ * Full exit handler: wipes every taolu-prefixed storage key first, then
+ * navigates to root with NO search params and clears the in-memory context.
  *
- * Note: we use a hard location.replace() here because TanStack Router's
- * router.navigate() can be suppressed when the calling component is unmounted
- * by the preceding logout() state change. A full reload to / is the safest
- * way to guarantee a clean exit state.
+ * The order matters: if we navigate to / before localStorage is cleared, the
+ * role/session hydration on reload will immediately redirect back to the same
+ * role screen. If we clear context state before navigation, the calling
+ * component unmounts and can cancel the navigation. So storage is wiped first,
+ * then the browser replaces the URL to /, and finally the context is reset.
  */
 export function useLogout() {
   const { logout } = useCompetition();
   const router = useRouter();
 
   return useCallback(() => {
-    // 1) redirect to root with empty search params first (before state changes unmount the caller)
-    try {
-      if (router?.navigate) {
-        router.navigate({ to: "/", search: {}, replace: true });
-      }
-    } catch { /* ignore */ }
-    if (typeof window !== "undefined") {
-      window.location.replace("/");
-    }
-
-    // 2) clear in-memory state
-    logout();
-
-    // 3) wipe all app storage keys (local + session) — keep Supabase auth device session intact
+    // 1) wipe all app storage keys (local + session) first — keep Supabase auth device session intact
     if (typeof window !== "undefined") {
       try {
         const keysToRemove: string[] = [];
@@ -47,6 +34,20 @@ export function useLogout() {
         keysToRemove.forEach((key) => window.localStorage.removeItem(key));
         window.sessionStorage.removeItem("taolu.tab");
       } catch { /* ignore */ }
+    }
+
+    // 2) clear in-memory state. The router is still stable here, so this is safe.
+    logout();
+
+    // 3) redirect to root with empty search params. Try TanStack navigation first,
+    //    but always fall back to a full location replace so the exit is guaranteed.
+    try {
+      if (router?.navigate) {
+        router.navigate({ to: "/", search: {}, replace: true });
+      }
+    } catch { /* ignore */ }
+    if (typeof window !== "undefined") {
+      window.location.replace("/");
     }
   }, [logout, router]);
 }
