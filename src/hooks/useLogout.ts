@@ -37,6 +37,7 @@ export function useLogout() {
 
     // 3) redirect to root with empty search params and replace history entry
     console.log("[useLogout] navigating to /");
-    navigate({ to: "/", search: {}, replace: true });
+    void navigate({ to: "/", search: {}, replace: true });
+    console.log("[useLogout] navigate called");
   }, [logout, navigate]);
 }
