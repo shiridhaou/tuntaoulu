@@ -35,6 +35,7 @@ export function JudgeCPanel() {
   const logout = useLogout();
 
   const [sending, setSending] = useState(false);
+  const [sentC, setSentC] = useState(false);
 
   // Silent realtime subscription to current_match — recovers state on reconnect.
   const sync = useMatchSync(sessionCode);
@@ -101,12 +102,13 @@ export function JudgeCPanel() {
       payload: { attempts: judgeCAttempts },
     });
     setSending(false);
-    if (!res.ok) toast.error(`فشل الإرسال: ${res.error ?? "خطأ"}`);
-    else toast.success("تم إرسال نتيجة Group C");
+    if (!res.ok) { toast.error(`فشل الإرسال: ${res.error ?? "خطأ"}`); return; }
+    setSentC(true);
+    toast.success("تم إرسال نتيجة Group C");
   };
 
 
-  useJudgeStatus(sessionCode, judgeId, sending ? "judging" : "judging", athlete?.id ?? null);
+  useJudgeStatus(sessionCode, judgeId, sentC ? "sent" : "judging", athlete?.id ?? null);
 
   const judgedCodes = useMemo(() => new Set(judgeCAttempts.map(a => a.code)), [judgeCAttempts]);
   const firstUnjudgedIndex = useMemo(
@@ -135,6 +137,8 @@ export function JudgeCPanel() {
 
   const current = sheet[activeIndex];
   const allJudged = firstUnjudgedIndex < 0;
+
+  useEffect(() => { setSentC(false); }, [athlete?.id]);
 
   const advance = () => {
     const next = sheet.findIndex((d, i) => i > activeIndex && !judgedCodes.has(d.code));
