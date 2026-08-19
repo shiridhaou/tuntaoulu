@@ -6,6 +6,7 @@ import { FederationLogo } from "./FederationLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useDisplaySettings } from "@/hooks/useDisplaySettings";
 import { FullscreenToggle } from "./FullscreenToggle";
+import { useMatchSync } from "@/hooks/useMatchSync";
 
 // Live data from TA's session (current_match + match_events)
 function useLiveSession() {
@@ -200,7 +201,7 @@ export function PublicScoreboard() {
 function LiveScoreboard() {
   const {
     competitionStyle, judgeAScore, judgeADeductions, judgeBScores, judgeBAverage,
-    judgeCScore, judgeCAttempts, finalScore, timerRunning, timerElapsed, setTimerElapsed,
+    judgeCScore, judgeCAttempts, finalScore, timerElapsed,
     athletes, currentAthleteIndex, scoreRevealed, sessionCode,
   } = useCompetition();
   const { marquee: marqueeText, sponsors: sponsorLogos } = useDisplaySettings(sessionCode);
