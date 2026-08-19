@@ -24,7 +24,11 @@ export function InstallPwaPrompt() {
     }
 
     // Already installed
-    if (window.matchMedia?.("(display-mode: standalone)").matches) return;
+    const standalone =
+      window.matchMedia?.("(display-mode: standalone)").matches ||
+      window.matchMedia?.("(display-mode: fullscreen)").matches ||
+      (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    if (standalone) return;
 
     // Recently dismissed
     try {
@@ -38,8 +42,19 @@ export function InstallPwaPrompt() {
       setVisible(true);
     };
 
+    // Once installed, never show the banner again.
+    const installed = () => {
+      try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch { /* ignore */ }
+      setDeferred(null);
+      setVisible(false);
+    };
+
     window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", installed);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", installed);
+    };
   }, []);
 
   const dismiss = () => {

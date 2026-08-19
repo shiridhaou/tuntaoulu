@@ -9,17 +9,19 @@ type Props = {
   availableDecades: string[];
   activeDecade: string;
   onSelect: (decade: string) => void;
+  /** Hard lock from the Chief/TA — disables the whole keypad. */
+  disabled?: boolean;
 };
 
 /**
  * Group A keypad — always renders keys 0–7.
  * Purely presentational: it consumes props, never touches sync state.
  */
-export function GroupAKeypad({ availableDecades, activeDecade, onSelect }: Props) {
+export function GroupAKeypad({ availableDecades, activeDecade, onSelect, disabled = false }: Props) {
   return (
     <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
       {GROUP_A_KEYS.map(d => {
-        const enabled = availableDecades.includes(d);
+        const enabled = !disabled && availableDecades.includes(d);
         const active = enabled && activeDecade === d;
         const info = GROUP_A_GROUP_INFO[d];
         return (

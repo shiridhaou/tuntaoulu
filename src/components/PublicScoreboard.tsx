@@ -6,6 +6,7 @@ import { FederationLogo } from "./FederationLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useDisplaySettings } from "@/hooks/useDisplaySettings";
 import { FullscreenToggle } from "./FullscreenToggle";
+import { useMatchSync } from "@/hooks/useMatchSync";
 
 // Live data from TA's session (current_match + match_events)
 function useLiveSession() {
@@ -200,12 +201,14 @@ export function PublicScoreboard() {
 function LiveScoreboard() {
   const {
     competitionStyle, judgeAScore, judgeADeductions, judgeBScores, judgeBAverage,
-    judgeCScore, judgeCAttempts, finalScore, timerRunning, timerElapsed, setTimerElapsed,
+    judgeCScore, judgeCAttempts, finalScore, timerElapsed,
     athletes, currentAthleteIndex, scoreRevealed, sessionCode,
   } = useCompetition();
   const { marquee: marqueeText, sponsors: sponsorLogos } = useDisplaySettings(sessionCode);
 
   const { activeSessionCode, liveAthlete, liveTimerSec, callBanner } = useLiveSession();
+  const scoreboardSync = useMatchSync(sessionCode);
+  const syncTimerSec = scoreboardSync.elapsedSec;
   const { result: publishedResult, athlete: publishedAthlete } = usePublishedResult(activeSessionCode ?? sessionCode);
 
   // ── Published-only reveal ────────────────────────────────
@@ -264,18 +267,9 @@ function LiveScoreboard() {
     ? publishedPayload.c_movements.map((m) => ({ code: String(m.code), success: typeof m.successful === "boolean" ? m.successful : typeof m.success === "boolean" ? m.success : null }))
     : judgeCAttempts.map((a) => ({ code: a.code, success: a.successful }));
 
-  // Use TA's broadcast timer when available, else fallback to local
-  const displayTimerSec = liveTimerSec || timerElapsed;
+  // Authoritative timer mirrored from the Technical Assistant.
+  const displayTimerSec = syncTimerSec || liveTimerSec || timerElapsed;
 
-  // Performance timer tick — the interval is created ONCE per run/stop, not on every
-  // second (recreating it each tick was part of the flickering).
-  const elapsedRef = useRef(timerElapsed);
-  elapsedRef.current = timerElapsed;
-  useEffect(() => {
-    if (!timerRunning) return;
-    const id = setInterval(() => setTimerElapsed(elapsedRef.current + 1), 1000);
-    return () => clearInterval(id);
-  }, [timerRunning, setTimerElapsed]);
 
 
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;

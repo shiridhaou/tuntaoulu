@@ -5,6 +5,8 @@ import { submitJudgeScore } from "@/lib/scoreSubmit";
 import { toast } from "sonner";
 import { ArrowRight, Send, Undo2, Wifi, WifiOff, CheckCircle2, RotateCcw } from "lucide-react";
 import { useMatchSync } from "@/hooks/useMatchSync";
+import { useScoringGate } from "@/hooks/useScoringGate";
+import { useJudgeStatus } from "@/hooks/useJudgeStatus";
 import { modeCaps, type MatchMode } from "@/lib/matchMode";
 
 /* Official Group A code catalogue lives in @/lib/deductionCodes */
@@ -36,13 +38,15 @@ export function JudgeAPanel() {
   const {
     competitionStyle, setSelectedRole,
     judgeAScore, addJudgeADeduction, resetJudgeADeductions,
-    athletes, currentAthleteIndex, timerElapsed, timerRunning,
+    athletes, currentAthleteIndex,
     sessionCode, judgeId,
   } = useCompetition();
   const logout = useLogout();
 
 
   const aSync = useMatchSync(sessionCode);
+  // Timer + hard lock are mirrored from the Technical Assistant (single source of truth).
+  const { locked, timerSec: timerElapsed, timerRunning } = useScoringGate(aSync);
   // Live style broadcast by the Technical Assistant wins over the local pick.
   const liveStyle = (aSync.style ?? competitionStyle) as string | null;
   const config = liveStyle && STYLE_CONFIGS[liveStyle] ? STYLE_CONFIGS[liveStyle] : STYLE_CONFIGS.changquan;
@@ -57,6 +61,9 @@ export function JudgeAPanel() {
   const [online, setOnline] = useState(true);
   const [submitted, setSubmitted] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Report presence/state to the Chief's judge matrix (Judging → Sent).
+  useJudgeStatus(sessionCode, judgeId, submitted ? "sent" : "judging", null);
 
 
   // Style-aware rules engine: keys 0–7 always render, availability is style-driven.
@@ -92,9 +99,10 @@ export function JudgeAPanel() {
 
 
   const addCode = useCallback((c: CodeEntry) => {
+    if (locked) { toast.error("التقييم مقفل — انتظر فتح الحكم الرئيسي"); return; }
     haptic([28, 18, 28]);
     setConfirmed(prev => [...prev, c]);
-  }, []);
+  }, [locked]);
 
   const undoLast = useCallback(() => {
     haptic(20);
@@ -109,9 +117,10 @@ export function JudgeAPanel() {
   const totalDeduction = useMemo(() => confirmed.reduce((s, c) => s + c.value, 0), [confirmed]);
   const projectedScore = Math.max(0, maxA - totalDeduction);
 
-  const canSend = (!timerRunning && timerElapsed > 0) || timeUp;
+  const canSend = !locked && ((!timerRunning && timerElapsed > 0) || timeUp);
 
   const handleSend = useCallback(async () => {
+    if (locked) { toast.error("التقييم مقفل — لا يمكن الإرسال"); return; }
     if (!canSend) { toast.error("الإرسال غير متاح — انتظر إيقاف المؤقت"); return; }
     if (confirmed.length === 0) { toast.error("لا توجد أكواد للإرسال"); return; }
     haptic([60, 40, 60]);
@@ -133,7 +142,7 @@ export function JudgeAPanel() {
     }
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 2200);
-  }, [canSend, confirmed, sessionCode, judgeId, currentAthlete, projectedScore, timerElapsed, addJudgeADeduction]);
+  }, [locked, canSend, confirmed, sessionCode, judgeId, currentAthlete, projectedScore, timerElapsed, addJudgeADeduction]);
 
   const resetAll = useCallback(() => {
     haptic([20, 40, 20]);
@@ -178,6 +187,14 @@ export function JudgeAPanel() {
           <button onClick={logout} className="text-[10px] text-white/40 hover:text-white">خروج</button>
         </div>
       </header>
+
+      {locked && (
+        <div className="px-3 pt-2 shrink-0">
+          <div className="rounded-xl border border-amber-400/50 bg-amber-400/10 px-3 py-2 text-center text-[12px] font-black text-amber-200" dir="rtl">
+            🔒 التقييم مقفل — في انتظار فتح الحكم الرئيسي / Scoring Locked
+          </div>
+        </div>
+      )}
 
       {/* HUD — total deduction + projected + sent */}
       <div className="px-3 pt-3 shrink-0">
@@ -241,6 +258,7 @@ export function JudgeAPanel() {
       {/* Group A keypad — restricted to 0–7 */}
       <div className="px-3 pt-2 shrink-0">
         <GroupAKeypad
+          disabled={locked}
           availableDecades={decades}
           activeDecade={decade}
           onSelect={(d) => { setDecade(d); setModalOpen(true); }}
@@ -256,7 +274,8 @@ export function JudgeAPanel() {
               type="button"
               onPointerDown={(e) => { e.stopPropagation(); }}
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); addCode(toEntry(r)); }}
-              className="rounded-2xl border border-white/10 bg-black/60 p-3 text-right active:scale-[0.97] transition-all hover:border-emerald-500/50"
+              disabled={locked}
+              className="rounded-2xl border border-white/10 bg-black/60 p-3 text-right active:scale-[0.97] transition-all hover:border-emerald-500/50 disabled:opacity-30 disabled:pointer-events-none"
               style={{ backdropFilter: "blur(14px)" }}
             >
               <div className="flex items-center justify-between gap-2">
@@ -288,7 +307,7 @@ export function JudgeAPanel() {
       <div className="px-3 pb-3 shrink-0 grid grid-cols-[1fr_auto_auto] gap-2">
         <button
           onClick={undoLast}
-          disabled={confirmed.length === 0}
+          disabled={locked || confirmed.length === 0}
           className="h-14 rounded-xl font-black text-sm flex items-center justify-center gap-2 border border-amber-400/50 bg-amber-400/10 text-amber-200 active:scale-95 transition-all disabled:opacity-25"
         >
           <Undo2 className="h-5 w-5" /> تراجع عن آخر خصم
