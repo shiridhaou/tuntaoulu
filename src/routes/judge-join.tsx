@@ -36,6 +36,13 @@ const ROLE_OPTIONS: { id: JoinRole; title: string; subtitle: string; color: stri
   { id: "TA",  title: "Technical Assistant", subtitle: "المساعد التقني (TA)",     color: "#22D3EE", bg: "rgba(34,211,238,0.12)", icon: <Cpu className="h-6 w-6" /> },
 ];
 
+const PANEL_PATH = {
+  A: "/judge-a",
+  B: "/judge-b",
+  C: "/judge-c",
+  AHJ: "/assistant",
+} as const;
+
 function roleFromSelected(selected: string | null): JoinRole | null {
   switch (selected) {
     case "a-quality-judge": return "A";
@@ -128,7 +135,7 @@ function JudgeJoinPage() {
         setJudgeId(null);
         setSelectedRole("technical-assistant");
         toast.success("تم الدخول", { description: `المساعد التقني · الجلسة ${trimmedCode}` });
-        navigate({ to: "/" });
+        navigate({ to: "/ta", search: { session: trimmedCode }, replace: true });
         return;
       }
 
@@ -151,7 +158,7 @@ function JudgeJoinPage() {
       setSelectedRole(userRoleFromRequested(role));
       setJudgeId(slotKey);
       toast.success("تم الدخول", { description: `الفتحة ${slotKey} · الجلسة ${trimmedCode}` });
-      navigate({ to: "/" });
+      navigate({ to: PANEL_PATH[role], search: { session: trimmedCode }, replace: true });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "فشل الدخول";
       setError(msg);
