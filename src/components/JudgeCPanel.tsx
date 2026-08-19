@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { submitJudgeScore } from "@/lib/scoreSubmit";
 import { useMatchSync } from "@/hooks/useMatchSync";
+import { useScoringGate } from "@/hooks/useScoringGate";
+import { useJudgeStatus } from "@/hooks/useJudgeStatus";
 import { toast } from "sonner";
 import { QUICK_CODES, CONNECTION_BONUSES, MAX_C_MOVEMENT, MAX_C_CONNECTION, lookupCode, isConnectionCode, lookupConnection, type ConnectionBonus } from "@/lib/difficultyCodes";
 
@@ -27,7 +29,7 @@ export function JudgeCPanel() {
   const {
     competitionStyle, setSelectedRole,
     judgeCAttempts, judgeCScore, addJudgeCAttempt, toggleJudgeCAttempt, resetJudgeCAttempts,
-    finalScore, athletes, currentAthleteIndex, timerElapsed, timerRunning,
+    finalScore, athletes, currentAthleteIndex,
     sessionCode, judgeId,
   } = useCompetition();
   const logout = useLogout();
@@ -36,6 +38,8 @@ export function JudgeCPanel() {
 
   // Silent realtime subscription to current_match — recovers state on reconnect.
   const sync = useMatchSync(sessionCode);
+  // Timer + hard lock mirrored from the Technical Assistant.
+  const { locked, timerSec: timerElapsed, timerRunning } = useScoringGate(sync);
   const matchMode = (sync.payload?.match_mode as "compulsory" | "optional" | undefined) ?? "optional";
   const liveStyle = (sync.style ?? competitionStyle) as keyof typeof STYLE_CONFIGS | null;
 
@@ -84,6 +88,7 @@ export function JudgeCPanel() {
   }, [athlete?.id, athlete?.difficultySheet, athlete?.name]);
 
   const handleSubmit = async () => {
+    if (locked) { toast.error("التقييم مقفل — لا يمكن الإرسال"); return; }
     if (!timerRunning && timerElapsed === 0) {
       toast.error("لا يمكن الإرسال قبل بدء المؤقت من الحكم الرئيسي");
       return;
@@ -100,6 +105,8 @@ export function JudgeCPanel() {
     else toast.success("تم إرسال نتيجة Group C");
   };
 
+
+  useJudgeStatus(sessionCode, judgeId, sending ? "judging" : "judging", athlete?.id ?? null);
 
   const judgedCodes = useMemo(() => new Set(judgeCAttempts.map(a => a.code)), [judgeCAttempts]);
   const firstUnjudgedIndex = useMemo(
@@ -135,11 +142,13 @@ export function JudgeCPanel() {
   };
 
   const handleYes = () => {
+    if (locked) { toast.error("التقييم مقفل"); return; }
     if (!current || judgedCodes.has(current.code)) return;
     addJudgeCAttempt({ code: current.code, label: current.label, value: current.value, successful: true });
     advance();
   };
   const handleNo = () => {
+    if (locked) { toast.error("التقييم مقفل"); return; }
     if (!current || judgedCodes.has(current.code)) return;
     addJudgeCAttempt({ code: current.code, label: current.label, value: current.value, successful: false });
     advance();
@@ -158,6 +167,7 @@ export function JudgeCPanel() {
   const attemptIndex = (code: string) => judgeCAttempts.findIndex(a => a.code === code);
 
   const tapQuickCode = (code: string) => {
+    if (locked) { toast.error("التقييم مقفل"); return; }
     const idx = attemptIndex(code);
     if (idx >= 0) { toggleJudgeCAttempt(idx); return; }
     const meta = lookupCode(code);
@@ -166,6 +176,7 @@ export function JudgeCPanel() {
 
   /** Confirm / Unconfirm a specific movement of the athlete's sheet. */
   const validateMovement = (d: DifficultyMovement, ok: boolean) => {
+    if (locked) { toast.error("التقييم مقفل"); return; }
     const idx = attemptIndex(d.code);
     if (idx >= 0) {
       const cur = judgeCAttempts[idx];
@@ -188,6 +199,7 @@ export function JudgeCPanel() {
 
 
   const tapConnection = (b: ConnectionBonus) => {
+    if (locked) { toast.error("التقييم مقفل"); return; }
     const idx = attemptIndex(b.code);
     if (idx >= 0) { toggleJudgeCAttempt(idx); return; }
     if (connectionTotal + b.value > MAX_C_CONNECTION + 1e-6) {
@@ -325,7 +337,7 @@ export function JudgeCPanel() {
             </div>
             <button
               onClick={(e) => { e.preventDefault(); e.currentTarget.blur(); void handleSubmit(); }}
-              disabled={!allJudged || sending}
+              disabled={locked || !allJudged || sending}
               type="button"
               className="h-11 px-4 rounded-xl flex items-center gap-2 font-heading font-black text-xs tracking-wider border-2 border-green-400/60 bg-gradient-to-b from-green-500/30 to-green-600/20 text-green-100 hover:from-green-500/40 hover:to-green-600/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               style={{ boxShadow: allJudged && !sending ? "0 8px 24px oklch(0.65 0.20 145 / 0.55), inset 0 1px 0 oklch(1 0 0 / 0.2)" : undefined }}
@@ -346,6 +358,14 @@ export function JudgeCPanel() {
       </header>
 
       {/* Main action zone — locked, no vertical scroll */}
+      {locked && (
+        <div className="px-4 pt-2 shrink-0">
+          <div className="rounded-xl border border-amber-400/50 bg-amber-400/10 px-3 py-2 text-center text-xs font-heading font-black text-amber-300" dir="rtl">
+            🔒 التقييم مقفل — في انتظار فتح الحكم الرئيسي / Scoring Locked
+          </div>
+        </div>
+      )}
+
       <main className="flex-1 flex flex-col items-center justify-between p-4 min-h-0 gap-3 overflow-hidden">
         {/* Current movement label */}
         <div className="text-center mt-1">
@@ -381,7 +401,7 @@ export function JudgeCPanel() {
         <div className="flex items-center justify-center gap-6 md:gap-10 w-full max-w-2xl">
           <motion.button
             whileTap={{ scale: 0.92 }}
-            disabled={!current || allJudged || judgedCodes.has(current?.code ?? "")}
+            disabled={locked || !current || allJudged || judgedCodes.has(current?.code ?? "")}
             onClick={(e) => { e.preventDefault(); e.currentTarget.blur(); handleYes(); }}
             type="button"
             className="btn-3d-green flex-1 h-36 md:h-44 rounded-3xl flex flex-col items-center justify-center font-heading font-black disabled:opacity-40 disabled:cursor-not-allowed"
@@ -393,7 +413,7 @@ export function JudgeCPanel() {
 
           <motion.button
             whileTap={{ scale: 0.92 }}
-            disabled={!current || allJudged || judgedCodes.has(current?.code ?? "")}
+            disabled={locked || !current || allJudged || judgedCodes.has(current?.code ?? "")}
             onClick={(e) => { e.preventDefault(); e.currentTarget.blur(); handleNo(); }}
             type="button"
             className="btn-3d-red flex-1 h-36 md:h-44 rounded-3xl flex flex-col items-center justify-center font-heading font-black disabled:opacity-40 disabled:cursor-not-allowed"
