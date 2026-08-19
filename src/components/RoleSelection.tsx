@@ -203,7 +203,7 @@ export function RoleSelection() {
       setSetupComplete(false);
       setSelectedRole(role.id as UserRole);
       console.log("[RoleSelection] Chief selected → forced fresh session, routing to Setup Gate");
-      navigate({ to: "/chief" });
+      navigate({ to: "/chief", search: {} });
       return;
     }
 
