@@ -23,17 +23,18 @@ export function SessionGuard({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    if (!sessionCode) {
+    const code = (sessionCode ?? "").trim().toUpperCase();
+    if (!code) {
       setState("invalid");
       return;
     }
     setState("checking");
     supabase
-      .rpc("is_active_session", { _code: sessionCode })
+      .rpc("is_active_session", { _code: code })
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error || !data) {
-          console.warn("[SessionGuard] invalid/expired session", { sessionCode, error });
+          console.warn("[SessionGuard] invalid/expired session", { code, error });
           setState("invalid");
         } else {
           setState("ok");
