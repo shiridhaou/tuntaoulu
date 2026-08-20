@@ -4,6 +4,7 @@ import { ListChecks, Send, CheckCircle2, Trash2, Plus } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useDifficultySheet, type DifficultySheetSourceAthlete } from "@/hooks/useDifficultySheet";
+import { toWesternDigits } from "@/lib/numFormat";
 import type { JudgeStatusRow } from "@/types/matchTypes";
 
 // ============================================================================
