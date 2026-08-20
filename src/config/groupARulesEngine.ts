@@ -70,12 +70,12 @@ const DICT: Record<string, { pinyin: string; ar: string; en: string; value?: num
   "33": { pinyin: "Butterfly / Butterfly Twist", ar: "الفراشة والدوران", en: "Butterfly / Butterfly Twist" },
   "34": { pinyin: "Jumping Snap / Heel Push Kick", ar: "القفز النابض/الدفع", en: "Jumping Snap / Heel Push Kick" },
 
-  // Tab 4 — Weapon Techniques (40–49)
-  "40": { pinyin: "Qì Xiè Fǎ", ar: "تقنية السلاح غير صحيحة", en: "Incorrect weapon technique" },
-  "41": { pinyin: "Jiàn Fǎ", ar: "تقنية السيف المستقيم غير صحيحة", en: "Incorrect straightsword method" },
-  "43": { pinyin: "Qiāng Fǎ", ar: "تقنية الرمح غير صحيحة", en: "Incorrect spear method" },
-  "44": { pinyin: "Qì Xiè Xié Tiáo", ar: "تناسق السلاح مع الجسم غير صحيح", en: "Weapon–body coordination fault" },
-  "42": { pinyin: "Dāo · Gùn Fǎ", ar: "طريقة السيف/العصا غير صحيحة", en: "Incorrect broadsword / cudgel method" },
+  // Tab 4 — Nanquan & Fall/Landing Techniques (40–49)
+  "40": { pinyin: "Qián Tū Tiào", ar: "ركلة طائرة مع قفز وسقوط", en: "Front Jump Kick with Fall" },
+  "41": { pinyin: "Tēng Kōng Cè Chāi", ar: "ركلة جانبية مزدوجة بالقفز", en: "Jumping Split Side Kick" },
+  "42": { pinyin: "Diē Bù", ar: "تقنيات السقوط والربط الأرضي", en: "Fall and Ground Link Techniques" },
+  "43": { pinyin: "Nán Quán Tuǐ Fǎ", ar: "تقنيات أرجل الأسلوب الجنوبي الخاصة", en: "Special Nanquan Leg Techniques" },
+  "44": { pinyin: "Qiè Xiè Xié Tiáo", ar: "تناسق حركة السلاح مع الجسم", en: "Weapon–Body Coordination (Nandao/Nangun)" },
 
   // Tab 5 — Stances
   "50": { pinyin: "Gōng Bù", ar: "وقفة القوس", en: "Bow Stance" },
