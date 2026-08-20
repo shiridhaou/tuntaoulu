@@ -276,7 +276,7 @@ export function JudgeAPanel() {
           disabled={locked}
           availableDecades={decades}
           activeDecade={decade}
-          onSelect={(d) => { setDecade(d); setModalOpen(true); }}
+          onSelect={(d) => setDecade(d)}
         />
       </div>
 
