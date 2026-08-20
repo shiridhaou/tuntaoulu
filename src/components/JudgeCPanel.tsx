@@ -9,6 +9,9 @@ import { useMatchSync } from "@/hooks/useMatchSync";
 import { useScoringGate } from "@/hooks/useScoringGate";
 import { useJudgeStatus } from "@/hooks/useJudgeStatus";
 import { toast } from "sonner";
+import { SessionBadge } from "@/components/SessionBadge";
+import { useActiveSessionCode } from "@/hooks/useActiveSession";
+import { useRoomPresence } from "@/hooks/useRoomPresence";
 import { QUICK_CODES, CONNECTION_BONUSES, MAX_C_MOVEMENT, MAX_C_CONNECTION, lookupCode, isConnectionCode, lookupConnection, type ConnectionBonus } from "@/lib/difficultyCodes";
 
 
@@ -38,6 +41,8 @@ export function JudgeCPanel() {
   const [sentC, setSentC] = useState(false);
 
   // Silent realtime subscription to current_match — recovers state on reconnect.
+  const activeSession = useActiveSessionCode(sessionCode);
+  useRoomPresence(activeSession, { role: "C", slot: judgeId });
   const sync = useMatchSync(sessionCode);
   // Timer + hard lock mirrored from the Technical Assistant.
   const { locked, timerSec: timerElapsed, timerRunning } = useScoringGate(sync);
@@ -94,10 +99,11 @@ export function JudgeCPanel() {
       toast.error("لا يمكن الإرسال قبل بدء المؤقت من الحكم الرئيسي");
       return;
     }
-    if (!sessionCode || !judgeId) { toast.error("لا توجد جلسة"); return; }
+    const code = sessionCode ?? activeSession;
+    if (!code || !judgeId) { toast.error("كود الجلسة غير متوفر — أعد الدخول بالرمز"); return; }
     setSending(true);
     const res = await submitJudgeScore({
-      sessionCode, judgeSlot: judgeId, judgeRole: "C",
+      sessionCode: code, judgeSlot: judgeId, judgeRole: "C",
       athleteId: athlete?.id ?? null, score: judgeCScore,
       payload: { attempts: judgeCAttempts },
     });
