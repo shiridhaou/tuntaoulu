@@ -17,6 +17,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMatchSync, broadcastSessionState } from "@/hooks/useMatchSync";
 import { joinSessionMembership } from "@/lib/sessionMembership";
+import { toast } from "sonner";
 import { styleLabelAr, styleLabelEn } from "@/lib/styleNames";
 import { modeCaps } from "@/lib/matchMode";
 import { pushDisplaySettings, uploadSponsorLogo } from "@/hooks/useDisplaySettings";
