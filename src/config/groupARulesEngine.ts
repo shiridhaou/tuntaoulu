@@ -26,10 +26,10 @@ export const GROUP_A_GROUP_INFO: Record<string, { pinyin: string; titleAr: strin
   "1": { pinyin: "Balances", titleAr: "التوازنات", titleEn: "Balances (10-16)" },
   "2": { pinyin: "Kicks & Sweeps", titleAr: "الركلات والمسح", titleEn: "Kicks & Sweeps (20-26)" },
   "3": { pinyin: "Jumps", titleAr: "القفزات", titleEn: "Jumps (30-34)" },
-  "4": { pinyin: "Qì Xiè Fǎ", titleAr: "تقنيات السلاح", titleEn: "Weapon Techniques (40-49)" },
-  "5": { pinyin: "Stances", titleAr: "الوقفات", titleEn: "Stances (50-58)" },
-  "6": { pinyin: "Weapon Techniques", titleAr: "تقنيات السلاح", titleEn: "Weapon Techniques (60-68)" },
-  "7": { pinyin: "Tōng Yòng Kòu Fēn", titleAr: "الخصومات العامة", titleEn: "General Deductions (70A-79)" },
+  "4": { pinyin: "Nanquan & Fall/Landing", titleAr: "تقنيات النانكوان والسقوط", titleEn: "Nanquan & Fall/Landing Techniques (40–49)" },
+  "5": { pinyin: "Stances", titleAr: "الوقفات", titleEn: "Stances (50–58)" },
+  "6": { pinyin: "Weapon Techniques", titleAr: "تقنيات السلاح", titleEn: "Weapon Techniques (60–68)" },
+  "7": { pinyin: "Tōng Yòng Kòu Fēn", titleAr: "الخصومات العامة", titleEn: "General Deductions (70A–79)" },
 };
 
 /** Shared technical dictionary (code → wording). Style rows reuse it. */
