@@ -402,8 +402,10 @@ function ChiefRefereeDashboardInner() {
         finalScore: aggregateFinal,
         timestamp: new Date().toISOString(),
       });
+      toast.success("تم نشر النتيجة على شاشة العرض");
     } catch (e) {
       console.error("[CHIEF PUBLISH] failed", e);
+      toast.error(`فشل نشر النتيجة: ${(e as { message?: string })?.message ?? "خطأ غير معروف"}`);
     } finally {
       setPublishingLive(false);
       if (opts.openWindow) openCastWindow();
