@@ -6,7 +6,7 @@ import { FederationLogo } from "./FederationLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useDisplaySettings } from "@/hooks/useDisplaySettings";
 import { FullscreenToggle } from "./FullscreenToggle";
-import { useMatchSync } from "@/hooks/useMatchSync";
+import { useMatchSync, onSessionState } from "@/hooks/useMatchSync";
 
 // Live data from TA's session (current_match + match_events)
 function useLiveSession() {
