@@ -22,14 +22,14 @@ export type GroupARule = {
 export const GROUP_A_KEYS = ["0", "1", "2", "3", "4", "5", "6", "7"] as const;
 
 export const GROUP_A_GROUP_INFO: Record<string, { pinyin: string; titleAr: string; titleEn: string }> = {
-  "0": { pinyin: "Shǒu Xíng", titleAr: "أشكال اليد", titleEn: "Hand Forms (01–09)" },
-  "1": { pinyin: "Bù Xíng · Shǒu Xíng", titleAr: "الوقفات وأشكال اليد", titleEn: "Stances & Hand Forms (10–19)" },
-  "2": { pinyin: "Tuǐ Fǎ", titleAr: "تقنيات الساق", titleEn: "Leg Techniques (20–29)" },
-  "3": { pinyin: "Tiào Yuè", titleAr: "القفزات", titleEn: "Jumps & Leaps (30–39)" },
-  "4": { pinyin: "Qì Xiè Fǎ", titleAr: "تقنيات السلاح", titleEn: "Weapon Techniques (40–49)" },
-  "5": { pinyin: "Bù Xíng · Bù Fǎ", titleAr: "الوقفات والخطوات", titleEn: "Stances & Footwork (50–59)" },
-  "6": { pinyin: "Qì Xiè", titleAr: "السلاح والتوازن", titleEn: "Apparatus / Weapon Balance (60–69)" },
-  "7": { pinyin: "Tōng Yòng Kòu Fēn", titleAr: "الخصومات العامة", titleEn: "General Deductions (70A–79)" },
+  "0": { pinyin: "Shǒu Xíng", titleAr: "أشكال اليد", titleEn: "Hand Forms (01-04)" },
+  "1": { pinyin: "Balances", titleAr: "التوازنات", titleEn: "Balances (10-16)" },
+  "2": { pinyin: "Kicks & Sweeps", titleAr: "الركلات والمسح", titleEn: "Kicks & Sweeps (20-26)" },
+  "3": { pinyin: "Jumps", titleAr: "القفزات", titleEn: "Jumps (30-34)" },
+  "4": { pinyin: "Qì Xiè Fǎ", titleAr: "تقنيات السلاح", titleEn: "Weapon Techniques (40-49)" },
+  "5": { pinyin: "Stances", titleAr: "الوقفات", titleEn: "Stances (50-58)" },
+  "6": { pinyin: "Weapon Techniques", titleAr: "تقنيات السلاح", titleEn: "Weapon Techniques (60-68)" },
+  "7": { pinyin: "Tōng Yòng Kòu Fēn", titleAr: "الخصومات العامة", titleEn: "General Deductions (70A-79)" },
 };
 
 /** Shared technical dictionary (code → wording). Style rows reuse it. */
