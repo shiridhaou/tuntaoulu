@@ -522,7 +522,7 @@ function TADashboardInner() {
         const wb = XLSX.read(buf, { type: "array", cellDates: true, codepage: 65001 });
         rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "", raw: false });
       }
-      const records = rows.map((r) => normalizeRow(r, tournament.id)).filter((r) => r.full_name);
+      const records = rows.map((r) => normalizeRow(r, tournament?.id ?? "")).filter((r) => r.full_name);
       if (!records.length) { toast.error("لا يوجد لاعبون صالحون في الملف"); return; }
       // Show the confirmation preview — nothing is committed until "تأكيد".
       setPreview(records);
