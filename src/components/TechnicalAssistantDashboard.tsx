@@ -25,6 +25,8 @@ import { cleanUuid, newUuid } from "@/lib/uuid";
 import { normalizeStyle, styleLabelAr } from "@/lib/styleNames";
 
 import { FederationLogo } from "./FederationLogo";
+import { SessionBadge } from "@/components/SessionBadge";
+import { RoomReadyWidget } from "@/components/RoomReadyWidget";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -934,16 +936,17 @@ function TADashboardInner() {
           updated_at: new Date().toISOString(),
         }, { onConflict: "session_code" });
       }
-      await matchControl.start(sessionCode);
-      // Instant unlock for every judge panel — realtime replication can lag,
-      // so the timer transition also rides the low-latency broadcast channel.
-      await broadcastSessionState(sessionCode, {
+      // Instant unlock for every judge panel FIRST — the broadcast must never
+      // wait on the database round-trip (TA is a pure, unblocked broadcaster).
+      void broadcastSessionState(sessionCode, {
         athlete_id: liveAthlete?.id ?? null,
         style: styleCategory,
         timer_state: "running",
         started_at: new Date().toISOString(),
         payload: { match_started: true, phase: "live" },
       });
+      await matchControl.start(sessionCode);
+
       await emitEvent("timer_start", { at: timerSec });
       pushLog("time", "▶ تشغيل المؤقت");
     } catch (e: any) {
@@ -1145,6 +1148,7 @@ function TADashboardInner() {
   return (
     <div className="h-screen max-h-screen overflow-hidden p-2 md:p-3 relative font-arabic flex flex-col" dir="rtl">
       <div className="mesh-gradient-bg" />
+      <RoomReadyWidget sessionCode={sessionCode} me={{ role: "ta" }} />
       <div className="max-w-[1600px] w-full mx-auto relative z-10 flex flex-col gap-2 flex-1 min-h-0">
 
         {/* ===== STANDARDIZED HEADER ===== */}
@@ -1154,6 +1158,7 @@ function TADashboardInner() {
         >
           <div className="flex items-center gap-3 min-w-0">
             <FederationLogo size="header" />
+            <SessionBadge code={sessionCode} />
             <div className="border-r border-foreground/10 pr-3 min-w-0 hidden sm:block">
               <p className="text-[9px] uppercase tracking-widest text-fed-blue font-body leading-none">Technical Assistant</p>
               <h1 className="text-sm md:text-base font-heading font-bold text-gold leading-tight truncate">

@@ -10,6 +10,9 @@ import { useJudgeStatus } from "@/hooks/useJudgeStatus";
 import { effectiveMaxB, type MatchMode } from "@/lib/matchMode";
 import { toast } from "sonner";
 import { ArrowRight, Minus, Plus, Send, AlertTriangle, RotateCcw, CheckCircle2, Delete } from "lucide-react";
+import { SessionBadge } from "@/components/SessionBadge";
+import { useActiveSessionCode } from "@/hooks/useActiveSession";
+import { useRoomPresence } from "@/hooks/useRoomPresence";
 
 
 /** Official Group B performance tiers (out of 3.00). */
@@ -48,6 +51,8 @@ export function JudgeBPanel() {
   const myIndex = 0;
   const score = judgeBScores[myIndex] ?? 0;
 
+  const activeSession = useActiveSessionCode(sessionCode);
+  useRoomPresence(activeSession, { role: "B", slot: judgeId });
   const sync = useMatchSync(sessionCode);
   // Timer + hard lock mirrored from the Technical Assistant.
   const { locked, timerSec: timerElapsed, timerRunning } = useScoringGate(sync);
@@ -113,9 +118,11 @@ export function JudgeBPanel() {
       toast.error("لا يمكن الإرسال قبل بدء المؤقت من الحكم الرئيسي");
       return;
     }
-    if (sessionCode && judgeId) {
+    const code = sessionCode ?? activeSession;
+    if (!code) { toast.error("كود الجلسة غير متوفر — أعد الدخول بالرمز"); return; }
+    if (code && judgeId) {
       const res = await submitJudgeScore({
-        sessionCode, judgeSlot: judgeId, judgeRole: "B",
+        sessionCode: code, judgeSlot: judgeId, judgeRole: "B",
         athleteId: currentAthlete?.id ?? null, score,
         payload: { mode: liveMode },
       });
@@ -142,6 +149,7 @@ export function JudgeBPanel() {
             <span className="text-sm font-heading font-bold px-3 py-1 rounded-full border border-gold/40 bg-gold/10 text-gold" dir="ltr">
               JUDGE B · Overall Performance · {max.toFixed(2)}
             </span>
+            <SessionBadge code={sessionCode} />
           </div>
 
           <div className="flex items-center gap-3">

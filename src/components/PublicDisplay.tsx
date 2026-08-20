@@ -6,6 +6,8 @@ import { FederationLogo } from "./FederationLogo";
 import { exportReportToPdf } from "@/lib/pdfExport";
 import { useCompetition } from "@/store/competition-store";
 import { FullscreenToggle } from "./FullscreenToggle";
+import { SessionBadge } from "@/components/SessionBadge";
+import { useRoomPresence } from "@/hooks/useRoomPresence";
 
 /**
  * PublicDisplay — full-screen public results screen at /public-display.
@@ -623,6 +625,7 @@ function VarBroadcastView({
 // ── Component ─────────────────────────────────────────────────────────
 export function PublicDisplay() {
   const sessionCode = useActiveSession();
+  useRoomPresence(sessionCode, { role: "display" });
   const { athlete, judgeScores, result, liveTaDeduction, liveTaPulse } = useLiveDisplay(sessionCode);
   const varLive = useVarBroadcastFlag(sessionCode);
   const liveVideoUrl = useLiveVideoUrl(sessionCode);
@@ -984,6 +987,7 @@ export function PublicDisplay() {
             <p className="text-[10px] uppercase tracking-[0.3em] text-white/50 font-body">Tunisian Wushu</p>
             <p className="text-sm font-heading font-black text-white tracking-wider">CHAMPIONSHIPS 2024</p>
           </div>
+          <SessionBadge code={sessionCode} />
         </div>
         <div className="flex items-center gap-2">
           <span className="px-2 py-1 rounded text-[10px] font-heading font-black tracking-wider border"

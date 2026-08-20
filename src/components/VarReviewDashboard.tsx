@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { SessionBadge } from "@/components/SessionBadge";
+import { useRoomPresence } from "@/hooks/useRoomPresence";
 import { ShieldAlert, Flag, RefreshCw, Activity, ArrowLeft } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -27,6 +29,7 @@ export function VarReviewDashboard() {
     return localStorage.getItem("var_session") ?? "";
   });
   const [codeInput, setCodeInput] = useState(sessionCode);
+  useRoomPresence(sessionCode || null, { role: "var" });
   const [match, setMatch] = useState<CurrentMatchRow | null>(null);
   const [scores, setScores] = useState<ScoreRow[]>([]);
   const [flagged, setFlagged] = useState<Set<string>>(new Set());
@@ -150,7 +153,7 @@ export function VarReviewDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[10px] text-white/40 font-mono">SESSION {sessionCode}</span>
+          <SessionBadge code={sessionCode} />
           <button
             onClick={() => { localStorage.removeItem("var_session"); setSessionCode(""); }}
             className="text-[10px] text-white/40 hover:text-white"

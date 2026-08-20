@@ -15,6 +15,10 @@ import { enabledKeysForStyle, rulesForKey, type GroupARule } from "@/config/grou
 import { GroupAKeypad } from "@/components/GroupAKeypad";
 import { styleShort, styleLabelAr } from "@/lib/styleNames";
 import { DeductionModal } from "@/components/DeductionModal";
+import { SessionBadge } from "@/components/SessionBadge";
+import { useActiveSessionCode } from "@/hooks/useActiveSession";
+import { useRoomPresence } from "@/hooks/useRoomPresence";
+
 
 
 const toEntry = (r: GroupARule): CodeEntry => ({
@@ -44,10 +48,14 @@ export function JudgeAPanel() {
   const logout = useLogout();
 
 
+  const activeSession = useActiveSessionCode(sessionCode);
+  useRoomPresence(activeSession, { role: "A", slot: judgeId });
+
   const aSync = useMatchSync(sessionCode);
   // Timer + hard lock are mirrored from the Technical Assistant (single source of truth).
   const { locked, timerSec: timerElapsed, timerRunning } = useScoringGate(aSync);
   // Live style broadcast by the Technical Assistant wins over the local pick.
+
   const liveStyle = (aSync.style ?? competitionStyle) as string | null;
   const config = liveStyle && STYLE_CONFIGS[liveStyle] ? STYLE_CONFIGS[liveStyle] : STYLE_CONFIGS.changquan;
   const liveMode: MatchMode = ((aSync.payload as Record<string, unknown> | null)?.match_mode as MatchMode | undefined) ?? "optional";
@@ -127,9 +135,11 @@ export function JudgeAPanel() {
 
     confirmed.forEach(c => addJudgeADeduction({ code: c.code, value: c.value, label: c.label }));
 
-    if (sessionCode && judgeId) {
+    const code = sessionCode ?? activeSession;
+    if (!code) { toast.error("كود الجلسة غير متوفر — أعد الدخول بالرمز"); return; }
+    if (code && judgeId) {
       const res = await submitJudgeScore({
-        sessionCode, judgeSlot: judgeId, judgeRole: "A",
+        sessionCode: code, judgeSlot: judgeId, judgeRole: "A",
         athleteId: currentAthlete?.id ?? null,
         score: projectedScore,
         payload: {
@@ -142,7 +152,8 @@ export function JudgeAPanel() {
     }
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 2200);
-  }, [locked, canSend, confirmed, sessionCode, judgeId, currentAthlete, projectedScore, timerElapsed, addJudgeADeduction]);
+  }, [locked, canSend, confirmed, sessionCode, activeSession, judgeId, currentAthlete, projectedScore, timerElapsed, addJudgeADeduction]);
+
 
   const resetAll = useCallback(() => {
     haptic([20, 40, 20]);
@@ -160,6 +171,8 @@ export function JudgeAPanel() {
           <span className="shrink-0 text-[10px] font-black tracking-[0.25em] px-2 py-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-300" dir="ltr">
             JUDGE A · QUALITY
           </span>
+          <SessionBadge code={sessionCode} />
+
           <span
             className={`shrink-0 text-[9px] font-black tracking-widest px-2 py-0.5 rounded-full border ${
               liveMode === "compulsory"
