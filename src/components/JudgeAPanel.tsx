@@ -308,13 +308,6 @@ export function JudgeAPanel() {
         </div>
       </main>
 
-      <DeductionModal
-        open={modalOpen}
-        decade={decade}
-        rules={subRules}
-        onPick={(r) => { addCode(toEntry(r)); setModalOpen(false); }}
-        onClose={() => setModalOpen(false)}
-      />
 
 
 
