@@ -5,6 +5,8 @@ import { useCompetition, STYLE_CONFIGS, type CompetitionStyle } from "@/store/co
 import { useLogout } from "@/hooks/useLogout";
 
 import { FederationLogo } from "./FederationLogo";
+import { SessionBadge } from "@/components/SessionBadge";
+import { RoomReadyWidget } from "@/components/RoomReadyWidget";
 import { AiAssistantSidebar } from "./AiAssistantSidebar";
 // QrCommitModal replaced by FinalScoreSheetModal
 import { WaitingSidebar } from "./WaitingSidebar";
@@ -498,6 +500,7 @@ function ChiefRefereeDashboardInner() {
               <Trophy className="h-3 w-3" style={{ color: ORANGE }} />
               <span className="text-[9px] font-heading font-bold tracking-wider" style={{ color: ORANGE }}>CHIEF</span>
             </div>
+            <SessionBadge code={sessionCode} />
           </div>
 
           <div className="text-center">

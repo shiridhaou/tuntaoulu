@@ -25,6 +25,8 @@ import { cleanUuid, newUuid } from "@/lib/uuid";
 import { normalizeStyle, styleLabelAr } from "@/lib/styleNames";
 
 import { FederationLogo } from "./FederationLogo";
+import { SessionBadge } from "@/components/SessionBadge";
+import { RoomReadyWidget } from "@/components/RoomReadyWidget";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
