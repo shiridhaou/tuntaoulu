@@ -641,7 +641,9 @@ function TADashboardInner() {
   }
 
   async function saveManualAthlete() {
-    if (!tournament) { toast.error("أنشئ البطولة أولاً"); return; }
+    // No tournament form gate — resolveTournamentId() materializes the active
+    // tournament row when needed, keeping athlete data independent of metadata.
+
     if (!manualForm.name.trim()) { toast.error("اسم اللاعب مطلوب"); return; }
     setManualSaving(true);
     try {
