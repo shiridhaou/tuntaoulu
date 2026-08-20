@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { ensureDeviceSession, joinSessionMembership } from "@/lib/sessionMembership";
 
 /**
  * Push a judge score to the shared judge_scores table so the Chief Referee
