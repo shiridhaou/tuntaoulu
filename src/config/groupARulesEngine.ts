@@ -103,8 +103,8 @@ const DICT: Record<string, { pinyin: string; ar: string; en: string; value?: num
   "74": { pinyin: "Qì Xiè Duàn", ar: "كسر السلاح أو المروحة", en: "Broken weapon / fan parts", value: 0.2 },
   "75": { pinyin: "Qì Xiè Luò", ar: "سقوط السلاح على الأرض", en: "Weapon drop", value: 0.3 },
   "76": { pinyin: "Fú Shì Luò", ar: "سقوط زينة السلاح أو اللباس", en: "Apparel / ornament drop", value: 0.1 },
-  "77": { pinyin: "Píng Héng", ar: "عدم تنفيذ التوازن بالإيقاع / أقل من ثانيتين", en: "Balance held under 2 sec", value: 0.2 },
-  "78": { pinyin: "Chū Jiè", ar: "الخروج من البساط", en: "Out of carpet", value: 0.3 },
+  "77": { pinyin: "Píng Héng", ar: "عدم تنفيذ التوازن بالإيقاع / أقل من ثانيتين", en: "Balance held under 2 sec", value: 0.1 },
+  "78": { pinyin: "Chū Jiè", ar: "الخروج من البساط", en: "Out of carpet", value: 0.1 },
   "79": { pinyin: "Wàng Dòng Zuò", ar: "نسيان حركة", en: "Forgotten movement", value: 0.1 },
 };
 
