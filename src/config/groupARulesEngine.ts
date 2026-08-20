@@ -90,13 +90,13 @@ const DICT: Record<string, { pinyin: string; ar: string; en: string; value?: num
   "59": { pinyin: "Tài Jí Bù Fǎ", ar: "خطوات التايجي غير صحيحة", en: "Incorrect Taiji footwork" },
 
   // Tab 6 — Weapon Techniques (60–68)
-  "60": { pinyin: "Guà Jiàn / Liāo Jiàn", ar: "دفاع وقطع السيف", en: "Defend and Cut Sword" },
-  "61": { pinyin: "Wò Jiàn", ar: "مسك السيف", en: "Sword Grip" },
-  "62": { pinyin: "Chán Tóu / Guǒ Nǎo", ar: "لف السيف حول الرأس", en: "Sword Around Head" },
-  "63": { pinyin: "Lán / Ná / Zhā Qiāng", ar: "تقنيات الرمح (حظر/سحب/طعن)", en: "Spear Techniques (Block/Drag/Stab)" },
+  "60": { pinyin: "Guà Jiàn / Liāo Jiàn", ar: "دفاع وقطع السيف (Vertical Circle)", en: "Defend and Cut Sword (Vertical Circle)" },
+  "61": { pinyin: "Wò Jiàn", ar: "مسك السيف الصحيح (Sword Grip)", en: "Correct Sword Grip" },
+  "62": { pinyin: "Chán Tóu / Guǒ Nǎo", ar: "لف السيف/السكين حول الرأس", en: "Sword / Knife Around Head" },
+  "63": { pinyin: "Lán / Ná / Zhā Qiāng", ar: "تقنيات الرمح الثلاثية (حظر/سحب/طعن)", en: "Three Spear Techniques (Block / Drag / Stab)" },
   "64": { pinyin: "Píng Lūn Gùn", ar: "تدوير العصا الأفقية", en: "Horizontal Staff Rotation" },
   "65": { pinyin: "Lì Wǔ Huā", ar: "تنسيق الزهرة العمودية بالرمح/العصا", en: "Vertical Flower Coordination" },
-  "66": { pinyin: "Throw and Catch Weapon", ar: "رمي واستقبال السلاح", en: "Throw and Catch Weapon" },
+  "66": { pinyin: "Throw and Catch Weapon", ar: "رمي واستقبال السلاح (Weapon Catch/Throw)", en: "Weapon Throw and Catch" },
   "67": { pinyin: "Dǐng Gùn", ar: "تثبيت العصا على الأرض", en: "Ground Staff Support" },
   "68": { pinyin: "Jiǎo Jiàn", ar: "تدوير رأس السيف", en: "Sword Tip Rotation" },
   "69": { pinyin: "Tài Jí Shàn Fǎ", ar: "تقنية مروحة التايجي غير صحيحة", en: "Incorrect Taiji fan method" },
