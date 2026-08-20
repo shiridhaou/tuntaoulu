@@ -14,7 +14,6 @@ import { type CodeEntry } from "@/lib/deductionCodes";
 import { enabledKeysForStyle, rulesForKey, type GroupARule } from "@/config/groupARulesEngine";
 import { GroupAKeypad } from "@/components/GroupAKeypad";
 import { styleShort, styleLabelAr } from "@/lib/styleNames";
-import { DeductionModal } from "@/components/DeductionModal";
 import { SessionBadge } from "@/components/SessionBadge";
 import { useActiveSessionCode } from "@/hooks/useActiveSession";
 import { useRoomPresence } from "@/hooks/useRoomPresence";
@@ -68,7 +67,6 @@ export function JudgeAPanel() {
   const [confirmed, setConfirmed] = useState<CodeEntry[]>([]);
   const [online, setOnline] = useState(true);
   const [submitted, setSubmitted] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
 
   // Report presence/state to the Chief's judge matrix (Judging → Sent).
   useJudgeStatus(sessionCode, judgeId, submitted ? "sent" : "judging", null);
@@ -276,7 +274,7 @@ export function JudgeAPanel() {
           disabled={locked}
           availableDecades={decades}
           activeDecade={decade}
-          onSelect={(d) => { setDecade(d); setModalOpen(true); }}
+          onSelect={(d) => setDecade(d)}
         />
       </div>
 
@@ -308,13 +306,6 @@ export function JudgeAPanel() {
         </div>
       </main>
 
-      <DeductionModal
-        open={modalOpen}
-        decade={decade}
-        rules={subRules}
-        onPick={(r) => { addCode(toEntry(r)); setModalOpen(false); }}
-        onClose={() => setModalOpen(false)}
-      />
 
 
 
