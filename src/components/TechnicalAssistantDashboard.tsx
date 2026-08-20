@@ -936,16 +936,17 @@ function TADashboardInner() {
           updated_at: new Date().toISOString(),
         }, { onConflict: "session_code" });
       }
-      await matchControl.start(sessionCode);
-      // Instant unlock for every judge panel — realtime replication can lag,
-      // so the timer transition also rides the low-latency broadcast channel.
-      await broadcastSessionState(sessionCode, {
+      // Instant unlock for every judge panel FIRST — the broadcast must never
+      // wait on the database round-trip (TA is a pure, unblocked broadcaster).
+      void broadcastSessionState(sessionCode, {
         athlete_id: liveAthlete?.id ?? null,
         style: styleCategory,
         timer_state: "running",
         started_at: new Date().toISOString(),
         payload: { match_started: true, phase: "live" },
       });
+      await matchControl.start(sessionCode);
+
       await emitEvent("timer_start", { at: timerSec });
       pushLog("time", "▶ تشغيل المؤقت");
     } catch (e: any) {
