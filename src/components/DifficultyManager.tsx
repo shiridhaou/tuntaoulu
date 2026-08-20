@@ -4,6 +4,7 @@ import { ListChecks, Send, CheckCircle2, Trash2, Plus } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useDifficultySheet, type DifficultySheetSourceAthlete } from "@/hooks/useDifficultySheet";
+import { toWesternDigits } from "@/lib/numFormat";
 import type { JudgeStatusRow } from "@/types/matchTypes";
 
 // ============================================================================
@@ -145,12 +146,14 @@ export function DifficultyManager({
           <div className="divide-y divide-white/5">
             {sheet.map((d, i) => (
               <div key={i} className="grid grid-cols-12 gap-2 px-2 py-1.5 items-center hover:bg-white/[0.03]">
-                <span className="col-span-1 text-[10px] text-white/40 font-mono text-center">{i + 1}</span>
+                <span className="col-span-1 text-[10px] text-white/40 font-mono text-center num-west">{i + 1}</span>
                 <Input
-                  value={d.code}
-                  onChange={(e) => updateRow(i, { code: e.target.value.toUpperCase() })}
+                  value={toWesternDigits(d.code)}
+                  onChange={(e) => updateRow(i, { code: toWesternDigits(e.target.value).toUpperCase() })}
                   className="col-span-2 h-7 text-xs font-mono font-bold text-cyber-orange bg-black border-white/10 num-west"
                   dir="ltr"
+                  lang="en"
+                  inputMode="text"
                 />
                 <Input
                   value={d.label}
@@ -160,10 +163,12 @@ export function DifficultyManager({
                 />
                 <Input
                   type="number" step="0.05" min="0" max="1"
-                  value={d.value}
-                  onChange={(e) => updateRow(i, { value: parseFloat(e.target.value) || 0 })}
+                  value={toWesternDigits(d.value)}
+                  onChange={(e) => updateRow(i, { value: parseFloat(toWesternDigits(e.target.value)) || 0 })}
                   className="col-span-1 h-7 text-xs text-center font-mono font-bold text-emerald-400 bg-black border-white/10 num-west"
                   dir="ltr"
+                  lang="en"
+                  inputMode="decimal"
                 />
                 <Button onClick={() => removeRow(i)} size="icon" variant="ghost"
                   className="col-span-1 h-7 w-7 text-fed-red hover:bg-fed-red/10 mx-auto">
@@ -171,6 +176,7 @@ export function DifficultyManager({
                 </Button>
               </div>
             ))}
+
           </div>
         )}
       </div>
@@ -179,11 +185,12 @@ export function DifficultyManager({
       <div className="grid grid-cols-12 gap-2 mt-2 items-center">
         <Input
           value={newCode}
-          onChange={(e) => setNewCode(e.target.value.toUpperCase())}
+          onChange={(e) => setNewCode(toWesternDigits(e.target.value).toUpperCase())}
           onKeyDown={(e) => e.key === "Enter" && handleAddRow()}
           placeholder="Code (e.g. 323A)"
-          className="col-span-3 h-8 text-xs font-mono bg-black border-white/15"
+          className="col-span-3 h-8 text-xs font-mono bg-black border-white/15 num-west"
           dir="ltr"
+          lang="en"
         />
         <Input
           value={newLabel}
@@ -195,11 +202,14 @@ export function DifficultyManager({
         <Input
           type="number" step="0.05" min="0" max="1"
           value={newValue}
-          onChange={(e) => setNewValue(e.target.value)}
+          onChange={(e) => setNewValue(toWesternDigits(e.target.value))}
           onKeyDown={(e) => e.key === "Enter" && handleAddRow()}
-          className="col-span-2 h-8 text-xs text-center font-mono bg-black border-white/15"
+          className="col-span-2 h-8 text-xs text-center font-mono bg-black border-white/15 num-west"
           dir="ltr"
+          lang="en"
+          inputMode="decimal"
         />
+
         <Button onClick={handleAddRow} size="sm" className="col-span-1 h-8 bg-emerald-500 hover:bg-emerald-600 text-white">
           <Plus className="h-3.5 w-3.5" />
         </Button>

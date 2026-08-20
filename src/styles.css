@@ -371,6 +371,16 @@ body,
   font-feature-settings: "lnum" 1, "tnum" 1;
 }
 
+/* Any numeric surface (score inputs, deduction tables, difficulty sheets)
+   renders Western digits with lining, tabular figures. */
+.num-west,
+.num-west * {
+  font-variant-numeric: lining-nums tabular-nums;
+  -moz-font-feature-settings: "lnum" 1, "tnum" 1;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+  -webkit-locale: "en";
+}
+
 /* Date inputs always render ISO (YYYY-MM-DD) left-to-right. */
 input[type="date"],
 input[type="datetime-local"],
@@ -379,4 +389,8 @@ input[type="number"] {
   direction: ltr;
   text-align: left;
   font-variant-numeric: lining-nums tabular-nums;
+  -moz-font-feature-settings: "lnum" 1, "tnum" 1;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+  -webkit-locale: "en";
 }
+
