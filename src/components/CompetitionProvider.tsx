@@ -510,8 +510,11 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
   }, [remoteTeam]);
 
   const setSessionCode = useCallback((code: string | null) => {
-    setSessionCodeState(code);
-    if (code) void joinSessionMembership(code);
+    // Normalise once, here: every downstream read (sync, score submit, guards)
+    // then compares the exact same canonical code.
+    const norm = code ? code.trim().toUpperCase() : null;
+    setSessionCodeState(norm);
+    if (norm) void joinSessionMembership(norm);
   }, []);
   const setJudgeId = useCallback((id: string | null) => setJudgeIdState(id), []);
 

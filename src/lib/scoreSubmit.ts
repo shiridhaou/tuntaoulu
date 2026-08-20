@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { ensureDeviceSession, joinSessionMembership } from "@/lib/sessionMembership";
 
 /**
  * Push a judge score to the shared judge_scores table so the Chief Referee
@@ -21,21 +22,35 @@ export async function submitJudgeScore(args: {
   score: number;
   payload?: Record<string, unknown>;
 }): Promise<{ ok: boolean; error?: string }> {
-  const { sessionCode, judgeSlot, judgeRole, athleteId, score, payload = {} } = args;
+  const { judgeSlot, judgeRole, athleteId, score, payload = {} } = args;
+  // Canonical code: URL / localStorage / manual entry may differ in case or spacing.
+  const sessionCode = (args.sessionCode ?? "").trim().toUpperCase()
+    || (typeof window !== "undefined"
+      ? (window.localStorage.getItem("taolu.sessionCode") ?? "").trim().toUpperCase()
+      : "");
+  if (!sessionCode) return { ok: false, error: "كود الجلسة غير متوفر — أعد الدخول بالرمز" };
   try {
-    // 1) Validate session is active
-    const { data: session, error: sErr } = await supabase
-      .from("sessions").select("active").eq("code", sessionCode).maybeSingle();
-    if (sErr) return { ok: false, error: `جلسة غير صالحة: ${sErr.message}` };
-    if (!session) return { ok: false, error: "رمز الجلسة غير موجود" };
-    if (!session.active) return { ok: false, error: "الجلسة غير نشطة" };
+    // 0) Guarantee a device identity + membership row (RLS needs both, and a
+    //    missing membership is what made the session look "not found").
+    await ensureDeviceSession();
+    await joinSessionMembership(sessionCode, judgeRole, judgeSlot);
 
-    // 2) Validate current_match athlete matches
+    // 1) Validate session is active. The direct read can be hidden by RLS, so
+    //    fall back to the security-definer check before failing the judge.
+    const { data: session } = await supabase
+      .from("sessions").select("active").eq("code", sessionCode).maybeSingle();
+    if (session && !session.active) return { ok: false, error: "الجلسة غير نشطة" };
+    if (!session) {
+      const { data: active, error: rpcErr } = await supabase.rpc("is_active_session", { _code: sessionCode });
+      if (rpcErr) return { ok: false, error: `تعذّر التحقق من الجلسة: ${rpcErr.message}` };
+      if (!active) return { ok: false, error: "رمز الجلسة غير موجود أو غير نشط" };
+    }
+
+    // 2) Validate current_match athlete matches (when a match row is visible)
     const { data: cm } = await supabase
       .from("current_match").select("athlete_id, timer_state")
       .eq("session_code", sessionCode).maybeSingle();
-    if (!cm) return { ok: false, error: "لا توجد مباراة جارية — انتظر الحكم الرئيسي" };
-    if (cm.athlete_id !== athleteId) {
+    if (cm && athleteId && cm.athlete_id && cm.athlete_id !== athleteId) {
       return { ok: false, error: "الرياضي تغيّر — حدّث الشاشة قبل الإرسال" };
     }
 

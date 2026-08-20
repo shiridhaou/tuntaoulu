@@ -181,8 +181,10 @@ export function JudgeAPanel() {
           {currentAthlete && (
             <span className="text-[11px] text-white/80 font-bold truncate max-w-[140px]">{currentAthlete.name}</span>
           )}
+          {/* Authoritative match clock (mirrors TA / Chief / Judges B & C): elapsed, with remaining as a hint. */}
           <span className={`tabular-nums text-sm font-black ${timeUp ? "text-red-400 animate-pulse" : timerRunning ? "text-emerald-300" : "text-white/60"}`} dir="ltr">
-            {fmtTime(remaining)}
+            {fmtTime(timerElapsed)}
+            <span className="ml-1 text-[10px] font-bold text-white/35">/ {fmtTime(remaining)}</span>
           </span>
           <button onClick={logout} className="text-[10px] text-white/40 hover:text-white">خروج</button>
         </div>
