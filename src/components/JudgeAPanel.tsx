@@ -15,6 +15,10 @@ import { enabledKeysForStyle, rulesForKey, type GroupARule } from "@/config/grou
 import { GroupAKeypad } from "@/components/GroupAKeypad";
 import { styleShort, styleLabelAr } from "@/lib/styleNames";
 import { DeductionModal } from "@/components/DeductionModal";
+import { SessionBadge } from "@/components/SessionBadge";
+import { useActiveSessionCode } from "@/hooks/useActiveSession";
+import { useRoomPresence } from "@/hooks/useRoomPresence";
+
 
 
 const toEntry = (r: GroupARule): CodeEntry => ({
