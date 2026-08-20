@@ -1147,6 +1147,7 @@ function TADashboardInner() {
   return (
     <div className="h-screen max-h-screen overflow-hidden p-2 md:p-3 relative font-arabic flex flex-col" dir="rtl">
       <div className="mesh-gradient-bg" />
+      <RoomReadyWidget sessionCode={sessionCode} me={{ role: "ta" }} />
       <div className="max-w-[1600px] w-full mx-auto relative z-10 flex flex-col gap-2 flex-1 min-h-0">
 
         {/* ===== STANDARDIZED HEADER ===== */}
@@ -1156,6 +1157,7 @@ function TADashboardInner() {
         >
           <div className="flex items-center gap-3 min-w-0">
             <FederationLogo size="header" />
+            <SessionBadge code={sessionCode} />
             <div className="border-r border-foreground/10 pr-3 min-w-0 hidden sm:block">
               <p className="text-[9px] uppercase tracking-widest text-fed-blue font-body leading-none">Technical Assistant</p>
               <h1 className="text-sm md:text-base font-heading font-bold text-gold leading-tight truncate">
