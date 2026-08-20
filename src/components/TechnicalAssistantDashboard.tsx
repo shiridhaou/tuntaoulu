@@ -1409,6 +1409,27 @@ function TADashboardInner() {
                         </Button>
                       </div>
 
+                      {/* Active tournament context — metadata is stored once and
+                          reused for every list imported into this session. */}
+                      <div className="num-west rounded-xl border border-gold/30 bg-gold/5 p-3 text-xs space-y-1">
+                        <div className="flex items-center gap-2 text-gold font-bold">
+                          <Trophy className="h-3.5 w-3.5" />
+                          {tournament?.name || form.name || "بطولة بدون اسم — يمكن تسميتها لاحقاً من الإعدادات"}
+                        </div>
+                        <p className="text-muted-foreground">
+                          {(tournament?.location || form.location) && <span>{tournament?.location || form.location} · </span>}
+                          {(tournament?.start_date || form.start_date) && (
+                            <span dir="ltr">
+                              {toWesternDigits(tournament?.start_date || form.start_date)}
+                              {(tournament?.end_date || form.end_date) ? ` → ${toWesternDigits(tournament?.end_date || form.end_date)}` : ""}
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          بيانات البطولة محفوظة — يمكنك رفع عدة قوائم (شمالي / جنوبي …) تباعاً دون إعادة تعبئة النموذج. كل قائمة تُضاف إلى نفس البطولة.
+                        </p>
+                      </div>
+
                       <div
                         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                         onDragLeave={() => setDragOver(false)}
@@ -1418,8 +1439,7 @@ function TADashboardInner() {
                         }}
                         onClick={() => fileRef.current?.click()}
                         className={`relative cursor-pointer rounded-2xl border-2 border-dashed transition-all p-8 text-center
-                          ${dragOver ? "border-fed-blue bg-fed-blue/10 scale-[1.01]" : "border-border/60 hover:border-fed-blue/60 hover:bg-fed-blue/5"}
-                          ${!tournament ? "opacity-50 pointer-events-none" : ""}`}
+                          ${dragOver ? "border-fed-blue bg-fed-blue/10 scale-[1.01]" : "border-border/60 hover:border-fed-blue/60 hover:bg-fed-blue/5"}`}
                       >
                         <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls"
                           onChange={(e) => { const f = e.target.files?.[0]; if (f) void processFile(f); e.target.value = ""; }}
@@ -1432,9 +1452,9 @@ function TADashboardInner() {
                             <p className="font-heading font-bold">اسحب وأفلت ملف CSV أو Excel هنا</p>
                             <p className="text-xs text-muted-foreground mt-1">أو انقر لاختيار ملف</p>
                           </div>
-                          {!tournament && <p className="text-xs text-fed-red">⚠ أنشئ البطولة أولاً من الإعدادات</p>}
                         </motion.div>
                       </div>
+
 
                       <div className="text-xs text-muted-foreground bg-muted/20 rounded-lg p-3 leading-relaxed">
                         <strong className="text-foreground">الأعمدة المتوقعة:</strong>{" "}
