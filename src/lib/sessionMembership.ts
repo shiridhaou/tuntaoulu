@@ -14,13 +14,29 @@ export async function joinSessionMembership(
   const userId = data.session?.user?.id;
   if (!userId || !sessionCode) return;
 
+  // NEVER downgrade an existing role/slot: a later call without arguments
+  // (e.g. setSessionCode) used to null out the Chief's role, which then broke
+  // result publishing under RLS.
+  const { data: existing } = await supabase
+    .from("session_members")
+    .select("role, slot")
+    .eq("session_code", sessionCode)
+    .eq("user_id", userId)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("session_members")
     .upsert(
-      { session_code: sessionCode, user_id: userId, role: role ?? null, slot: slot ?? null },
+      {
+        session_code: sessionCode,
+        user_id: userId,
+        role: role ?? existing?.role ?? null,
+        slot: slot ?? existing?.slot ?? null,
+      },
       { onConflict: "session_code,user_id" },
     );
   if (error) console.warn("[session] membership registration failed", error.message);
+
 }
 
 /**
