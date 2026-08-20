@@ -48,10 +48,14 @@ export function JudgeAPanel() {
   const logout = useLogout();
 
 
+  const activeSession = useActiveSessionCode(sessionCode);
+  useRoomPresence(activeSession, { role: "A", slot: judgeId });
+
   const aSync = useMatchSync(sessionCode);
   // Timer + hard lock are mirrored from the Technical Assistant (single source of truth).
   const { locked, timerSec: timerElapsed, timerRunning } = useScoringGate(aSync);
   // Live style broadcast by the Technical Assistant wins over the local pick.
+
   const liveStyle = (aSync.style ?? competitionStyle) as string | null;
   const config = liveStyle && STYLE_CONFIGS[liveStyle] ? STYLE_CONFIGS[liveStyle] : STYLE_CONFIGS.changquan;
   const liveMode: MatchMode = ((aSync.payload as Record<string, unknown> | null)?.match_mode as MatchMode | undefined) ?? "optional";
