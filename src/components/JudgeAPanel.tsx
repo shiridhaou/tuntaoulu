@@ -171,6 +171,8 @@ export function JudgeAPanel() {
           <span className="shrink-0 text-[10px] font-black tracking-[0.25em] px-2 py-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-300" dir="ltr">
             JUDGE A · QUALITY
           </span>
+          <SessionBadge code={sessionCode} />
+
           <span
             className={`shrink-0 text-[9px] font-black tracking-widest px-2 py-0.5 rounded-full border ${
               liveMode === "compulsory"
