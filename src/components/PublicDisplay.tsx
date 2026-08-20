@@ -6,6 +6,8 @@ import { FederationLogo } from "./FederationLogo";
 import { exportReportToPdf } from "@/lib/pdfExport";
 import { useCompetition } from "@/store/competition-store";
 import { FullscreenToggle } from "./FullscreenToggle";
+import { SessionBadge } from "@/components/SessionBadge";
+import { useRoomPresence } from "@/hooks/useRoomPresence";
 
 /**
  * PublicDisplay — full-screen public results screen at /public-display.

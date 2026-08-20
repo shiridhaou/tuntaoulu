@@ -483,6 +483,8 @@ function ChiefRefereeDashboardInner() {
         <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full blur-3xl" style={{ background: `${ORANGE}10` }} />
       </div>
 
+      <RoomReadyWidget sessionCode={sessionCode} me={{ role: "chief" }} />
+
       {/* HEADER */}
       <header className="relative z-10 h-14 backdrop-blur-xl bg-white/[0.02] border-b border-white/10 px-4 flex items-center shrink-0">
         <div className="w-full grid grid-cols-3 items-center gap-3">
