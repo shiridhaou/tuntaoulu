@@ -185,11 +185,12 @@ export function DifficultyManager({
       <div className="grid grid-cols-12 gap-2 mt-2 items-center">
         <Input
           value={newCode}
-          onChange={(e) => setNewCode(e.target.value.toUpperCase())}
+          onChange={(e) => setNewCode(toWesternDigits(e.target.value).toUpperCase())}
           onKeyDown={(e) => e.key === "Enter" && handleAddRow()}
           placeholder="Code (e.g. 323A)"
-          className="col-span-3 h-8 text-xs font-mono bg-black border-white/15"
+          className="col-span-3 h-8 text-xs font-mono bg-black border-white/15 num-west"
           dir="ltr"
+          lang="en"
         />
         <Input
           value={newLabel}
@@ -201,11 +202,14 @@ export function DifficultyManager({
         <Input
           type="number" step="0.05" min="0" max="1"
           value={newValue}
-          onChange={(e) => setNewValue(e.target.value)}
+          onChange={(e) => setNewValue(toWesternDigits(e.target.value))}
           onKeyDown={(e) => e.key === "Enter" && handleAddRow()}
-          className="col-span-2 h-8 text-xs text-center font-mono bg-black border-white/15"
+          className="col-span-2 h-8 text-xs text-center font-mono bg-black border-white/15 num-west"
           dir="ltr"
+          lang="en"
+          inputMode="decimal"
         />
+
         <Button onClick={handleAddRow} size="sm" className="col-span-1 h-8 bg-emerald-500 hover:bg-emerald-600 text-white">
           <Plus className="h-3.5 w-3.5" />
         </Button>
