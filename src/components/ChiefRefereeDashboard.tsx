@@ -362,6 +362,27 @@ function ChiefRefereeDashboardInner() {
           committed_at: Date.now(),
         } as never,
       });
+      if (publishError) throw publishError;
+
+      // Instant push to every connected screen (public display included) so the
+      // final score appears without waiting on postgres replication.
+      void broadcastSessionState(sessionCode, {
+        athlete_id: currentAthlete.id,
+        style: competitionStyle,
+        payload: {
+          published_result: {
+            athlete_id: currentAthlete.id,
+            athlete_name: currentAthlete.name,
+            score_a: groupATotal,
+            score_b: groupBNet,
+            score_c: matchMode === "optional" ? groupCTotal : null,
+            deductions: taDeduction,
+            final_score: aggregateFinal,
+            status: "PUBLISHED",
+            published_at: Date.now(),
+          },
+        },
+      });
       await supabase.from("match_events").insert({
         session_code: sessionCode,
         event_type: "score_published",
