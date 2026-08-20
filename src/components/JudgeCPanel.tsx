@@ -312,6 +312,7 @@ export function JudgeCPanel() {
               <ArrowRight className="h-4 w-4" />
             </button>
             <FederationLogo size="sm" />
+            <SessionBadge code={sessionCode} />
             <div className="min-w-0">
               <p className="text-sm font-heading font-bold text-white truncate">{athlete?.name ?? "—"}</p>
               <p className="text-[10px] text-white/60 font-body truncate" dir="ltr">

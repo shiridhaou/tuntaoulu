@@ -2,6 +2,9 @@ import { useCompetition, STYLE_CONFIGS, type Athlete, type DifficultyMovement } 
 import { useLogout } from "@/hooks/useLogout";
 
 import { FederationLogo } from "./FederationLogo";
+import { SessionBadge } from "@/components/SessionBadge";
+import { useActiveSessionCode } from "@/hooks/useActiveSession";
+import { useRoomPresence } from "@/hooks/useRoomPresence";
 import {
   ArrowRight, RotateCcw, Play, Pause, Bell, AlertTriangle, Zap, FileSpreadsheet,
   Video, VideoOff, CheckCircle2, AlertCircle, Loader2, Film, ShieldCheck,
@@ -351,6 +354,7 @@ export function AssistantRefereePanel() {
             <span className="text-xs text-cyber-orange font-heading font-bold px-2.5 py-1 rounded-full border border-cyber-orange/40 bg-cyber-orange/10 glow-cyber" dir="ltr">
               VAR • Hybrid Video Controller
             </span>
+            <SessionBadge code={sessionCode} />
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-white/60 font-body">{athlete?.name ?? "—"}</span>
