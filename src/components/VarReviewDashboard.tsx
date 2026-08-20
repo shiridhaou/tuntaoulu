@@ -29,6 +29,7 @@ export function VarReviewDashboard() {
     return localStorage.getItem("var_session") ?? "";
   });
   const [codeInput, setCodeInput] = useState(sessionCode);
+  useRoomPresence(sessionCode || null, { role: "var" });
   const [match, setMatch] = useState<CurrentMatchRow | null>(null);
   const [scores, setScores] = useState<ScoreRow[]>([]);
   const [flagged, setFlagged] = useState<Set<string>>(new Set());

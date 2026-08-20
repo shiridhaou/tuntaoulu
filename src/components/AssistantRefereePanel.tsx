@@ -54,7 +54,8 @@ export function AssistantRefereePanel() {
     sessionCode,
   } = useCompetition();
   const logout = useLogout();
-
+  const activeSession = useActiveSessionCode(sessionCode);
+  useRoomPresence(activeSession, { role: "assistant" });
 
   const config = competitionStyle ? STYLE_CONFIGS[competitionStyle] : STYLE_CONFIGS.changquan;
   const athlete = athletes[currentAthleteIndex];
