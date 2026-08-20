@@ -15,7 +15,9 @@ import { ConsensusCodesPanel } from "./ConsensusCodesPanel";
 import { FinalScoreSheetModal } from "./FinalScoreSheetModal";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
-import { useMatchSync } from "@/hooks/useMatchSync";
+import { useMatchSync, broadcastSessionState } from "@/hooks/useMatchSync";
+import { joinSessionMembership } from "@/lib/sessionMembership";
+import { toast } from "sonner";
 import { styleLabelAr, styleLabelEn } from "@/lib/styleNames";
 import { modeCaps } from "@/lib/matchMode";
 import { pushDisplaySettings, uploadSponsorLogo } from "@/hooks/useDisplaySettings";
@@ -332,12 +334,15 @@ function ChiefRefereeDashboardInner() {
           successful: total > 0 ? success >= Math.ceil(total / 2) : null,
         };
       });
+      // Guarantee this device is registered as the chief seat before writing —
+      // results-write permission is derived from the stored session role.
+      await joinSessionMembership(sessionCode, "chief");
       await supabase
         .from("match_results")
         .delete()
         .eq("session_code", sessionCode)
         .eq("athlete_id", currentAthlete.id);
-      await supabase.from("match_results").insert({
+      const { error: publishError } = await supabase.from("match_results").insert({
         session_code: sessionCode,
         athlete_id: currentAthlete.id,
         athlete_name: currentAthlete.name,
@@ -358,6 +363,27 @@ function ChiefRefereeDashboardInner() {
           committed_at: Date.now(),
         } as never,
       });
+      if (publishError) throw publishError;
+
+      // Instant push to every connected screen (public display included) so the
+      // final score appears without waiting on postgres replication.
+      void broadcastSessionState(sessionCode, {
+        athlete_id: currentAthlete.id,
+        style: competitionStyle,
+        payload: {
+          published_result: {
+            athlete_id: currentAthlete.id,
+            athlete_name: currentAthlete.name,
+            score_a: groupATotal,
+            score_b: groupBNet,
+            score_c: matchMode === "optional" ? groupCTotal : null,
+            deductions: taDeduction,
+            final_score: aggregateFinal,
+            status: "PUBLISHED",
+            published_at: Date.now(),
+          },
+        },
+      });
       await supabase.from("match_events").insert({
         session_code: sessionCode,
         event_type: "score_published",
@@ -377,8 +403,10 @@ function ChiefRefereeDashboardInner() {
         finalScore: aggregateFinal,
         timestamp: new Date().toISOString(),
       });
+      toast.success("تم نشر النتيجة على شاشة العرض");
     } catch (e) {
       console.error("[CHIEF PUBLISH] failed", e);
+      toast.error(`فشل نشر النتيجة: ${(e as { message?: string })?.message ?? "خطأ غير معروف"}`);
     } finally {
       setPublishingLive(false);
       if (opts.openWindow) openCastWindow();
