@@ -502,7 +502,11 @@ function TADashboardInner() {
   }
 
   async function processFile(file: File) {
-    if (!tournament) { toast.error("أنشئ البطولة أولاً"); return; }
+    // Tournament metadata (name/venue/dates) is a separate concern: athlete
+    // lists can be imported into the active tournament at any time — several
+    // lists in a row (e.g. Changquan then Nanquan) without re-submitting the
+    // tournament form. The row is materialized lazily on sync when missing.
+
     setLoading(true);
     try {
       const ext = file.name.split(".").pop()?.toLowerCase();
