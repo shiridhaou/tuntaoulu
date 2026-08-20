@@ -26,10 +26,10 @@ export const GROUP_A_GROUP_INFO: Record<string, { pinyin: string; titleAr: strin
   "1": { pinyin: "Balances", titleAr: "التوازنات", titleEn: "Balances (10-16)" },
   "2": { pinyin: "Kicks & Sweeps", titleAr: "الركلات والمسح", titleEn: "Kicks & Sweeps (20-26)" },
   "3": { pinyin: "Jumps", titleAr: "القفزات", titleEn: "Jumps (30-34)" },
-  "4": { pinyin: "Qì Xiè Fǎ", titleAr: "تقنيات السلاح", titleEn: "Weapon Techniques (40-49)" },
-  "5": { pinyin: "Stances", titleAr: "الوقفات", titleEn: "Stances (50-58)" },
-  "6": { pinyin: "Weapon Techniques", titleAr: "تقنيات السلاح", titleEn: "Weapon Techniques (60-68)" },
-  "7": { pinyin: "Tōng Yòng Kòu Fēn", titleAr: "الخصومات العامة", titleEn: "General Deductions (70A-79)" },
+  "4": { pinyin: "Nanquan & Fall/Landing", titleAr: "تقنيات النانكوان والسقوط", titleEn: "Nanquan & Fall/Landing Techniques (40–49)" },
+  "5": { pinyin: "Stances", titleAr: "الوقفات", titleEn: "Stances (50–58)" },
+  "6": { pinyin: "Weapon Techniques", titleAr: "تقنيات السلاح", titleEn: "Weapon Techniques (60–68)" },
+  "7": { pinyin: "Tōng Yòng Kòu Fēn", titleAr: "الخصومات العامة", titleEn: "General Deductions (70A–79)" },
 };
 
 /** Shared technical dictionary (code → wording). Style rows reuse it. */
@@ -70,12 +70,12 @@ const DICT: Record<string, { pinyin: string; ar: string; en: string; value?: num
   "33": { pinyin: "Butterfly / Butterfly Twist", ar: "الفراشة والدوران", en: "Butterfly / Butterfly Twist" },
   "34": { pinyin: "Jumping Snap / Heel Push Kick", ar: "القفز النابض/الدفع", en: "Jumping Snap / Heel Push Kick" },
 
-  // Tab 4 — Weapon Techniques (40–49)
-  "40": { pinyin: "Qì Xiè Fǎ", ar: "تقنية السلاح غير صحيحة", en: "Incorrect weapon technique" },
-  "41": { pinyin: "Jiàn Fǎ", ar: "تقنية السيف المستقيم غير صحيحة", en: "Incorrect straightsword method" },
-  "43": { pinyin: "Qiāng Fǎ", ar: "تقنية الرمح غير صحيحة", en: "Incorrect spear method" },
-  "44": { pinyin: "Qì Xiè Xié Tiáo", ar: "تناسق السلاح مع الجسم غير صحيح", en: "Weapon–body coordination fault" },
-  "42": { pinyin: "Dāo · Gùn Fǎ", ar: "طريقة السيف/العصا غير صحيحة", en: "Incorrect broadsword / cudgel method" },
+  // Tab 4 — Nanquan & Fall/Landing Techniques (40–49)
+  "40": { pinyin: "Qián Tū Tiào", ar: "ركلة طائرة مع قفز وسقوط", en: "Front Jump Kick with Fall" },
+  "41": { pinyin: "Tēng Kōng Cè Chāi", ar: "ركلة جانبية مزدوجة بالقفز", en: "Jumping Split Side Kick" },
+  "42": { pinyin: "Diē Bù", ar: "تقنيات السقوط والربط الأرضي", en: "Fall and Ground Link Techniques" },
+  "43": { pinyin: "Nán Quán Tuǐ Fǎ", ar: "تقنيات أرجل الأسلوب الجنوبي الخاصة", en: "Special Nanquan Leg Techniques" },
+  "44": { pinyin: "Qiè Xiè Xié Tiáo", ar: "تناسق حركة السلاح مع الجسم", en: "Weapon–Body Coordination (Nandao/Nangun)" },
 
   // Tab 5 — Stances
   "50": { pinyin: "Gōng Bù", ar: "وقفة القوس", en: "Bow Stance" },
@@ -90,13 +90,13 @@ const DICT: Record<string, { pinyin: string; ar: string; en: string; value?: num
   "59": { pinyin: "Tài Jí Bù Fǎ", ar: "خطوات التايجي غير صحيحة", en: "Incorrect Taiji footwork" },
 
   // Tab 6 — Weapon Techniques (60–68)
-  "60": { pinyin: "Guà Jiàn / Liāo Jiàn", ar: "دفاع وقطع السيف", en: "Defend and Cut Sword" },
-  "61": { pinyin: "Wò Jiàn", ar: "مسك السيف", en: "Sword Grip" },
-  "62": { pinyin: "Chán Tóu / Guǒ Nǎo", ar: "لف السيف حول الرأس", en: "Sword Around Head" },
-  "63": { pinyin: "Lán / Ná / Zhā Qiāng", ar: "تقنيات الرمح (حظر/سحب/طعن)", en: "Spear Techniques (Block/Drag/Stab)" },
+  "60": { pinyin: "Guà Jiàn / Liāo Jiàn", ar: "دفاع وقطع السيف (Vertical Circle)", en: "Defend and Cut Sword (Vertical Circle)" },
+  "61": { pinyin: "Wò Jiàn", ar: "مسك السيف الصحيح (Sword Grip)", en: "Correct Sword Grip" },
+  "62": { pinyin: "Chán Tóu / Guǒ Nǎo", ar: "لف السيف/السكين حول الرأس", en: "Sword / Knife Around Head" },
+  "63": { pinyin: "Lán / Ná / Zhā Qiāng", ar: "تقنيات الرمح الثلاثية (حظر/سحب/طعن)", en: "Three Spear Techniques (Block / Drag / Stab)" },
   "64": { pinyin: "Píng Lūn Gùn", ar: "تدوير العصا الأفقية", en: "Horizontal Staff Rotation" },
   "65": { pinyin: "Lì Wǔ Huā", ar: "تنسيق الزهرة العمودية بالرمح/العصا", en: "Vertical Flower Coordination" },
-  "66": { pinyin: "Throw and Catch Weapon", ar: "رمي واستقبال السلاح", en: "Throw and Catch Weapon" },
+  "66": { pinyin: "Throw and Catch Weapon", ar: "رمي واستقبال السلاح (Weapon Catch/Throw)", en: "Weapon Throw and Catch" },
   "67": { pinyin: "Dǐng Gùn", ar: "تثبيت العصا على الأرض", en: "Ground Staff Support" },
   "68": { pinyin: "Jiǎo Jiàn", ar: "تدوير رأس السيف", en: "Sword Tip Rotation" },
   "69": { pinyin: "Tài Jí Shàn Fǎ", ar: "تقنية مروحة التايجي غير صحيحة", en: "Incorrect Taiji fan method" },
