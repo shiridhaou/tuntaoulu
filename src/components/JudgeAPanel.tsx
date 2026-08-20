@@ -14,7 +14,6 @@ import { type CodeEntry } from "@/lib/deductionCodes";
 import { enabledKeysForStyle, rulesForKey, type GroupARule } from "@/config/groupARulesEngine";
 import { GroupAKeypad } from "@/components/GroupAKeypad";
 import { styleShort, styleLabelAr } from "@/lib/styleNames";
-import { DeductionModal } from "@/components/DeductionModal";
 import { SessionBadge } from "@/components/SessionBadge";
 import { useActiveSessionCode } from "@/hooks/useActiveSession";
 import { useRoomPresence } from "@/hooks/useRoomPresence";
@@ -68,7 +67,6 @@ export function JudgeAPanel() {
   const [confirmed, setConfirmed] = useState<CodeEntry[]>([]);
   const [online, setOnline] = useState(true);
   const [submitted, setSubmitted] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
 
   // Report presence/state to the Chief's judge matrix (Judging → Sent).
   useJudgeStatus(sessionCode, judgeId, submitted ? "sent" : "judging", null);
