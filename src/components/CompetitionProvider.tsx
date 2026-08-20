@@ -716,11 +716,29 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isChief || !sessionCode) return;
     const currentAthleteId = athletes[currentAthleteIndex]?.id ?? null;
-    setSubmittedSlots([]); // reset on athlete change
+
+    // GHOST GUARD: every athlete change (or global reset) starts from a clean
+    // slate — stale raw judge scores from the previous attempt must never leak
+    // into the live aggregation view.
+    setSubmittedSlots([]);
+    setJudgeOverrides({});
+    setJudgeBScores(Array(MAX_B).fill(3.0));
+
+    const belongsToCurrent = (athleteId: string | null | undefined) =>
+      currentAthleteId ? athleteId === currentAthleteId : !athleteId;
+
+    const clearSlot = (slot: string) => {
+      setJudgeOverrides(prev => ({ ...prev, [slot]: null }));
+      if (slot.startsWith("B")) {
+        const idx = parseInt(slot.slice(1), 10) - 1;
+        if (!Number.isNaN(idx)) setJudgeBScores(prev => prev.map((v, i) => i === idx ? 3.0 : v));
+      }
+      setSubmittedSlots(prev => prev.filter(s => s !== slot));
+    };
 
     const applyRow = (r: { judge_slot: string; score: number | null; athlete_id: string | null; submitted?: boolean }) => {
       // Strict athlete match — discard scores for other athletes
-      if (currentAthleteId && r.athlete_id && r.athlete_id !== currentAthleteId) return;
+      if (!belongsToCurrent(r.athlete_id)) return;
       if (typeof r.score !== "number") return;
       const s = r.score;
       setJudgeOverrides(prev => ({ ...prev, [r.judge_slot]: s }));
@@ -733,9 +751,11 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
       setSubmittedSlots(prev => prev.includes(r.judge_slot) ? prev : [...prev, r.judge_slot]);
     };
 
-    void supabase.from("judge_scores").select("judge_slot, score, athlete_id, submitted")
-      .eq("session_code", sessionCode)
-      .then(({ data }) => { (data ?? []).forEach(applyRow); });
+    let cancelled = false;
+    let q = supabase.from("judge_scores").select("judge_slot, score, athlete_id, submitted")
+      .eq("session_code", sessionCode);
+    if (currentAthleteId) q = q.eq("athlete_id", currentAthleteId);
+    void q.then(({ data }) => { if (!cancelled) (data ?? []).forEach(applyRow); });
 
     const ch = supabase
       .channel(`js-${sessionCode}`)
@@ -745,15 +765,16 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
         (payload) => {
           if (payload.eventType === "DELETE") {
             const old = payload.old as { judge_slot?: string };
-            if (old?.judge_slot) setSubmittedSlots(prev => prev.filter(s => s !== old.judge_slot));
+            if (old?.judge_slot) clearSlot(old.judge_slot);
             return;
           }
           applyRow(payload.new as { judge_slot: string; score: number | null; athlete_id: string | null; submitted?: boolean });
         },
       )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { cancelled = true; supabase.removeChannel(ch); };
   }, [isChief, sessionCode, athletes, currentAthleteIndex]);
+
 
 
   // "خروج" = leave the current role/session, NOT a credential sign-out.
