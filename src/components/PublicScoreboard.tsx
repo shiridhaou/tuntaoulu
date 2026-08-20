@@ -163,7 +163,30 @@ function usePublishedResult(sessionCode: string | null) {
         () => { void loadLatest(); })
       .subscribe();
 
-    return () => { cancelled = true; supabase.removeChannel(ch); };
+    // Instant path: the Chief broadcasts the published snapshot the moment the
+    // PUBLISH button is pressed, so the screen never waits on replication.
+    const offState = onSessionState(sessionCode, (raw) => {
+      const pr = (raw as { payload?: { published_result?: Record<string, unknown> } })?.payload?.published_result;
+      if (!pr || pr.status !== "PUBLISHED") return;
+      if (cancelled) return;
+      setResult((prev) => ({
+        athlete_id: String(pr.athlete_id ?? prev?.athlete_id ?? ""),
+        athlete_name: (pr.athlete_name as string) ?? prev?.athlete_name ?? null,
+        final_score: Number(pr.final_score ?? prev?.final_score ?? 0),
+        score_a: pr.score_a === null || pr.score_a === undefined ? (prev?.score_a ?? null) : Number(pr.score_a),
+        score_b: pr.score_b === null || pr.score_b === undefined ? (prev?.score_b ?? null) : Number(pr.score_b),
+        score_c: pr.score_c === null || pr.score_c === undefined ? null : Number(pr.score_c),
+        deductions: pr.deductions === null || pr.deductions === undefined ? (prev?.deductions ?? null) : Number(pr.deductions),
+        published: true,
+        payload: prev?.payload ?? null,
+        style: prev?.style ?? null,
+        updated_at: new Date().toISOString(),
+      }));
+      // Then refresh from the database to pull the full breakdown payload.
+      void loadLatest();
+    });
+
+    return () => { cancelled = true; supabase.removeChannel(ch); offState(); };
   }, [sessionCode]);
 
   return { result, athlete };
