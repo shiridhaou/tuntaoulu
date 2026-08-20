@@ -987,6 +987,7 @@ export function PublicDisplay() {
             <p className="text-[10px] uppercase tracking-[0.3em] text-white/50 font-body">Tunisian Wushu</p>
             <p className="text-sm font-heading font-black text-white tracking-wider">CHAMPIONSHIPS 2024</p>
           </div>
+          <SessionBadge code={sessionCode} />
         </div>
         <div className="flex items-center gap-2">
           <span className="px-2 py-1 rounded text-[10px] font-heading font-black tracking-wider border"
