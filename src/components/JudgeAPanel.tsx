@@ -135,9 +135,11 @@ export function JudgeAPanel() {
 
     confirmed.forEach(c => addJudgeADeduction({ code: c.code, value: c.value, label: c.label }));
 
-    if (sessionCode && judgeId) {
+    const code = sessionCode ?? activeSession;
+    if (!code) { toast.error("كود الجلسة غير متوفر — أعد الدخول بالرمز"); return; }
+    if (code && judgeId) {
       const res = await submitJudgeScore({
-        sessionCode, judgeSlot: judgeId, judgeRole: "A",
+        sessionCode: code, judgeSlot: judgeId, judgeRole: "A",
         athleteId: currentAthlete?.id ?? null,
         score: projectedScore,
         payload: {
@@ -150,7 +152,8 @@ export function JudgeAPanel() {
     }
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 2200);
-  }, [locked, canSend, confirmed, sessionCode, judgeId, currentAthlete, projectedScore, timerElapsed, addJudgeADeduction]);
+  }, [locked, canSend, confirmed, sessionCode, activeSession, judgeId, currentAthlete, projectedScore, timerElapsed, addJudgeADeduction]);
+
 
   const resetAll = useCallback(() => {
     haptic([20, 40, 20]);
