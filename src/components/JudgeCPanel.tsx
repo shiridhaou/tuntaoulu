@@ -303,7 +303,7 @@ export function JudgeCPanel() {
   }
 
   return (
-    <div className="h-screen cyber-bg flex flex-col overflow-hidden text-white">
+    <div className="num-west h-screen cyber-bg flex flex-col overflow-hidden text-white" lang="en">
       {/* Top status bar — now also hosts score summary + SUBMIT (always visible) */}
       <header className="border-b border-cyber-orange/25 bg-black/70 backdrop-blur px-4 py-2 shrink-0 sticky top-0 z-30">
         <div className="flex items-center justify-between gap-3 flex-wrap">
