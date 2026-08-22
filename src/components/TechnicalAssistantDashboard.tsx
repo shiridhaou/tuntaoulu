@@ -1022,7 +1022,7 @@ function TADashboardInner() {
 
   // Broadcast VAR — asks the VAR referee to review the current athlete at the
   // exact timer position, and mirrors the request to the public display flag.
-  async function broadcastVar() {
+ async function broadcastVar() {
     if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
     await emitEvent("var_review_request", {
       at: timerSec,
@@ -1033,7 +1033,29 @@ function TADashboardInner() {
       match_mode: matchMode,
     });
     pushLog("var", `🎥 VAR review @ ${Math.floor(timerSec / 60)}:${String(timerSec % 60).padStart(2, "0")}`);
-    toast.success("تم إرسال طلب مراجعة الفيديو إلى حكم VAR");
+
+    // البث المباشر فوراً لشاشة الحكم C
+    const channel = supabase.channel(`match_${sessionCode}`);
+    await channel.send({
+      type: "broadcast",
+      event: "video_review",
+      payload: { status: "PAUSED_FOR_REVIEW", timestamp: new Date().toISOString() }
+    });
+
+    toast.success("تم إرسال طلب مراجعة الفيديو إلى القضاة");
+  }
+
+  async function resumeVar() {
+    if (!sessionCode) return;
+
+    const channel = supabase.channel(`match_${sessionCode}`);
+    await channel.send({
+      type: "broadcast",
+      event: "video_review",
+      payload: { status: "RESUMED", timestamp: new Date().toISOString() }
+    });
+
+    toast.success("▶ تم استئناف المباراة وإغلاق تنبيه الفيديو");
   }
 
   // Lock match config and broadcast to all judges (preserves any existing athlete)
@@ -1274,6 +1296,13 @@ function TADashboardInner() {
               className="h-7 px-2 text-xs bg-orange-500 hover:bg-orange-600 text-black shadow shadow-orange-500/30 font-bold">
               <Video className="h-3 w-3 ml-1" /> Broadcast VAR
             </Button>
+            <button
+  type="button"
+  onClick={resumeVar}
+  className="px-3 py-1.5 rounded-lg border border-green-500/40 bg-green-500/10 text-green-300 text-xs font-bold hover:bg-green-500/20 transition-all"
+>
+  ▶ Resume
+</button>
 
             {/* View Session Logs — opens the Event Drawer */}
             <Button onClick={() => setDrawerOpen((v) => !v)} size="sm" variant="outline"
