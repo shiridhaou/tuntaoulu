@@ -13,7 +13,8 @@ import { SessionBadge } from "@/components/SessionBadge";
 import { useActiveSessionCode } from "@/hooks/useActiveSession";
 import { useRoomPresence } from "@/hooks/useRoomPresence";
 import { QUICK_CODES, CONNECTION_BONUSES, MAX_C_MOVEMENT, MAX_C_CONNECTION, lookupCode, isConnectionCode, lookupConnection, type ConnectionBonus } from "@/lib/difficultyCodes";
-
+// ⚠️ تحقق من هذا المسار في مشروعك — هو المسار الافتراضي لعميل Supabase في مشاريع Lovable
+import { supabase } from "@/integrations/supabase/client";
 
 const DEFAULT_SHEET: DifficultyMovement[] = [
   { code: "323A", label: "Tornado 360°", connection: "Independent", value: 0.2 },
@@ -27,6 +28,17 @@ const DEFAULT_SHEET: DifficultyMovement[] = [
   { code: "353A", label: "Aerial 360°", connection: "Independent", value: 0.3 },
   { code: "353B", label: "Double Aerial Spin", connection: "A+B", value: 0.4 },
 ];
+
+/** Stable per-browser device identifier — used for session-persistence heartbeats. */
+function getDeviceId(): string {
+  const KEY = "wushu_device_id";
+  let id = localStorage.getItem(KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(KEY, id);
+  }
+  return id;
+}
 
 export function JudgeCPanel() {
   const {
@@ -51,6 +63,68 @@ export function JudgeCPanel() {
 
   const config = liveStyle ? STYLE_CONFIGS[liveStyle] : STYLE_CONFIGS.changquan;
   const athlete = athletes[currentAthleteIndex];
+
+  // ── Session persistence / auto-reconnect heartbeat ──────────────────────
+  // Registers this device as an active "C" judge station in `active_sessions`
+  // and refreshes `last_active` periodically. This lets the Chief / admin
+  // dashboard see connection health, and lets us show a "Reconnecting…" badge
+  // in the UI instead of silently failing when the network drops mid-match.
+  const deviceIdRef = useRef<string>(getDeviceId());
+  const [reconnecting, setReconnecting] = useState(false);
+  useEffect(() => {
+    const code = sessionCode ?? activeSession;
+    if (!code || !judgeId) return;
+
+    let cancelled = false;
+    const syncSession = async () => {
+      try {
+        const { error } = await supabase.from("active_sessions").upsert(
+          {
+            device_id: deviceIdRef.current,
+            session_code: code,
+            role: "C",
+            judge_slot: judgeId,
+            last_active: new Date().toISOString(),
+          },
+          { onConflict: "device_id" },
+        );
+        if (error) throw error;
+        if (!cancelled) setReconnecting(false);
+      } catch {
+        // Network hiccup or table not reachable — surface it, next tick retries.
+        if (!cancelled) setReconnecting(true);
+      }
+    };
+
+    syncSession();
+    const interval = setInterval(syncSession, 15000); // heartbeat every 15s
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [sessionCode, activeSession, judgeId]);
+
+  // ── Video review listener ────────────────────────────────────────────────
+  // Subscribes to the match's broadcast channel so this screen reflects
+  // "PAUSED_FOR_REVIEW" the instant the Chief triggers a replay, and clears
+  // when review is resumed — independent of the scoring-lock mechanism above.
+  const [videoReview, setVideoReview] = useState<{ active: boolean; timestamp?: number }>({ active: false });
+  useEffect(() => {
+    const code = sessionCode ?? activeSession;
+    if (!code) return;
+    const channel = supabase.channel(`match_${code}`);
+    channel
+      .on("broadcast", { event: "video_review" }, (msg) => {
+        const status = (msg.payload as { status?: string; timestamp?: number } | undefined)?.status;
+        const ts = (msg.payload as { status?: string; timestamp?: number } | undefined)?.timestamp;
+        setVideoReview({ active: status === "PAUSED_FOR_REVIEW", timestamp: ts });
+        if (status === "PAUSED_FOR_REVIEW") {
+          toast.info("⏸️ تم إيقاف التحكيم مؤقتاً لإعادة مشاهدة اللقطة");
+        } else if (status === "RESUMED") {
+          toast.success("▶️ استؤنف التحكيم بعد المراجعة");
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [sessionCode, activeSession]);
+
   const [extraMovements, setExtraMovements] = useState<DifficultyMovement[]>([]);
   const fullSheet: DifficultyMovement[] = useMemo(() => {
     const base = athlete?.difficultySheet?.length ? athlete.difficultySheet : DEFAULT_SHEET;
@@ -313,6 +387,11 @@ export function JudgeCPanel() {
             </button>
             <FederationLogo size="sm" />
             <SessionBadge code={sessionCode} />
+            {reconnecting && (
+              <span className="text-[10px] text-amber-300 font-heading font-bold px-2 py-0.5 rounded-full border border-amber-400/40 bg-amber-400/10 animate-pulse" dir="ltr">
+                ⚠ Reconnecting…
+              </span>
+            )}
             <div className="min-w-0">
               <p className="text-sm font-heading font-bold text-white truncate">{athlete?.name ?? "—"}</p>
               <p className="text-[10px] text-white/60 font-body truncate" dir="ltr">
@@ -373,6 +452,15 @@ export function JudgeCPanel() {
         <div className="px-4 pt-2 shrink-0">
           <div className="rounded-xl border border-amber-400/50 bg-amber-400/10 px-3 py-2 text-center text-xs font-heading font-black text-amber-300" dir="rtl">
             🔒 التقييم مقفل — في انتظار فتح الحكم الرئيسي / Scoring Locked
+          </div>
+        </div>
+      )}
+
+      {/* Video review banner — independent of the scoring lock above */}
+      {videoReview.active && (
+        <div className="px-4 pt-2 shrink-0">
+          <div className="rounded-xl border border-cyan-400/50 bg-cyan-400/10 px-3 py-2 text-center text-xs font-heading font-black text-cyan-300" dir="rtl">
+            🎥 مراجعة فيديو قيد التنفيذ — Video Review In Progress
           </div>
         </div>
       )}
@@ -633,3 +721,4 @@ export function JudgeCPanel() {
     </div>
   );
 }
+
