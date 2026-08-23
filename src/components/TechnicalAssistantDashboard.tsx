@@ -2613,7 +2613,6 @@ function parseDate(v: string): string | null {
   if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
   return null;
 }
-
 function normalizeRow(row: Record<string, any>, tournamentId: string) {
   const bib = pick(row, ["number", "bib", "bib_number", "dossard", "n°", "no", "num", "id", "registration", "رقم", "الرقم", "رقم التسجيل", "رقم اللاعب"]);
   const name = pick(row, ["name", "full_name", "fullname", "athlete", "athlete_name", "nom", "nom complet", "nom_complet", "prenom nom", "participant", "competitor", "الاسم", "اسم", "اسم اللاعب", "الاسم الكامل"]);
@@ -2631,26 +2630,41 @@ function normalizeRow(row: Record<string, any>, tournamentId: string) {
   const matchMode = detectMatchMode(modeRaw);
 
   // ── Per-movement columns (C1_code, C1_value, C1_label … up to C20) ──
-  const sheet: { code: string; label: string; value: number }[] = [];
+  const sheet: any[] = [];
   for (let i = 1; i <= 20; i++) {
     const code = pick(row, [
       `C${i}_code`, `c${i}_code`, `c${i} code`, `code${i}`, `code ${i}`,
       `movement${i}_code`, `m${i}_code`, `movement_${i}`, `صعوبة${i}`, `حركة${i}`,
     ]);
-    if (!code) continue;
+    if (!code || String(code).trim() === "" || String(code) === "nan") continue;
+
     const valRaw = pick(row, [
       `C${i}_value`, `c${i}_value`, `c${i} value`, `value${i}`, `val${i}`,
       `points${i}`, `pts${i}`, `قيمة${i}`,
     ]);
+
     const label = pick(row, [
       `C${i}_label`, `c${i}_label`, `c${i} label`, `label${i}`,
       `name${i}`, `movement${i}_name`, `اسم${i}`,
     ]);
-    const v = parseFloat(valRaw.replace(",", "."));
+
+    // دعم استخراج الروابط من الإكسيل (Connections)
+    const connCode = pick(row, [`C${i}_connection_code`, `c${i}_connection_code`]);
+    const connValue = pick(row, [`C${i}_connection_value`, `c${i}_connection_value`]);
+    const connLabel = pick(row, [`C${i}_connection_label`, `c${i}_connection_label`]);
+
+    const strVal = String(valRaw || "").replace(",", ".");
+    const parsedVal = parseFloat(strVal);
+    const cleanCode = String(code).toUpperCase().trim();
+
     sheet.push({
-      code: code.toUpperCase().trim(),
-      label: label || code.toUpperCase().trim(),
-      value: isFinite(v) ? v : (code.endsWith("C") ? 0.4 : code.endsWith("B") ? 0.3 : 0.2),
+      id: `mov_${i}_${Math.random().toString(36).substr(2, 7)}`,
+      code: cleanCode,
+      label: label && String(label) !== "nan" ? String(label) : cleanCode,
+      value: isFinite(parsedVal) ? parsedVal : (cleanCode.endsWith("C") ? 0.4 : cleanCode.endsWith("B") ? 0.3 : 0.2),
+      connection_code: connCode && String(connCode) !== "nan" ? String(connCode) : null,
+      connection_value: connValue && String(connValue) !== "nan" ? parseFloat(String(connValue).replace(",", ".")) : null,
+      connection_label: connLabel && String(connLabel) !== "nan" ? String(connLabel) : null,
     });
   }
 
@@ -2671,7 +2685,6 @@ function normalizeRow(row: Record<string, any>, tournamentId: string) {
     difficulty_codes: codes,
     difficulty_sheet: sheet,
     status: "waiting" as const,
-    // transient (stripped before DB insert)
-    _mode: matchMode,
+    _mode: matchMode || (sheet.length > 0 ? "optional" : "compulsory"),
   };
 }
