@@ -295,7 +295,7 @@ function PublicReportPage() {
               <p className="text-[10px] font-heading tracking-[0.3em] text-white/60">FINAL SCORE</p>
             </div>
             <p className="text-6xl md:text-7xl font-heading font-black tabular-nums leading-none"
-              style={{ color: ORANGE, textShadow: `0 0 35px ${ORANGE}AA, 0 0 70px ${GOLD}55` }} dir="ltr">
+              style={{ color: "#FACC15", textShadow: "none" }} dir="ltr">
               {Number(result.final_score).toFixed(2)}
             </p>
           </div>
