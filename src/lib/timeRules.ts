@@ -62,9 +62,9 @@ export function computeTimeDeduction(
     return { value: 0, reason: "ضمن الزمن المسموح", direction: "ok", drift: 0, window: w };
   }
 
-  let value = 0.1;
-  if (drift > 5) value = 0.3;
-  else if (drift > 2) value = 0.2;
+  // IWUF 2024 · Article 26: Taiji → −0.10 per 5 s drift, others → −0.10 per 2 s drift.
+  const step = styleId === "taijiquan" ? 5 : 2;
+  const value = Math.round(Math.ceil(drift / step) * 0.1 * 100) / 100;
 
   const verb = direction === "under" ? "أقل من" : "أكثر من";
   const reason = `زمن الأداء ${verb} المسموح به بـ ${drift}ث`;
