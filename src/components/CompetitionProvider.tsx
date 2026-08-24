@@ -89,7 +89,7 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
   const [judgeAssignments, setJudgeAssignments] = useState<JudgeAssignments>({});
   const [judgeOverrides, setJudgeOverrides] = useState<Record<string, number | null>>({});
   const [marqueeText, setMarqueeText] = useState<string>(
-    "الجامعة التونسية للووشو كونغ فو — Tunisian Wushu Kung Fu Federation — البطولة الوطنية 2024 — National Championship 2024"
+    "الجامعة التونسية للووشو كونغ فو — Tunisian Wushu Kung Fu Federation — البطولة الوطنية 2026 — National Championship 2026"
   );
   const [sponsorLogos, setSponsorLogos] = useState<string[]>([]);
   const [leaderboardMode, setLeaderboardMode] = useState(false);
@@ -261,11 +261,30 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
     const total = Math.min(caps.maxCMovement, mov) + Math.min(caps.maxCConnection, con);
     return Math.round(Math.min(caps.maxC, total) * 100) / 100;
   }, [judgeCAttempts, caps.maxC, caps.maxCMovement, caps.maxCConnection]);
+// 1. دالة حساب خصم الوقت آلياً بحسب لائحة الاتحاد الدولي 2024
+  const computeTimeDeduction = (elapsed: number, target: number, isTaiji: boolean) => {
+    const diff = Math.abs(elapsed - target);
+    if (diff <= 0) return 0;
+    return isTaiji ? Math.ceil(diff / 5) * 0.10 : Math.ceil(diff / 2) * 0.10;
+  };
 
+  // 2. حساب النتيجة النهائية وتطبيق خصم الوقت تلقائياً
   const finalScore = useMemo(() => {
     const cContrib = includeC ? judgeCScore : 0;
-    return Math.round((judgeAScore + judgeBAverage + cContrib) * 100) / 100;
-  }, [judgeAScore, judgeBAverage, judgeCScore, includeC]);
+    const baseScore = judgeAScore + judgeBAverage + cContrib;
+
+    // جلب الوقت المسموح والأسلوب للاعب النشط
+    const targetTime = currentAthlete?.target_time || 80;
+    const isTaiji = currentAthlete?.style?.toLowerCase().includes("taiji") ?? false;
+
+    // حساب الخصومات
+    const timeDeduction = computeTimeDeduction(timerElapsed, targetTime, isTaiji);
+
+    // النتيجة النهائية = (مجموع الحكام) - (خصم الوقت)
+    const total = Math.max(0, baseScore - timeDeduction);
+    
+    return Math.round(total * 100) / 100;
+  }, [judgeAScore, judgeBAverage, judgeCScore, includeC, timerElapsed, currentAthlete]);
 
   const setJudgeBScore = (index: number, score: number) => {
     setJudgeBScores(prev => prev.map((v, i) => i === index ? Math.round(Math.max(0, Math.min(effMaxB, score)) * 100) / 100 : v));
@@ -278,7 +297,6 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resetMovementSequence = useCallback(() => setMovementSequence(DEFAULT_MOVEMENTS), []);
-
   // When the live match mode flips (TA toggles Compulsory ↔ Optional), realign
   // the local B scores to the new perfect-score baseline so every B judge sees
   // 5.00 (Compulsory) or 3.00 (Optional) without page refresh.
