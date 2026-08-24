@@ -873,7 +873,7 @@ export function PublicDisplay() {
                 <p
                   key={`live-total-${liveTaPulse}`}
                   className="text-7xl md:text-8xl lg:text-9xl font-heading font-black tabular-nums leading-none mt-2"
-                  style={{ color: GOLD, textShadow: `0 0 40px ${GOLD}cc, 0 0 80px ${GOLD}66` }} dir="ltr">
+                  style={{ color: "#FACC15", textShadow: "none" }} dir="ltr">
                   {Math.max(0, liveTotal - taDed).toFixed(2)}
                 </p>
                 {taDed > 0 && (
@@ -1032,10 +1032,9 @@ export function PublicDisplay() {
             </p>
             <div className="mt-5 flex items-end justify-between gap-3">
               <p className="text-[10px] uppercase tracking-[0.4em] text-white/50 font-body">Final Score</p>
-             <p className="text-7xl md:text-8xl font-heading font-black tabular-nums leading-none text-yellow-400 drop-shadow-none"
-  style={{ color: "#FACC15", textShadow: "none" }} dir="ltr">
-  {animated.toFixed(2)}
-</p>
+              <p className="text-7xl md:text-8xl font-heading font-black tabular-nums leading-none text-yellow-400"
+                style={{ color: "#FACC15", textShadow: "none" }} dir="ltr">
+                {animated.toFixed(2)}
               </p>
             </div>
           </section>

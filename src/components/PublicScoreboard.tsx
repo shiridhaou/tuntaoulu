@@ -480,11 +480,9 @@ function LiveScoreboard() {
               className="font-heading font-black tabular-nums leading-none"
               style={{
                 fontSize: "13rem",
-                color: showFinal ? CRIMSON : "rgba(255,255,255,0.20)",
-                textShadow: showFinal
-                  ? `0 0 50px ${CRIMSON}, 0 0 100px ${CRIMSON}cc, 0 0 160px ${CRIMSON}66`
-                  : "none",
-                transition: "all 1s ease",
+                color: showFinal ? "#FACC15" : "rgba(255,255,255,0.20)",
+                textShadow: "none",
+                transition: "color 1s ease",
               }}
               dir="ltr"
             >

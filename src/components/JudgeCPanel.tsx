@@ -78,7 +78,7 @@ export function JudgeCPanel() {
     let cancelled = false;
     const syncSession = async () => {
       try {
-        const { error } = await supabase.from("active_sessions").upsert(
+        const { error } = await (supabase as any).from("active_sessions").upsert(
           {
             device_id: deviceIdRef.current,
             session_code: code,

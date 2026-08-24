@@ -77,7 +77,11 @@ export function checkCategoryTime(ruleId: string | null | undefined, elapsedSec:
     return { value: 0, direction: "ok", drift: 0, reason: "ضمن الزمن المسموح", rule };
   }
 
-  const value = drift > 5 ? 0.3 : drift > 2 ? 0.2 : 0.1;
+  // IWUF 2024 · Article 26 — automatic time deduction:
+  //   Taiji styles : −0.10 for every 5 s over/under the legal window
+  //   Other styles : −0.10 for every 2 s over/under the legal window
+  const step = rule.group === "taiji" ? 5 : 2;
+  const value = Math.round(Math.ceil(drift / step) * 0.1 * 100) / 100;
   const verb = direction === "under" ? "أقل من الزمن الأدنى" : "أكثر من الزمن الأقصى";
   return {
     value,
