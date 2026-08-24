@@ -269,22 +269,12 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
   };
 
   // 2. حساب النتيجة النهائية وتطبيق خصم الوقت تلقائياً
-  const finalScore = useMemo(() => {
-    const cContrib = includeC ? judgeCScore : 0;
-    const baseScore = judgeAScore + judgeBAverage + cContrib;
-
-    // جلب الوقت المسموح والأسلوب للاعب النشط
-    const targetTime = currentAthlete?.target_time || 80;
-    const isTaiji = currentAthlete?.style?.toLowerCase().includes("taiji") ?? false;
-
-    // حساب الخصومات
-    const timeDeduction = computeTimeDeduction(timerElapsed, targetTime, isTaiji);
-
-    // النتيجة النهائية = (مجموع الحكام) - (خصم الوقت)
-    const total = Math.max(0, baseScore - timeDeduction);
+ const finalScore = useMemo(() => {
+    const cContrib = includeC ? (judgeCScore || 0) : 0;
+    const baseScore = (judgeAScore || 0) + (judgeBAverage || 0) + cContrib;
     
-    return Math.round(total * 100) / 100;
-  }, [judgeAScore, judgeBAverage, judgeCScore, includeC, timerElapsed, currentAthlete]);
+    return Math.round(baseScore * 100) / 100;
+  }, [judgeAScore, judgeBAverage, judgeCScore, includeC]);
 
   const setJudgeBScore = (index: number, score: number) => {
     setJudgeBScores(prev => prev.map((v, i) => i === index ? Math.round(Math.max(0, Math.min(effMaxB, score)) * 100) / 100 : v));
