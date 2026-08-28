@@ -92,18 +92,18 @@ const DICT: Record<string, { pinyin: string; ar: string; en: string; value?: num
   "69": { pinyin: "Diǎn Shàn", ar: "الطعن برأس بالمروحة", en: "Fan Tip Dab" },
 
   // Tab 7 General Deductions
+ // Tab 7 General Deductions (محدثة بالكامل طبقاً للجدول الرسمي)
   "70A": { pinyin: "Yáo Huàng", ar: "اهتزاز الجذع", en: "Torso sways", value: 0.05 },
-  "70B": { pinyin: "Yí Bù / Tiào Bù", ar: "تحريك القدم أو القفز الإضافي", en: "Foot shuffles or skips", value: 0.10 },
+  "70B": { pinyin: "Yí Bù / Tiào Bù", ar: "تحريك القدم أو القفز", en: "Foot shuffles or skips", value: 0.10 },
   "71": { pinyin: "Zhī Chēng", ar: "الدعم الإضافي", en: "Additional Support", value: 0.20 },
   "72": { pinyin: "Diē Dǎo", ar: "السقوط", en: "Fall", value: 0.30 },
-  "73": { pinyin: "Chū Jiè", ar: "الخروج من البساط", en: "Out-of-bounds", value: 0.10 },
-  "74": { pinyin: "Wàng Dòng Zuò", ar: "نسيان حركة", en: "Forgetting movement", value: 0.10 },
-  "75": { pinyin: "Fú Shì Luò / Cán Qiē", ar: "سقوط زينة السلاح أو جزء من اللباس أو غطاء الرأس / التفاف الزينة أو السلاح اللين / فقدان الحذاء", en: "Apparel Ornament Drop / Lost Shoe", value: 0.05 },
-  "76": { pinyin: "Qì Xiè Cù Dì / Shī Kòng / Ping Heng", ar: "عدم تنفيذ حركة التوازن بإيقاع سريع ومناسب / عدم الثبات في التوازن لمدة لا تقل عن ثانيتين", en: "Unsteady Balance Rhythm", value: 0.10 },
-  "77": { pinyin: "Qì Xiè Cù Dì / Shī Kòng", ar: "لمس السلاح للأرض / فقدان السيطرة على السلاح", en: "Weapon touches ground", value: 0.10 },
-  "78": { pinyin: "Qì Xiè Zhàng Ái / Biàn Xíng / Shàn Miàn", ar: "اصطدام السلاح بالجسم / تشوه السلاح / انفصال سطح المروحة", en: "Weapon hits body / fan detached", value: 0.20 },
-  "79": { pinyin: "Qì Xiè Duàn / Qì Xiè Luò Dì", ar: "كسر السلاح / كسر أجزاء المروحة أو سقوط مساميرها / سقوط السلاح على الأرض", en: "Broken weapon or fan parts / Dropped", value: 0.30 },
-};
+  "73": { pinyin: "Qì Xiè Cù Dì / Shī Kòng", ar: "لمس السلاح للأرض / فقدان السيطرة على السلاح / اصطدام السلاح بالجسم / تشوه السلاح / انفصال سطح المروحة", en: "Weapon touches ground / hits body / fan detached", value: 0.10 },
+  "74": { pinyin: "Qì Xiè Duàn", ar: "كسر السلاح / كسر أجزاء المروحة أو سقوط مساميرها", en: "Broken weapon or fan parts", value: 0.20 },
+  "75": { pinyin: "Qì Xiè Luò Dì", ar: "سقوط السلاح على الأرض", en: "Weapon dropped on the floor", value: 0.30 },
+  "76": { pinyin: "Fú Shì Luò / Cán Qiē", ar: "سقوط زينة السلاح أو جزء من اللباس أو غطاء الرأس / التفاف الزينة أو السلاح اللين حول اليد أو الجسم / فقدان الحذاء", en: "Apparel Ornament Drop / Lost Shoe", value: 0.10 },
+  "77": { pinyin: "Píng Héng", ar: "عدم تنفيذ حركة التوازنع بإيقاع سريع ومناسب لطبيعة الأسلوب / عدم الثبات في التوازن لمدة لا تقل عن ثانيتين", en: "Unsteady Balance Rhythm / Hold time", value: 0.20 },
+  "78": { pinyin: "Chū Jiè", ar: "الخروج من البساط", en: "Out-of-bounds", value: 0.30 },
+  "79": { pinyin: "Wàng Dòng Zuò", ar: "نسيان حركة", en: "Forgetting movement", value: 0.10 },
 
 export const GENERAL_CODES = ["70A", "70B", "71", "72", "73", "74", "75", "76", "77", "78", "79"] as const;
 
