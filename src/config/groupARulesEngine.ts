@@ -25,7 +25,6 @@ export const GROUP_A_GROUP_INFO: Record<string, { pinyin: string; titleAr: strin
   "6": { pinyin: "Weapon Techniques", titleAr: "تقنيات السلاح والمروحة", titleEn: "Weapon & Fan Techniques (60-69)" },
   "7": { pinyin: "Tōng Yòng Kòu Fēn", titleAr: "الخصومات العامة", titleEn: "General Deductions (70A–79)" },
 };
-
 const DICT: Record<string, { pinyin: string; ar: string; en: string; value?: number }> = {
   // Tab 0
   "01": { pinyin: "Quán", ar: "القبضة", en: "Fist Form" },
@@ -43,16 +42,16 @@ const DICT: Record<string, { pinyin: string; ar: string; en: string; value?: num
   "15": { pinyin: "Cè Shēn / Tān Hǎi Píng Héng", ar: "التوازن الجانبي / توازن استكشاف البحر", en: "Side Balance / Sea Exploration" },
   "16": { pinyin: "Wàng Yuè Píng Héng", ar: "توازن النظر إلى القمر", en: "Moon-Viewing Balance" },
   "17": { pinyin: "Dī Shì Qián Dēng Cǎi Jiǎo", ar: "توازن منخفض مع ركلة أمامية بالكعب", en: "Low Balance with Front Heel Kick" },
-  "18": { pinyin: "Qián Jǔ Tuǐ Dī Shì Píng Héng", ar: "توازن منخفض مع رفع الساق للأمام", en: "Low Balance Front Leg Raised" }, // تم التبديل مع 19
-  "19": { pinyin: "Hòu Chā Tuǐ Dī Shì Píng Héng", ar: "التوازن المنخفض مع إدخال الرجل خلفاً", en: "Low Balance Leg Crossed Behind" }, // تم التبديل مع 18
+  "18": { pinyin: "Qián Jǔ Tuǐ Dī Shì Píng Héng", ar: "توازن منخفض مع رفع الساق للأمام", en: "Low Balance Front Leg Raised" },
+  "19": { pinyin: "Hòu Chā Tuǐ Dī Shì Píng Héng", ar: "التوازن المنخفض مع إدخال الرجل خلفاً", en: "Low Balance Leg Crossed Behind" },
 
   // Tab 2
   "20": { pinyin: "Qián Sǎo Tuǐ", ar: "المسح الأمامي", en: "Front Sweep" },
   "21": { pinyin: "Hòu Sǎo Tuǐ", ar: "المسح الخلفي", en: "Back Sweep" },
   "22": { pinyin: "Diē Shì Chā", ar: "الحوض الأمامي", en: "Front Split" },
-  "23": { pinyin: "Diē Chā / Fen Jiāo / Dēng Jiāo", ar: "نصف الحوض / الركلة المتفرقة / الركل بالكعب", en: "Half Split / Split Kick / Heel Kick" }, // تم إصلاح التايجي
+  "23": { pinyin: "Diē Chā / Fen Jiāo / Dēng Jiāo", ar: "نصف الحوض / الركلة المتفرقة / الركل بالكعب", en: "Half Split / Split Kick / Heel Kick" },
   "24": { pinyin: "Zhèng Tī Tuǐ / Cè Tī Tuǐ", ar: "الركلة الأمامية المستقيمة / الركلة الجانبية المستقيمة", en: "Front Straight Kick / Side Straight Kick" },
-  "25": { pinyin: "Zhuǎn Shēn Hòu Bǎi Tuǐ", ar: "الركلة الهلالية مع الدوران", en: "Spinning Crescent Kick" }, // تم تحديث التسمية للجنوبي
+  "25": { pinyin: "Zhuǎn Shēn Hòu Bǎi Tuǐ", ar: "الركلة الهلالية مع الدوران", en: "Spinning Crescent Kick" },
   "26": { pinyin: "Tí Xī Dú Lì", ar: "رفع الركبة", en: "Single Knee Raised" },
   "27": { pinyin: "Héng Dīng Tuǐ", ar: "ركلة المسمار الأفقية", en: "Horizontal Nail Kick" },
 
@@ -83,7 +82,7 @@ const DICT: Record<string, { pinyin: string; ar: string; en: string; value?: num
   "60": { pinyin: "Guā Jiàn / Liāo Jiàn / Shàn Liāo / Guà Shàn", ar: "صد السيف الدائري / رفع السيف للأعلى / الدفاع والقطع بالسيف الرفيع أو بالمروحة", en: "Sword/Fan Cuts" },
   "61": { pinyin: "Wò Jiàn / Kāi Shàn", ar: "مسك السيف / فتح المروحة", en: "Sword Grip / Open Fan" },
   "62": { pinyin: "Chán Tóu / Guǒ Nǎo", ar: "لف السيف العريض حول الرأس / لف السيف خلف الرأس", en: "Broadsword Wrap" },
-  "63": { pinyin: "Lán Qiāng / Ná Qiāng / Zhā Qiāng / Hé Shàn / Cì Shàn / Pī Shàn", ar: "صد بالرمح للخارج / صد بالرمح للداخل / الطعن بالرمح / غلق المروحة / الطعن بالمروحة / القطع بالمروحة", en: "Spear Defenses / Fan Close, Stab, Chop" }, // تم إصلاح نص كلمة الطعن والقطع للمروحة
+  "63": { pinyin: "Lán Qiāng / Ná Qiāng / Zhā Qiāng / Hé Shàn / Cì Shàn / Pī Shàn", ar: "صد بالرمح للخارج / صد بالرمح للداخل / الطعن بالرمح / غلق المروحة / الطعن بالمروحة / القطع بالمروحة", en: "Spear Defenses / Fan Close, Stab, Chop" },
   "64": { pinyin: "Píng Lún Gùn", ar: "دوران العصا أفقياً بيد واحدة", en: "Horizontal Staff Rotation" },
   "65": { pinyin: "Lì Wǔ Huā Qiāng / Lì Wǔ Huā Gùn", ar: "شكل الرقم (8) العمودي بالرمح / شكل الرقم (8) العمودي بالعصا", en: "Vertical Figure-8 Spear/Staff" },
   "66": { pinyin: "Gùn Shuāng Shǒu Tí Liāo Huā / Qi Xiè Pāo Jiē / Pāo Jiē Shàn", ar: "رفع العصا بشكل عمودي باليدين / رمي واستقبال السلاح / رمي المروحة والتقاطها", en: "Staff Lift / Throw & Catch" },
@@ -91,19 +90,19 @@ const DICT: Record<string, { pinyin: string; ar: string; en: string; value?: num
   "68": { pinyin: "Jiǎo Jiàn", ar: "تدوير السيف", en: "Sword Tip Rotation" },
   "69": { pinyin: "Diǎn Shàn", ar: "الطعن برأس بالمروحة", en: "Fan Tip Dab" },
 
-  // Tab 7 General Deductions
- // Tab 7 General Deductions (محدثة بالكامل طبقاً للجدول الرسمي)
+  // Tab 7 General Deductions (محدثة بالكامل طبقاً لجدول التحكيم الرسمي 10-1-6)
   "70A": { pinyin: "Yáo Huàng", ar: "اهتزاز الجذع", en: "Torso sways", value: 0.05 },
-  "70B": { pinyin: "Yí Bù / Tiào Bù", ar: "تحريك القدم أو القفز", en: "Foot shuffles or skips", value: 0.10 },
+  "70B": { pinyin: "Yí Bù / Tiào Bù", ar: "تحريك القدم أو القفز الإضافي", en: "Foot shuffles or skips", value: 0.10 },
   "71": { pinyin: "Zhī Chēng", ar: "الدعم الإضافي", en: "Additional Support", value: 0.20 },
   "72": { pinyin: "Diē Dǎo", ar: "السقوط", en: "Fall", value: 0.30 },
-  "73": { pinyin: "Qì Xiè Cù Dì / Shī Kòng", ar: "لمس السلاح للأرض / فقدان السيطرة على السلاح / اصطدام السلاح بالجسم / تشوه السلاح / انفصال سطح المروحة", en: "Weapon touches ground / hits body / fan detached", value: 0.10 },
-  "74": { pinyin: "Qì Xiè Duàn", ar: "كسر السلاح / كسر أجزاء المروحة أو سقوط مساميرها", en: "Broken weapon or fan parts", value: 0.20 },
+  "73": { pinyin: "Qì Xiè Cù Dì / Shī Kòng / Ping Heng", ar: "لمس السلاح للأرض / فقدان السيطرة / اصطدام السلاح / تشوه السلاح / انفصال سطح المروحة", en: "Weapon touches ground / hits body / fan detached", value: 0.10 },
+  "74": { pinyin: "Qì Xiè Duàn", ar: "كسر السلاح / كسر أجزاء المروحة أو سقوط مساميرها", en: "Main or minor ribs of fan break / Weapon Broken", value: 0.20 },
   "75": { pinyin: "Qì Xiè Luò Dì", ar: "سقوط السلاح على الأرض", en: "Weapon dropped on the floor", value: 0.30 },
-  "76": { pinyin: "Fú Shì Luò / Cán Qiē", ar: "سقوط زينة السلاح أو جزء من اللباس أو غطاء الرأس / التفاف الزينة أو السلاح اللين حول اليد أو الجسم / فقدان الحذاء", en: "Apparel Ornament Drop / Lost Shoe", value: 0.10 },
-  "77": { pinyin: "Píng Héng", ar: "عدم تنفيذ حركة التوازنع بإيقاع سريع ومناسب لطبيعة الأسلوب / عدم الثبات في التوازن لمدة لا تقل عن ثانيتين", en: "Unsteady Balance Rhythm / Hold time", value: 0.20 },
-  "78": { pinyin: "Chū Jiè", ar: "الخروج من البساط", en: "Out-of-bounds", value: 0.30 },
+  "76": { pinyin: "Fú Shì Luò / Cán Qiē", ar: "سقوط زينة السلاح أو جزء من اللباس أو غطاء الرأس / التفاف الزينة / فقدان الحذاء", en: "Apparel Ribbon Tassel Drop / Lost Shoe", value: 0.10 },
+  "77": { pinyin: "Píng Héng", ar: "عدم تنفيذ حركة التوازن بإيقاع سريع ومناسب / عدم الثبات لمدة لا تقل عن ثانيتين", en: "Unsteady Balance Rhythm / Hold time", value: 0.10 },
+  "78": { pinyin: "Chū Jiè", ar: "الخروج من البساط", en: "Out-of-bounds", value: 0.10 },
   "79": { pinyin: "Wàng Dòng Zuò", ar: "نسيان حركة", en: "Forgetting movement", value: 0.10 },
+}; // <-- تم إضافة إغلاق الكائن هنا بشكل صحيح!
 
 export const GENERAL_CODES = ["70A", "70B", "71", "72", "73", "74", "75", "76", "77", "78", "79"] as const;
 
@@ -121,7 +120,7 @@ const STYLE_CODES: Record<GroupAStyle, string[]> = {
     "01", "02", "03", "04",
     "20", "23", "25", "26", "27",
     "30", "32",
-    "40", "42", // تم حذف 41 نهائياً هنا
+    "40", "42",
     "50", "51", "52", "53", "55", "56", "57",
     "62", "67",
     ...GENERAL_CODES,
