@@ -18,7 +18,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMatchSync, broadcastSessionState } from "@/hooks/useMatchSync";
 import { joinSessionMembership } from "@/lib/sessionMembership";
 import { toast } from "sonner";
-import { styleLabelAr, styleLabelEn } from "@/lib/styleNames";
+import { styleLabelAr, styleLabelEn, normalizeStyle } from "@/lib/styleNames";
+import { TIME_WINDOWS, fmtWindow, type TimeWindow } from "@/lib/timeRules";
 import { modeCaps } from "@/lib/matchMode";
 import { pushDisplaySettings, uploadSponsorLogo } from "@/hooks/useDisplaySettings";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -107,7 +108,13 @@ function ChiefRefereeDashboardInner() {
   const [taDeduction, setTaDeduction] = useState<number>(0);
   const [taOobCount, setTaOobCount] = useState<number>(0);
   const [taPulse, setTaPulse] = useState<number>(0); // increments on every TA deduction change for visual pulse
-  const config = competitionStyle ? STYLE_CONFIGS[competitionStyle] : STYLE_CONFIGS.changquan;
+  // Dynamic style: the TA's broadcast style (timerSync.style) is authoritative —
+  // the local competitionStyle is only a fallback. This drives BOTH the score
+  // caps and the performance-time window so Taiji athletes are never compared
+  // against the hardcoded 1:20 Changquan target.
+  const activeStyle = normalizeStyle(timerSync.style ?? competitionStyle ?? "changquan");
+  const config = STYLE_CONFIGS[activeStyle] ?? STYLE_CONFIGS.changquan;
+  const timeWindow: TimeWindow = TIME_WINDOWS[activeStyle] ?? TIME_WINDOWS.changquan;
   // Official caps: Compulsory A 7.00 + B 3.00 = 10.00 · Optional A 5.00 + B 3.00 + C 2.00 = 10.00
   const caps = modeCaps(matchMode);
   const effMaxA = caps.maxA;
@@ -413,7 +420,14 @@ function ChiefRefereeDashboardInner() {
     }
   };
 
-  const timeUp = timerElapsed >= config.performanceTime;
+  // IWUF 2024 · Art. 26 — single-bound styles (CQ/NQ: ≥ 1:20) flag "Time Up"
+  // once the required minimum is reached; windowed styles (Taiji 3:00–4:00,
+  // Traditional 1:00–1:30) only flag when the MAXIMUM is exceeded. An athlete
+  // inside the legal window is never flagged.
+  const singleBound = timeWindow.min === timeWindow.max;
+  const timeUp = singleBound
+    ? timerElapsed >= timeWindow.min
+    : timerElapsed > timeWindow.max;
 
   const scoreFor = (key: string, baseScore: number | null): number | null => {
     const o = judgeOverrides[key];
@@ -633,7 +647,7 @@ function ChiefRefereeDashboardInner() {
         <div className="flex items-center justify-between gap-4 px-4 py-1.5 rounded-xl bg-white/[0.03] border" style={{ borderColor: `${ORANGE}44`, boxShadow: `0 0 18px ${ORANGE}15` }}>
           <div className="flex items-center gap-2">
             <p className="text-[9px] uppercase tracking-[0.3em] text-white/40 font-body">Performance</p>
-            <p className="text-[10px] text-white/40 font-body" dir="ltr">/ {fmtTime(config.performanceTime)}</p>
+            <p className="text-[10px] text-white/40 font-body" dir="ltr">/ {fmtWindow(timeWindow)}</p>
           </div>
           <p className={`text-2xl font-heading font-black tabular-nums leading-none ${timeUp ? "animate-pulse" : ""}`}
             style={{ color: timeUp ? "#ff3b3b" : ORANGE }} dir="ltr">
