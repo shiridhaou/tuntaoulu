@@ -1,7 +1,7 @@
 import { useCompetition, STYLE_CONFIGS, type DifficultyMovement } from "@/store/competition-store";
 import { useLogout } from "@/hooks/useLogout";
 import { FederationLogo } from "./FederationLogo";
-import { ArrowRight, RotateCcw, Send, Check, X, ChevronDown } from "lucide-react";
+import { ArrowRight, RotateCcw, Send, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { submitJudgeScore } from "@/lib/scoreSubmit";
@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { SessionBadge } from "@/components/SessionBadge";
 import { useActiveSessionCode } from "@/hooks/useActiveSession";
 import { useRoomPresence } from "@/hooks/useRoomPresence";
-import { QUICK_CODES, CONNECTION_BONUSES, MAX_C_MOVEMENT, MAX_C_CONNECTION, lookupCode, isConnectionCode, lookupConnection, type ConnectionBonus } from "@/lib/difficultyCodes";
+import { MAX_C_MOVEMENT, MAX_C_CONNECTION, lookupCode, isConnectionCode, lookupConnection, type ConnectionBonus } from "@/lib/difficultyCodes";
 // ⚠️ تحقق من هذا المسار في مشروعك — هو المسار الافتراضي لعميل Supabase في مشاريع Lovable
 import { supabase } from "@/integrations/supabase/client";
 
@@ -143,16 +143,6 @@ export function JudgeCPanel() {
     [fullSheet],
   );
 
-  /** Connection buttons = athlete-sheet connections first, then the standard catalogue. */
-  const connectionOptions: { bonus: ConnectionBonus; fromSheet: boolean }[] = useMemo(() => [
-    ...sheetConnections.map(b => ({ bonus: b, fromSheet: true })),
-    ...CONNECTION_BONUSES
-      .filter(b => !sheetConnections.some(s2 => s2.code === b.code))
-      .map(b => ({ bonus: b, fromSheet: false })),
-  ], [sheetConnections]);
-
-
-
   // Notify Judge C when a NEW difficulty sheet arrives from the TA
   const lastSheetSigRef = useRef<string>("");
   useEffect(() => {
@@ -196,7 +186,6 @@ export function JudgeCPanel() {
     [sheet, judgedCodes]
   );
   const [activeIndex, setActiveIndex] = useState(0);
-  const [revealedCode, setRevealedCode] = useState<string | null>(null);
   useEffect(() => {
     setActiveIndex(firstUnjudgedIndex >= 0 ? firstUnjudgedIndex : sheet.length - 1);
   }, [firstUnjudgedIndex, sheet.length]);
@@ -206,7 +195,7 @@ export function JudgeCPanel() {
   // to "jump" after the first Yes/No because the browser would scroll the nearest
   // vertical ancestor as well. We now scroll only the track's scrollLeft.
   const trackRef = useRef<HTMLDivElement>(null);
-  const activeCardRef = useRef<HTMLDivElement>(null);
+  const activeCardRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const track = trackRef.current;
     const card = activeCardRef.current;
@@ -249,14 +238,6 @@ export function JudgeCPanel() {
   );
 
   const attemptIndex = (code: string) => judgeCAttempts.findIndex(a => a.code === code);
-
-  const tapQuickCode = (code: string) => {
-    if (locked) { toast.error("التقييم مقفل"); return; }
-    const idx = attemptIndex(code);
-    if (idx >= 0) { toggleJudgeCAttempt(idx); return; }
-    const meta = lookupCode(code);
-    addJudgeCAttempt({ code: meta.code, label: meta.label, value: meta.value, successful: true, kind: "movement" });
-  };
 
   /** Confirm / Unconfirm a specific movement of the athlete's sheet. */
   const validateMovement = (d: DifficultyMovement, ok: boolean) => {
@@ -523,195 +504,120 @@ export function JudgeCPanel() {
           </motion.button>
         </div>
 
-        {/* Arrow indicator */}
-        <div className="w-full max-w-5xl flex justify-center -mb-1">
-          <motion.div
-            animate={{ y: [0, 4, 0] }}
-            transition={{ duration: 1.4, repeat: Infinity }}
-            className="text-cyber-orange"
-          >
-            <ChevronDown className="h-5 w-5" style={{ filter: "drop-shadow(0 0 8px oklch(0.70 0.22 45 / 0.8))" }} />
-          </motion.div>
-        </div>
-
-        {/* Quick codes + connection bonuses */}
-        <div className="w-full max-w-5xl shrink-0 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
-          <div className="rounded-xl border border-white/10 bg-black/30 px-2 py-1.5">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-[9px] uppercase tracking-[0.25em] text-white/40 font-heading" dir="ltr">Quick Codes</p>
-              <p className="text-[10px] font-heading font-black text-cyber-orange tabular-nums" dir="ltr">
-                {movementTotal.toFixed(2)} / {MAX_C_MOVEMENT.toFixed(2)}
-              </p>
+        {/* Official-sheet timeline — scheduled movements and connections in sequence */}
+        <div className="w-full max-w-5xl shrink-0">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 mb-1.5 px-1">
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-3">
+                <p className="truncate text-[10px] uppercase tracking-[0.2em] text-white/60 font-heading" dir="ltr">
+                  Difficulty Timeline · {fullSheet.length} items
+                </p>
+                <p className="shrink-0 text-[10px] font-heading font-black text-cyber-orange tabular-nums" dir="ltr">
+                  M {movementTotal.toFixed(2)} / {MAX_C_MOVEMENT.toFixed(2)}
+                </p>
+                <p className="shrink-0 text-[10px] font-heading font-black text-cyan-300 tabular-nums" dir="ltr">
+                  C {connectionTotal.toFixed(2)} / {MAX_C_CONNECTION.toFixed(2)}
+                </p>
+              </div>
+              <div className="mt-1 flex items-center gap-3 text-[9px] font-heading" dir="ltr">
+                <span className="text-white/45">● Pending</span>
+                <span className="text-green-300">● Accepted</span>
+                <span className="text-red-300">● Rejected</span>
+              </div>
             </div>
-            {/* Manual code entry */}
-            <div className="flex items-center gap-1.5 mb-1.5">
+            <div className="flex shrink-0 items-center gap-1.5">
               <input
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") addManualCode(); }}
-                placeholder="كود يدوي · e.g. 353C"
+                placeholder="353C"
+                aria-label="Manual difficulty code"
                 dir="ltr"
-                className="flex-1 h-8 rounded-lg bg-black/50 border-2 border-white/10 focus:border-cyber-orange/60 outline-none px-2 text-[12px] font-heading font-black text-white placeholder:text-white/30 placeholder:font-body"
+                className="h-8 w-24 rounded-md bg-black/50 border border-white/15 focus:border-cyber-orange/60 outline-none px-2 text-[11px] font-heading font-black text-white placeholder:text-white/30"
               />
               <button
                 type="button"
                 onClick={(e) => { e.currentTarget.blur(); addManualCode(); }}
-                className="h-8 px-3 rounded-lg border-2 border-cyber-orange/50 bg-cyber-orange/15 text-cyber-orange text-[11px] font-heading font-black hover:bg-cyber-orange/25"
+                className="h-8 px-2.5 rounded-md border border-cyber-orange/50 bg-cyber-orange/15 text-cyber-orange text-[10px] font-heading font-black hover:bg-cyber-orange/25"
               >
-                + إضافة
+                + ADD
               </button>
             </div>
-
-            <div className="flex flex-wrap gap-1.5">
-              {QUICK_CODES.map((code) => {
-                const a = judgeCAttempts.find(x => x.code === code);
-                return (
-                  <button
-                    key={code}
-                    type="button"
-                    onClick={(e) => { e.currentTarget.blur(); tapQuickCode(code); }}
-                    className={`px-2 py-1 rounded-lg text-[11px] font-heading font-black border-2 transition-colors ${
-                      a ? (a.successful ? "border-green-400/60 bg-green-400/15 text-green-200" : "border-red-400/60 bg-red-400/15 text-red-200")
-                        : "border-white/10 bg-white/5 text-white/70 hover:border-cyber-orange/50"
-                    }`}
-                    dir="ltr"
-                  >
-                    {code}
-                  </button>
-                );
-              })}
-            </div>
           </div>
-
-          <div className="rounded-xl border border-white/10 bg-black/30 px-2 py-1.5">
-            <div className="flex items-center justify-between mb-1 gap-3">
-              <p className="text-[9px] uppercase tracking-[0.25em] text-white/40 font-heading" dir="ltr">Connections</p>
-              <p className="text-[10px] font-heading font-black text-cyan-300 tabular-nums" dir="ltr">
-                {connectionTotal.toFixed(2)} / {MAX_C_CONNECTION.toFixed(2)}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {connectionOptions.map(({ bonus: b, fromSheet }) => {
-                const a = judgeCAttempts.find(x => x.code === b.code);
-                return (
-                  <button
-                    key={b.code}
-                    type="button"
-                    title={fromSheet ? `${b.labelAr} · من استمارة اللاعب` : b.labelAr}
-                    onClick={(e) => { e.currentTarget.blur(); tapConnection(b); }}
-                    className={`px-2 py-1 rounded-lg text-[11px] font-heading font-black border-2 transition-colors ${
-                      a && a.successful ? "border-cyan-400/60 bg-cyan-400/15 text-cyan-200"
-                        : fromSheet ? "border-cyan-400/40 bg-cyan-400/5 text-cyan-100 hover:border-cyan-400/70"
-                        : "border-white/10 bg-white/5 text-white/70 hover:border-cyan-400/50"
-                    }`}
-                    dir="ltr"
-                  >
-                    {fromSheet ? "★ " : ""}{b.code} · +{b.value.toFixed(2)}
-                  </button>
-                );
-              })}
-
-            </div>
-          </div>
-        </div>
-
-        {/* Movements track — compact pills, name shows only on tap */}
-        <div className="w-full max-w-5xl shrink-0">
-          <div className="flex items-center justify-between mb-1 px-1">
-            <p className="text-[9px] uppercase tracking-[0.25em] text-white/40 font-heading" dir="ltr">
-              Movements · {sheet.length}
-            </p>
+          <div className="mb-1 px-1 min-h-3">
             {!athlete?.difficultySheet?.length && (
               <p className="text-[9px] text-amber-400/80 font-body" dir="rtl">
                 ⚠ في انتظار استمارة الصعوبة من المساعد التقني
               </p>
             )}
-            <p className="text-[9px] text-white/30 font-body" dir="rtl">انقر على الكود لرؤية الاسم</p>
           </div>
           <div
             ref={trackRef}
-            className="cyber-scroll-x overflow-x-auto overflow-y-hidden pb-2 px-2 rounded-xl border border-cyber-orange/20 bg-black/30"
-            style={{ height: "128px" }}
+            className="cyber-scroll-x overflow-x-auto overflow-y-hidden rounded-lg border border-cyber-orange/25 bg-black/40"
+            style={{ height: "150px" }}
           >
-            <div className="flex items-stretch gap-2 min-w-min h-full py-2">
-              {sheet.map((d, i) => {
+            <div className="flex min-w-max h-full items-stretch p-2" dir="ltr">
+              {fullSheet.map((d, timelineIndex) => {
+                const isConnection = isConnectionCode(d.code);
+                const movementIndex = isConnection ? -1 : sheet.findIndex(item => item.code === d.code);
                 const attempt = judgeCAttempts.find(a => a.code === d.code);
-                const isActive = i === activeIndex;
-                const showLabel = revealedCode === d.code;
+                const isActive = movementIndex === activeIndex && !attempt;
+                const connection = isConnection ? lookupConnection(d.code) : null;
+                const status = !attempt ? "Pending" : attempt.successful ? "Accepted" : "Rejected";
                 return (
-                  <motion.div
-                    key={d.code}
+                  <motion.button
+                    key={`${d.code}-${timelineIndex}`}
                     ref={isActive ? activeCardRef : undefined}
-                    layout
-                    onClick={() => {
-                      setRevealedCode(prev => prev === d.code ? null : d.code);
-                      if (!attempt) setActiveIndex(i);
+                    type="button"
+                    disabled={locked}
+                    onClick={(e) => {
+                      e.currentTarget.blur();
+                      if (isConnection && connection) {
+                        tapConnection(connection);
+                        return;
+                      }
+                      validateMovement(d, attempt ? !attempt.successful : true);
                     }}
-                    animate={{ scale: isActive ? 1.08 : 1 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 22 }}
-                    className={`relative shrink-0 w-20 md:w-24 rounded-xl px-2 py-1.5 cursor-pointer select-none border-2 flex flex-col items-center justify-center ${
-                      isActive
-                        ? "border-cyber-orange bg-black/60 glow-cyber"
+                    whileTap={locked ? undefined : { scale: 0.97 }}
+                    className={`relative shrink-0 w-32 md:w-36 px-3 py-2 text-left border-y border-r first:border-l first:rounded-l-md last:rounded-r-md disabled:cursor-not-allowed disabled:opacity-50 transition-colors flex flex-col justify-between ${
+                      attempt?.successful
+                        ? "border-green-400/60 bg-green-400/15"
                         : attempt
-                          ? attempt.successful
-                            ? "border-green-400/50 bg-green-400/10"
-                            : "border-red-400/50 bg-red-400/10"
-                          : "border-white/10 bg-white/5"
+                          ? "border-red-400/60 bg-red-400/15"
+                          : isActive
+                            ? "border-cyber-orange bg-cyber-orange/15"
+                            : isConnection
+                              ? "border-cyan-400/25 bg-cyan-400/5 hover:bg-cyan-400/10"
+                              : "border-white/15 bg-white/5 hover:bg-white/10"
                     }`}
-                    style={isActive ? { boxShadow: "0 0 24px oklch(0.70 0.22 45 / 0.55)" } : undefined}
-                    title={d.label}
+                    title={`${status}: ${d.label}`}
                   >
-                    <span className="text-base md:text-lg font-heading font-black text-white leading-none" dir="ltr">{d.code}</span>
-                    <span className="text-[10px] font-bold mt-1 px-1.5 py-0.5 rounded border border-cyber-orange/40 bg-cyber-orange/15 text-cyber-orange leading-none" dir="ltr">
-                      +{d.value.toFixed(2)}
-                    </span>
-                    {/* Per-movement validation — Confirmed / Unconfirmed */}
-                    <div className="flex gap-1 mt-1.5" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        title="تأكيد / Confirmed"
-                        onClick={(e) => { e.currentTarget.blur(); validateMovement(d, true); }}
-                        className={`h-6 w-8 rounded-md border-2 flex items-center justify-center transition-colors ${
-                          attempt?.successful ? "border-green-400 bg-green-400/30 text-green-100" : "border-green-400/40 bg-green-400/10 text-green-300 hover:bg-green-400/20"
-                        }`}
-                      >
-                        <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                      </button>
-                      <button
-                        type="button"
-                        title="إلغاء / Unconfirmed"
-                        onClick={(e) => { e.currentTarget.blur(); validateMovement(d, false); }}
-                        className={`h-6 w-8 rounded-md border-2 flex items-center justify-center transition-colors ${
-                          attempt && !attempt.successful ? "border-red-400 bg-red-400/30 text-red-100" : "border-red-400/40 bg-red-400/10 text-red-300 hover:bg-red-400/20"
-                        }`}
-                      >
-                        <X className="h-3.5 w-3.5" strokeWidth={3} />
-                      </button>
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`text-[9px] uppercase tracking-[0.15em] font-heading ${isConnection ? "text-cyan-300" : "text-white/45"}`}>
+                          {isConnection ? "Connection" : `Movement ${movementIndex + 1}`}
+                        </span>
+                        <span className="text-[9px] text-white/35 tabular-nums">{String(timelineIndex + 1).padStart(2, "0")}</span>
+                      </div>
+                      <p className="mt-2 truncate text-lg font-heading font-black text-white leading-none">{d.code}</p>
+                      <p className="mt-1 truncate text-[10px] text-white/55 font-body">{isConnection ? connection?.label : d.label}</p>
                     </div>
-
-                    {attempt && (
-                      <span className={`absolute -top-1.5 -right-1.5 text-[9px] font-black h-4 w-4 rounded-full flex items-center justify-center ${attempt.successful ? "bg-green-500 text-black" : "bg-red-500 text-white"}`}>
-                        {attempt.successful ? "✓" : "✗"}
+                    <div className="flex items-end justify-between gap-2">
+                      <span className={`text-base font-heading font-black tabular-nums ${isConnection ? "text-cyan-300" : "text-cyber-orange"}`}>
+                        +{(connection?.value ?? d.value).toFixed(2)}
                       </span>
-                    )}
-                    <AnimatePresence>
-                      {showLabel && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -4, scale: 0.9 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: -4, scale: 0.9 }}
-                          transition={{ duration: 0.15 }}
-                          onAnimationComplete={() => {
-                            setTimeout(() => setRevealedCode(prev => prev === d.code ? null : prev), 1800);
-                          }}
-                          className="absolute -top-12 left-1/2 -translate-x-1/2 z-50 px-2.5 py-1 rounded-lg bg-black/95 border border-cyber-orange/50 shadow-xl whitespace-nowrap pointer-events-none"
-                        >
-                          <p className="text-[11px] font-bold text-white" dir="ltr">{d.label}</p>
-                          <p className="text-[9px] text-white/60" dir="ltr">{d.connection}</p>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
+                      <span className={`inline-flex min-w-16 items-center justify-center gap-1 rounded px-1.5 py-1 text-[9px] uppercase font-heading font-black ${
+                        attempt?.successful
+                          ? "bg-green-400/25 text-green-200"
+                          : attempt
+                            ? "bg-red-400/25 text-red-200"
+                            : "bg-white/10 text-white/50"
+                      }`}>
+                        {attempt?.successful ? <Check className="h-3 w-3" strokeWidth={3} /> : attempt ? <X className="h-3 w-3" strokeWidth={3} /> : null}
+                        {status}
+                      </span>
+                    </div>
+                  </motion.button>
                 );
               })}
             </div>
