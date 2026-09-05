@@ -195,7 +195,7 @@ export function JudgeCPanel() {
   // to "jump" after the first Yes/No because the browser would scroll the nearest
   // vertical ancestor as well. We now scroll only the track's scrollLeft.
   const trackRef = useRef<HTMLDivElement>(null);
-  const activeCardRef = useRef<HTMLDivElement>(null);
+  const activeCardRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const track = trackRef.current;
     const card = activeCardRef.current;
