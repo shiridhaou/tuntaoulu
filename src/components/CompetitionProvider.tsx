@@ -669,7 +669,8 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
   // attach them to the local athlete record so all panels render correctly.
   useEffect(() => {
     if (isTA) return;
-    const sheet = sync.payload?.difficultySheet as Athlete["difficultySheet"] | undefined;
+    const rawSheet = (sync.payload?.difficultySheet ?? sync.payload?.movements) as unknown;
+    const sheet = (Array.isArray(rawSheet) && rawSheet.length ? rawSheet : undefined) as Athlete["difficultySheet"] | undefined;
     const athleteMeta = sync.payload?.athlete as { id?: string; name?: string; bib?: string | null; club?: string | null; country?: string | null } | undefined;
     const athleteId = sync.athleteId;
     if (!athleteId) return;

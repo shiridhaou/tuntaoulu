@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useDifficultySheet, type DifficultySheetSourceAthlete } from "@/hooks/useDifficultySheet";
 import { toWesternDigits } from "@/lib/numFormat";
+import { lookupCode } from "@/lib/difficultyCodes";
 import type { JudgeStatusRow } from "@/types/matchTypes";
 
 // ============================================================================
@@ -58,14 +59,17 @@ export function DifficultyManager({
   // Local UI-only state for the "add movement" row — raw text input parsing
   // (comma decimal support) stays here; the hook deals in numbers only.
   const [newCode, setNewCode] = useState("");
-  const [newValue, setNewValue] = useState("0.20");
+  const [newValue, setNewValue] = useState("");
   const [newLabel, setNewLabel] = useState("");
 
   function handleAddRow() {
     const v = parseFloat(newValue.replace(",", "."));
-    addRow(newCode, newLabel, isFinite(v) ? v : 0.2);
-    setNewCode(""); setNewValue("0.20"); setNewLabel("");
+    // Blank value → auto-fill the IWUF default for this code.
+    const meta = lookupCode(newCode);
+    addRow(newCode, newLabel || meta.label, isFinite(v) ? v : meta.value);
+    setNewCode(""); setNewValue(""); setNewLabel("");
   }
+
 
   const cJudgesSent = statuses.filter((s) => s.judge_slot.startsWith("C") && s.state === "sent").length;
   const cJudgesActive = statuses.filter((s) => s.judge_slot.startsWith("C")).length;
@@ -204,11 +208,13 @@ export function DifficultyManager({
           value={newValue}
           onChange={(e) => setNewValue(toWesternDigits(e.target.value))}
           onKeyDown={(e) => e.key === "Enter" && handleAddRow()}
+          placeholder="تلقائي"
           className="col-span-2 h-8 text-xs text-center font-mono bg-black border-white/15 num-west"
           dir="ltr"
           lang="en"
           inputMode="decimal"
         />
+
 
         <Button onClick={handleAddRow} size="sm" className="col-span-1 h-8 bg-emerald-500 hover:bg-emerald-600 text-white">
           <Plus className="h-3.5 w-3.5" />
