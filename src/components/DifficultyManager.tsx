@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useDifficultySheet, type DifficultySheetSourceAthlete } from "@/hooks/useDifficultySheet";
 import { toWesternDigits } from "@/lib/numFormat";
+import { lookupCode } from "@/lib/difficultyCodes";
 import type { JudgeStatusRow } from "@/types/matchTypes";
 
 // ============================================================================
@@ -207,11 +208,13 @@ export function DifficultyManager({
           value={newValue}
           onChange={(e) => setNewValue(toWesternDigits(e.target.value))}
           onKeyDown={(e) => e.key === "Enter" && handleAddRow()}
+          placeholder="تلقائي"
           className="col-span-2 h-8 text-xs text-center font-mono bg-black border-white/15 num-west"
           dir="ltr"
           lang="en"
           inputMode="decimal"
         />
+
 
         <Button onClick={handleAddRow} size="sm" className="col-span-1 h-8 bg-emerald-500 hover:bg-emerald-600 text-white">
           <Plus className="h-3.5 w-3.5" />
