@@ -553,6 +553,7 @@ export function JudgeCPanel() {
           </div>
           <div
             ref={trackRef}
+            dir="ltr"
             className="cyber-scroll-x overflow-x-auto overflow-y-hidden rounded-lg border border-cyber-orange/25 bg-black/40"
             style={{ height: "150px" }}
           >
