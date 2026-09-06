@@ -147,38 +147,59 @@ export function normalizeRow(row: Record<string, any>, tournamentId: string): No
 
   const styleRaw = pick(row, ["style", "styles", "discipline", "epreuve", "épreuve", "event", "event_type", "speciality", "specialty", "الأسلوب", "الاسلوب", "الاختصاص", "النوع"]);
   const modeRaw = pick(row, ["match_mode", "mode", "match mode", "type", "category_type", "نوع المنافسة", "النمط", "نمط", "نوع"]);
-  const diffRaw = pick(row, ["difficulty_codes", "difficulty codes", "difficulty", "codes", "صعوبة", "الصعوبة", "أكواد الصعوبة"]);
+  // Pattern C — one combined column holding all Group C codes.
+  const diffRaw = pick(row, [
+    "difficulty_codes", "difficulty codes", "difficulty", "difficulties", "codes",
+    "group_c", "group c", "groupc", "c_codes", "c codes", "movements", "difficulty_sheet",
+    "صعوبة", "الصعوبة", "أكواد الصعوبة", "حركات الصعوبة", "المجموعة ج",
+  ]);
   const birth_date = parseDate(birth);
   const style = detectStyle(styleRaw);
   const matchMode = detectMatchMode(modeRaw);
 
-  // ── Per-movement columns (C1_code, C1_value, C1_label … up to C20) ──
+  // ── Pattern A/B — per-movement columns:
+  //    A: C1_code + C1_value | C1_val | C1_pts (+ optional C1_label)
+  //    B: shorthand C1 / C2 / … holding the code alone (value looked up)
   const sheet: DifficultyItem[] = [];
   for (let i = 1; i <= 20; i++) {
     const code = pick(row, [
       `C${i}_code`, `c${i}_code`, `c${i} code`, `code${i}`, `code ${i}`,
       `movement${i}_code`, `m${i}_code`, `movement_${i}`, `صعوبة${i}`, `حركة${i}`,
+      // Pattern B — shorthand single column
+      `C${i}`, `c${i}`, `c-${i}`, `c ${i}`, `d${i}`, `diff${i}`, `difficulty${i}`,
     ]);
     if (!code) continue;
     const valRaw = pick(row, [
-      `C${i}_value`, `c${i}_value`, `c${i} value`, `value${i}`, `val${i}`,
-      `points${i}`, `pts${i}`, `قيمة${i}`,
+      `C${i}_value`, `c${i}_value`, `c${i} value`, `C${i}_val`, `c${i}_val`, `c${i} val`,
+      `value${i}`, `val${i}`, `points${i}`, `pts${i}`, `C${i}_pts`, `c${i}_points`, `قيمة${i}`,
     ]);
     const label = pick(row, [
       `C${i}_label`, `c${i}_label`, `c${i} label`, `label${i}`,
       `name${i}`, `movement${i}_name`, `اسم${i}`,
     ]);
+    const cleanCode = code.toUpperCase().trim();
     const v = parseFloat(valRaw.replace(",", "."));
+    const fallback = lookupCode(cleanCode);
     sheet.push({
-      code: code.toUpperCase().trim(),
-      label: label || code.toUpperCase().trim(),
-      value: isFinite(v) ? v : (code.endsWith("C") ? 0.4 : code.endsWith("B") ? 0.3 : 0.2),
+      code: cleanCode,
+      label: label || fallback.label || cleanCode,
+      value: isFinite(v) ? v : fallback.value,
     });
   }
 
+  // Pattern C — parse the combined column and build a sheet when no
+  // per-movement columns were present.
   const codes = diffRaw
-    ? String(diffRaw).split(/[,;|/\s]+/).map((c) => c.trim().toUpperCase()).filter(Boolean)
+    ? parseDifficultyCodes(diffRaw)
     : sheet.map((s) => s.code);
+
+  if (!sheet.length && codes.length) {
+    for (const c of codes) {
+      const meta = lookupCode(c);
+      sheet.push({ code: meta.code, label: meta.label, value: meta.value });
+    }
+  }
+
 
   return {
     tournament_id: tournamentId,
