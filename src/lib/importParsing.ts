@@ -14,6 +14,7 @@
 import { toWesternDigits } from "@/lib/numFormat";
 import { normalizeStyle } from "@/lib/styleNames";
 import { classifyAge, type AgeCategory } from "@/lib/ageCategories";
+import { lookupCode, parseDifficultyCodes } from "@/lib/difficultyCodes";
 
 // ============================================================================
 // Types
