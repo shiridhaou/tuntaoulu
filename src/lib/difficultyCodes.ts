@@ -56,8 +56,39 @@ export const CONNECTION_BONUSES: ConnectionBonus[] = [
 export const MAX_C_MOVEMENT = 1.4;
 export const MAX_C_CONNECTION = 0.6;
 
+/** Default bonus for a bare "+" connection node. */
+export const DEFAULT_CONNECTION_VALUE = 0.1;
+
+/**
+ * A "plus" connection node written by the TA as `+`, `+0.10`, `+0.15`, `+1`,
+ * `+6` … It belongs to the 0.60 connection bucket, never to the 1.40
+ * movement bucket. Returns null when the code is not a plus node.
+ */
+export function parsePlusConnection(
+  raw: string,
+): { code: string; value: number; suffix: string } | null {
+  const s = String(raw ?? "").trim().replace(/\s+/g, "");
+  if (!s.startsWith("+")) return null;
+  const suffix = s.slice(1);
+  if (suffix && !/^\d*[.,]?\d*$/.test(suffix)) return null; // e.g. "+353B" → combined code
+  const n = parseFloat(suffix.replace(",", "."));
+  // Decimal suffixes are explicit bonus values (0.10 / 0.15 / 0.20).
+  // Integer suffixes (+1, +6) are ordinal labels, not values.
+  const value = isFinite(n) && n > 0 && n < 1 ? n : DEFAULT_CONNECTION_VALUE;
+  return { code: `+${suffix}`, value, suffix };
+}
+
 export function lookupCode(code: string): DifficultyMovement {
   const key = code.trim().toUpperCase();
+  const plus = parsePlusConnection(key);
+  if (plus) {
+    return {
+      code: plus.code,
+      label: plus.suffix ? `Connection ${plus.suffix}` : "Connection",
+      connection: "Connection",
+      value: plus.value,
+    };
+  }
   if (/\+/.test(key)) {
     const parts = key.split("+").map(s => s.trim()).filter(Boolean);
     return {
