@@ -78,6 +78,65 @@ export function parsePlusConnection(
   return { code: `+${suffix}`, value, suffix };
 }
 
+/* ───────── Numeric connection codes (1 … 11) ─────────
+   Official sheets write connection / landing slots as bare numbers next to
+   the difficulty movement they belong to (e.g. `312A  +  324C  6  353B`).
+   They belong to the 0.60 connection bucket and their point value follows
+   the IWUF table: the grade (A / B / C) of the PRECEDING difficulty movement
+   and the discipline decide the bonus. */
+
+export type DifficultyGrade = "A" | "B" | "C";
+
+/** Bonus per grade of the preceding movement, per discipline family. */
+const CONNECTION_VALUE_BY_STYLE: Record<string, Record<DifficultyGrade, number>> = {
+  changquan:  { A: 0.1, B: 0.15, C: 0.2 },
+  nanquan:    { A: 0.1, B: 0.15, C: 0.2 },
+  taijiquan:  { A: 0.1, B: 0.15, C: 0.2 },
+  default:    { A: 0.1, B: 0.15, C: 0.2 },
+};
+
+/** Labels for the numeric connection / landing slots used on official sheets. */
+const NUMERIC_CONNECTION_LABELS: Record<number, { label: string; labelAr: string }> = {
+  1:  { label: "Connection 1",  labelAr: "ربط 1" },
+  2:  { label: "Connection 2",  labelAr: "ربط 2" },
+  3:  { label: "Connection 3",  labelAr: "ربط 3" },
+  4:  { label: "Connection 4",  labelAr: "ربط 4" },
+  5:  { label: "Connection 5",  labelAr: "ربط 5" },
+  6:  { label: "Connection 6",  labelAr: "ربط 6" },
+  7:  { label: "Connection 7",  labelAr: "ربط 7" },
+  8:  { label: "Connection 8",  labelAr: "ربط 8" },
+  9:  { label: "Connection 9",  labelAr: "ربط 9" },
+  10: { label: "Connection 10", labelAr: "ربط 10" },
+  11: { label: "Connection 11", labelAr: "ربط 11" },
+};
+
+/** True for a bare numeric connection slot code, `1` … `11`. */
+export function parseNumericConnection(raw: string): { code: string; ordinal: number } | null {
+  const s = String(raw ?? "").trim();
+  if (!/^\d{1,2}$/.test(s)) return null;
+  const n = parseInt(s, 10);
+  if (n < 1 || n > 11) return null;
+  return { code: String(n), ordinal: n };
+}
+
+/** Grade (A / B / C) carried by a difficulty code such as `353B`. */
+export function gradeOfCode(code: string): DifficultyGrade {
+  const last = String(code ?? "").trim().toUpperCase().slice(-1);
+  return last === "C" ? "C" : last === "B" ? "B" : "A";
+}
+
+/**
+ * Point value of a connection slot, given the discipline and the grade of the
+ * difficulty movement it is attached to. Used for numeric slots and for the
+ * bare `+` step connector.
+ */
+export function connectionValueFor(style?: string | null, grade: DifficultyGrade = "A"): number {
+  const table = CONNECTION_VALUE_BY_STYLE[String(style ?? "").toLowerCase()]
+    ?? CONNECTION_VALUE_BY_STYLE["default"]!;
+  return table[grade];
+}
+
+
 export function lookupCode(code: string): DifficultyMovement {
   const key = code.trim().toUpperCase();
   const plus = parsePlusConnection(key);
