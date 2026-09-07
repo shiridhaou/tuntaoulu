@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { broadcastSessionState } from "@/hooks/useMatchSync";
 import type { DifficultyItem } from "@/lib/importParsing";
-import { isConnectionCode, lookupCode } from "@/lib/difficultyCodes";
+import { isConnectionCode } from "@/lib/difficultyCodes";
 
 // ============================================================================
 // Types
