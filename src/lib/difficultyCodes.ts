@@ -195,22 +195,45 @@ export function buildDifficultySheet(codes: string[]): DifficultyMovement[] {
    "323A+353B". These are judged separately from movement difficulty and
    count against the 0.60 connection ceiling. */
 
-/** True when a code represents a connection (combined, or a "+" bonus node). */
-export function isConnectionCode(code: string): boolean {
-  return /\+/.test(String(code ?? ""));
+/** Context used to price a connection slot (discipline + preceding movement). */
+export interface ConnectionContext {
+  style?: string | null;
+  /** Code of the difficulty movement this connection is attached to. */
+  prevCode?: string | null;
 }
 
-/** Normalize a combined code like "323a + 353b", or a "+" bonus node, into a connection entry. */
-export function lookupConnection(code: string): ConnectionBonus {
-  const plus = parsePlusConnection(String(code).toUpperCase());
-  if (plus) {
+/** True when a code represents a connection: combined, `+` node, or `1`..`11`. */
+export function isConnectionCode(code: string): boolean {
+  const s = String(code ?? "").trim();
+  return /\+/.test(s) || parseNumericConnection(s) !== null;
+}
+
+/** Normalize a combined code, a "+" node, or a numeric slot into a connection entry. */
+export function lookupConnection(code: string, ctx: ConnectionContext = {}): ConnectionBonus {
+  const raw = String(code ?? "").trim();
+  const grade = gradeOfCode(ctx.prevCode ?? "");
+  const numeric = parseNumericConnection(raw);
+  if (numeric) {
+    const meta = NUMERIC_CONNECTION_LABELS[numeric.ordinal]!;
     return {
-      code: plus.code,
-      label: plus.suffix ? `Connection ${plus.suffix}` : "Connection",
-      labelAr: plus.suffix ? `ربط ${plus.suffix}` : "وضعية ربط",
-      value: plus.value,
+      code: numeric.code,
+      label: meta.label,
+      labelAr: meta.labelAr,
+      value: connectionValueFor(ctx.style, grade),
     };
   }
+  const plus = parsePlusConnection(raw.toUpperCase());
+  if (plus) {
+    // "+0.15" carries an explicit value; a bare "+" is priced from context.
+    const explicit = /^[.,]?\d*[.,]\d+$/.test(plus.suffix);
+    return {
+      code: plus.code,
+      label: plus.suffix ? `Connection ${plus.suffix}` : "Step Connection",
+      labelAr: plus.suffix ? `ربط ${plus.suffix}` : "ربط بخطوة",
+      value: explicit ? plus.value : connectionValueFor(ctx.style, grade),
+    };
+  }
+
   const parts = String(code).toUpperCase().split("+").map(s => s.trim()).filter(Boolean);
   const key = parts.join("+");
   const value = parts.length >= 3 ? 0.3 : 0.2;
