@@ -78,17 +78,78 @@ export function parsePlusConnection(
   return { code: `+${suffix}`, value, suffix };
 }
 
-export function lookupCode(code: string): DifficultyMovement {
+/* ───────── Numeric connection codes (1 … 11) ─────────
+   Official sheets write connection / landing slots as bare numbers next to
+   the difficulty movement they belong to (e.g. `312A  +  324C  6  353B`).
+   They belong to the 0.60 connection bucket and their point value follows
+   the IWUF table: the grade (A / B / C) of the PRECEDING difficulty movement
+   and the discipline decide the bonus. */
+
+export type DifficultyGrade = "A" | "B" | "C";
+
+/** Bonus per grade of the preceding movement, per discipline family. */
+const CONNECTION_VALUE_BY_STYLE: Record<string, Record<DifficultyGrade, number>> = {
+  changquan:  { A: 0.1, B: 0.15, C: 0.2 },
+  nanquan:    { A: 0.1, B: 0.15, C: 0.2 },
+  taijiquan:  { A: 0.1, B: 0.15, C: 0.2 },
+  default:    { A: 0.1, B: 0.15, C: 0.2 },
+};
+
+/** Labels for the numeric connection / landing slots used on official sheets. */
+const NUMERIC_CONNECTION_LABELS: Record<number, { label: string; labelAr: string }> = {
+  1:  { label: "Connection 1",  labelAr: "ربط 1" },
+  2:  { label: "Connection 2",  labelAr: "ربط 2" },
+  3:  { label: "Connection 3",  labelAr: "ربط 3" },
+  4:  { label: "Connection 4",  labelAr: "ربط 4" },
+  5:  { label: "Connection 5",  labelAr: "ربط 5" },
+  6:  { label: "Connection 6",  labelAr: "ربط 6" },
+  7:  { label: "Connection 7",  labelAr: "ربط 7" },
+  8:  { label: "Connection 8",  labelAr: "ربط 8" },
+  9:  { label: "Connection 9",  labelAr: "ربط 9" },
+  10: { label: "Connection 10", labelAr: "ربط 10" },
+  11: { label: "Connection 11", labelAr: "ربط 11" },
+};
+
+/** True for a bare numeric connection slot code, `1` … `11`. */
+export function parseNumericConnection(raw: string): { code: string; ordinal: number } | null {
+  const s = String(raw ?? "").trim();
+  if (!/^\d{1,2}$/.test(s)) return null;
+  const n = parseInt(s, 10);
+  if (n < 1 || n > 11) return null;
+  return { code: String(n), ordinal: n };
+}
+
+/** Grade (A / B / C) carried by a difficulty code such as `353B`. */
+export function gradeOfCode(code: string): DifficultyGrade {
+  const last = String(code ?? "").trim().toUpperCase().slice(-1);
+  return last === "C" ? "C" : last === "B" ? "B" : "A";
+}
+
+/**
+ * Point value of a connection slot, given the discipline and the grade of the
+ * difficulty movement it is attached to. Used for numeric slots and for the
+ * bare `+` step connector.
+ */
+export function connectionValueFor(style?: string | null, grade: DifficultyGrade = "A"): number {
+  const table = CONNECTION_VALUE_BY_STYLE[String(style ?? "").toLowerCase()]
+    ?? CONNECTION_VALUE_BY_STYLE["default"]!;
+  return table[grade];
+}
+
+
+export function lookupCode(code: string, ctx: { style?: string | null; prevCode?: string | null } = {}): DifficultyMovement {
   const key = code.trim().toUpperCase();
+  const numeric = parseNumericConnection(key);
+  if (numeric) {
+    const c = lookupConnection(key, ctx);
+    return { code: c.code, label: c.label, connection: "Connection", value: c.value };
+  }
   const plus = parsePlusConnection(key);
   if (plus) {
-    return {
-      code: plus.code,
-      label: plus.suffix ? `Connection ${plus.suffix}` : "Connection",
-      connection: "Connection",
-      value: plus.value,
-    };
+    const c = lookupConnection(key, ctx);
+    return { code: c.code, label: c.label, connection: "Connection", value: c.value };
   }
+
   if (/\+/.test(key)) {
     const parts = key.split("+").map(s => s.trim()).filter(Boolean);
     return {
@@ -136,22 +197,45 @@ export function buildDifficultySheet(codes: string[]): DifficultyMovement[] {
    "323A+353B". These are judged separately from movement difficulty and
    count against the 0.60 connection ceiling. */
 
-/** True when a code represents a connection (combined, or a "+" bonus node). */
-export function isConnectionCode(code: string): boolean {
-  return /\+/.test(String(code ?? ""));
+/** Context used to price a connection slot (discipline + preceding movement). */
+export interface ConnectionContext {
+  style?: string | null;
+  /** Code of the difficulty movement this connection is attached to. */
+  prevCode?: string | null;
 }
 
-/** Normalize a combined code like "323a + 353b", or a "+" bonus node, into a connection entry. */
-export function lookupConnection(code: string): ConnectionBonus {
-  const plus = parsePlusConnection(String(code).toUpperCase());
-  if (plus) {
+/** True when a code represents a connection: combined, `+` node, or `1`..`11`. */
+export function isConnectionCode(code: string): boolean {
+  const s = String(code ?? "").trim();
+  return /\+/.test(s) || parseNumericConnection(s) !== null;
+}
+
+/** Normalize a combined code, a "+" node, or a numeric slot into a connection entry. */
+export function lookupConnection(code: string, ctx: ConnectionContext = {}): ConnectionBonus {
+  const raw = String(code ?? "").trim();
+  const grade = gradeOfCode(ctx.prevCode ?? "");
+  const numeric = parseNumericConnection(raw);
+  if (numeric) {
+    const meta = NUMERIC_CONNECTION_LABELS[numeric.ordinal]!;
     return {
-      code: plus.code,
-      label: plus.suffix ? `Connection ${plus.suffix}` : "Connection",
-      labelAr: plus.suffix ? `ربط ${plus.suffix}` : "وضعية ربط",
-      value: plus.value,
+      code: numeric.code,
+      label: meta.label,
+      labelAr: meta.labelAr,
+      value: connectionValueFor(ctx.style, grade),
     };
   }
+  const plus = parsePlusConnection(raw.toUpperCase());
+  if (plus) {
+    // "+0.15" carries an explicit value; a bare "+" is priced from context.
+    const explicit = /^[.,]?\d*[.,]\d+$/.test(plus.suffix);
+    return {
+      code: plus.code,
+      label: plus.suffix ? `Connection ${plus.suffix}` : "Step Connection",
+      labelAr: plus.suffix ? `ربط ${plus.suffix}` : "ربط بخطوة",
+      value: explicit ? plus.value : connectionValueFor(ctx.style, grade),
+    };
+  }
+
   const parts = String(code).toUpperCase().split("+").map(s => s.trim()).filter(Boolean);
   const key = parts.join("+");
   const value = parts.length >= 3 ? 0.3 : 0.2;

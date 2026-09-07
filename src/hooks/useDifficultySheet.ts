@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { broadcastSessionState } from "@/hooks/useMatchSync";
 import type { DifficultyItem } from "@/lib/importParsing";
+import { isConnectionCode } from "@/lib/difficultyCodes";
 
 // ============================================================================
 // Types
@@ -115,7 +116,7 @@ export function useDifficultySheet({
     const normalizedCode = code.trim().toUpperCase();
     if (!normalizedCode) { toast.error("أدخل كود الحركة"); return; }
     // Connection nodes ("+", "+0.10", "+6" …) may legitimately repeat between movements.
-    const isConnection = normalizedCode.startsWith("+");
+    const isConnection = isConnectionCode(normalizedCode);
     if (!isConnection && sheet.some((d) => d.code === normalizedCode)) {
       toast.error("هذا الكود موجود مسبقاً"); return;
     }

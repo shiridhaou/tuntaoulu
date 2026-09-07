@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useDifficultySheet, type DifficultySheetSourceAthlete } from "@/hooks/useDifficultySheet";
 import { toWesternDigits } from "@/lib/numFormat";
-import { lookupCode } from "@/lib/difficultyCodes";
+import { lookupCode, isConnectionCode } from "@/lib/difficultyCodes";
 import type { JudgeStatusRow } from "@/types/matchTypes";
 
 // ============================================================================
@@ -65,7 +65,8 @@ export function DifficultyManager({
   function handleAddRow() {
     const v = parseFloat(newValue.replace(",", "."));
     // Blank value → auto-fill the IWUF default for this code.
-    const meta = lookupCode(newCode);
+    const prevCode = [...sheet].reverse().find((d) => !isConnectionCode(d.code))?.code ?? null;
+    const meta = lookupCode(newCode, { prevCode });
     addRow(newCode, newLabel || meta.label, isFinite(v) ? v : meta.value);
     setNewCode(""); setNewValue(""); setNewLabel("");
   }
