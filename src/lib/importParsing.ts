@@ -14,7 +14,7 @@
 import { toWesternDigits } from "@/lib/numFormat";
 import { normalizeStyle } from "@/lib/styleNames";
 import { classifyAge, type AgeCategory } from "@/lib/ageCategories";
-import { lookupCode, parseDifficultyCodes } from "@/lib/difficultyCodes";
+import { lookupCode, parseDifficultyCodes, isConnectionCode } from "@/lib/difficultyCodes";
 
 // ============================================================================
 // Types
@@ -162,6 +162,9 @@ export function normalizeRow(row: Record<string, any>, tournamentId: string): No
   //    A: C1_code + C1_value | C1_val | C1_pts (+ optional C1_label)
   //    B: shorthand C1 / C2 / … holding the code alone (value looked up)
   const sheet: DifficultyItem[] = [];
+  // Connections ("+" or numeric slots 1..11) are priced from the discipline and
+  // the grade of the difficulty movement they follow.
+  let lastMovementCode: string | null = null;
   for (let i = 1; i <= 20; i++) {
     const code = pick(row, [
       `C${i}_code`, `c${i}_code`, `c${i} code`, `code${i}`, `code ${i}`,
@@ -180,12 +183,13 @@ export function normalizeRow(row: Record<string, any>, tournamentId: string): No
     ]);
     const cleanCode = code.toUpperCase().trim();
     const v = parseFloat(valRaw.replace(",", "."));
-    const fallback = lookupCode(cleanCode);
+    const fallback = lookupCode(cleanCode, { style, prevCode: lastMovementCode });
     sheet.push({
-      code: cleanCode,
+      code: fallback.code,
       label: label || fallback.label || cleanCode,
       value: isFinite(v) ? v : fallback.value,
     });
+    if (!isConnectionCode(cleanCode)) lastMovementCode = cleanCode;
   }
 
   // Pattern C — parse the combined column and build a sheet when no
@@ -195,9 +199,11 @@ export function normalizeRow(row: Record<string, any>, tournamentId: string): No
     : sheet.map((s) => s.code);
 
   if (!sheet.length && codes.length) {
+    let prev: string | null = null;
     for (const c of codes) {
-      const meta = lookupCode(c);
+      const meta = lookupCode(c, { style, prevCode: prev });
       sheet.push({ code: meta.code, label: meta.label, value: meta.value });
+      if (!isConnectionCode(c)) prev = c;
     }
   }
 
