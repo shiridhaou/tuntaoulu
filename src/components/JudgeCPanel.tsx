@@ -243,15 +243,17 @@ export function JudgeCPanel() {
   const handleYes = () => {
     if (locked) { toast.error("التقييم مقفل"); return; }
     if (!current || judgedCodes.has(current.code)) return;
-    addJudgeCAttempt({ code: current.code, label: current.label, value: current.value, successful: true });
+    addJudgeCAttempt({ code: current.code, label: current.label, value: current.value, successful: true, kind: "movement" });
     advance();
   };
   const handleNo = () => {
     if (locked) { toast.error("التقييم مقفل"); return; }
     if (!current || judgedCodes.has(current.code)) return;
-    addJudgeCAttempt({ code: current.code, label: current.label, value: current.value, successful: false });
+    addJudgeCAttempt({ code: current.code, label: current.label, value: current.value, successful: false, kind: "movement" });
+    rejectLinkedConnections(current.code);
     advance();
   };
+
 
   // ── Quick international code tags + connection bonuses (Group C = 1.40 + 0.60) ──
   const movementTotal = useMemo(
