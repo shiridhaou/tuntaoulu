@@ -115,6 +115,9 @@ export function parseDifficultyCodes(raw: unknown): string[] {
   const s = String(raw).trim();
   if (!s) return [];
   return s
+    // keep "+ 0.10" / "+ 6" glued to their plus sign
+    .replace(/\+\s+(?=[\d.,])/g, "+")
+    // "323A+353B" stays combined; a standalone "+" stays its own token
     .split(/[,;|/\s]+/)
     .map(c => c.trim().toUpperCase())
     .filter(Boolean);
