@@ -137,17 +137,19 @@ export function connectionValueFor(style?: string | null, grade: DifficultyGrade
 }
 
 
-export function lookupCode(code: string): DifficultyMovement {
+export function lookupCode(code: string, ctx: { style?: string | null; prevCode?: string | null } = {}): DifficultyMovement {
   const key = code.trim().toUpperCase();
+  const numeric = parseNumericConnection(key);
+  if (numeric) {
+    const c = lookupConnection(key, ctx);
+    return { code: c.code, label: c.label, connection: "Connection", value: c.value };
+  }
   const plus = parsePlusConnection(key);
   if (plus) {
-    return {
-      code: plus.code,
-      label: plus.suffix ? `Connection ${plus.suffix}` : "Connection",
-      connection: "Connection",
-      value: plus.value,
-    };
+    const c = lookupConnection(key, ctx);
+    return { code: c.code, label: c.label, connection: "Connection", value: c.value };
   }
+
   if (/\+/.test(key)) {
     const parts = key.split("+").map(s => s.trim()).filter(Boolean);
     return {
