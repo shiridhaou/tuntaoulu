@@ -115,6 +115,9 @@ export function parseDifficultyCodes(raw: unknown): string[] {
   const s = String(raw).trim();
   if (!s) return [];
   return s
+    // keep "+ 0.10" / "+ 6" glued to their plus sign
+    .replace(/\+\s+(?=[\d.,])/g, "+")
+    // "323A+353B" stays combined; a standalone "+" stays its own token
     .split(/[,;|/\s]+/)
     .map(c => c.trim().toUpperCase())
     .filter(Boolean);
@@ -133,13 +136,22 @@ export function buildDifficultySheet(codes: string[]): DifficultyMovement[] {
    "323A+353B". These are judged separately from movement difficulty and
    count against the 0.60 connection ceiling. */
 
-/** True when a code represents a connection (combined) rather than a single movement. */
+/** True when a code represents a connection (combined, or a "+" bonus node). */
 export function isConnectionCode(code: string): boolean {
   return /\+/.test(String(code ?? ""));
 }
 
-/** Normalize a combined code like "323a + 353b" into a connection bonus entry. */
+/** Normalize a combined code like "323a + 353b", or a "+" bonus node, into a connection entry. */
 export function lookupConnection(code: string): ConnectionBonus {
+  const plus = parsePlusConnection(String(code).toUpperCase());
+  if (plus) {
+    return {
+      code: plus.code,
+      label: plus.suffix ? `Connection ${plus.suffix}` : "Connection",
+      labelAr: plus.suffix ? `ربط ${plus.suffix}` : "وضعية ربط",
+      value: plus.value,
+    };
+  }
   const parts = String(code).toUpperCase().split("+").map(s => s.trim()).filter(Boolean);
   const key = parts.join("+");
   const value = parts.length >= 3 ? 0.3 : 0.2;

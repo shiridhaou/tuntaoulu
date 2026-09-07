@@ -114,7 +114,11 @@ export function useDifficultySheet({
   const addRow = useCallback((code: string, label: string, value: number) => {
     const normalizedCode = code.trim().toUpperCase();
     if (!normalizedCode) { toast.error("أدخل كود الحركة"); return; }
-    if (sheet.some((d) => d.code === normalizedCode)) { toast.error("هذا الكود موجود مسبقاً"); return; }
+    // Connection nodes ("+", "+0.10", "+6" …) may legitimately repeat between movements.
+    const isConnection = normalizedCode.startsWith("+");
+    if (!isConnection && sheet.some((d) => d.code === normalizedCode)) {
+      toast.error("هذا الكود موجود مسبقاً"); return;
+    }
     setSheet((arr) => [...arr, {
       code: normalizedCode,
       label: label.trim() || normalizedCode,
