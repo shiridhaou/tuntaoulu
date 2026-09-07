@@ -138,10 +138,36 @@ export function JudgeCPanel() {
     () => fullSheet.filter(d => !isConnectionCode(d.code)),
     [fullSheet],
   );
-  const sheetConnections: ConnectionBonus[] = useMemo(
-    () => fullSheet.filter(d => isConnectionCode(d.code)).map(d => lookupConnection(d.code)),
-    [fullSheet],
-  );
+
+  /**
+   * Chronological timeline with each connection slot linked to the difficulty
+   * movement before it (which prices it) and the movement after it (invalidated
+   * when a step connector is rejected).
+   */
+  const timeline = useMemo(() => {
+    return fullSheet.map((d, index) => {
+      const isConnection = isConnectionCode(d.code);
+      let prevCode: string | null = null;
+      for (let i = index - 1; i >= 0; i--) {
+        const c = fullSheet[i]!.code;
+        if (!isConnectionCode(c)) { prevCode = c; break; }
+      }
+      let nextCode: string | null = null;
+      for (let i = index + 1; i < fullSheet.length; i++) {
+        const c = fullSheet[i]!.code;
+        if (!isConnectionCode(c)) { nextCode = c; break; }
+      }
+      const connection = isConnection
+        ? lookupConnection(d.code, { style: liveStyle ?? undefined, prevCode })
+        : null;
+      return { item: d, index, isConnection, connection, prevCode, nextCode };
+    });
+  }, [fullSheet, liveStyle]);
+
+  /** Connection slots attached to a given difficulty movement code. */
+  const connectionsOfMovement = (movementCode: string) =>
+    timeline.filter(t => t.isConnection && t.prevCode === movementCode);
+
 
   // Notify Judge C when a NEW difficulty sheet arrives from the TA
   const lastSheetSigRef = useRef<string>("");
