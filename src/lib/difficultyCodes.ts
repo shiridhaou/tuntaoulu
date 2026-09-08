@@ -95,27 +95,28 @@ const CONNECTION_VALUE_BY_STYLE: Record<string, Record<DifficultyGrade, number>>
   default:    { A: 0.1, B: 0.15, C: 0.2 },
 };
 
-/** Labels for the numeric connection / landing slots used on official sheets. */
+/** Official IWUF connection / landing slot labels, `0` … `11`. */
 const NUMERIC_CONNECTION_LABELS: Record<number, { label: string; labelAr: string }> = {
-  1:  { label: "Connection 1",  labelAr: "ربط 1" },
-  2:  { label: "Connection 2",  labelAr: "ربط 2" },
-  3:  { label: "Connection 3",  labelAr: "ربط 3" },
-  4:  { label: "Connection 4",  labelAr: "ربط 4" },
-  5:  { label: "Connection 5",  labelAr: "ربط 5" },
-  6:  { label: "Connection 6",  labelAr: "ربط 6" },
-  7:  { label: "Connection 7",  labelAr: "ربط 7" },
-  8:  { label: "Connection 8",  labelAr: "ربط 8" },
-  9:  { label: "Connection 9",  labelAr: "ربط 9" },
-  10: { label: "Connection 10", labelAr: "ربط 10" },
-  11: { label: "Connection 11", labelAr: "ربط 11" },
+  0:  { label: "Direct connection (0 steps)", labelAr: "ربط مباشر (بدون خطوات)" },
+  1:  { label: "Connection within 1 step",    labelAr: "ربط بخطوة واحدة" },
+  2:  { label: "Connection within 2 steps",   labelAr: "ربط بخطوتين" },
+  3:  { label: "Connection within 3 steps",   labelAr: "ربط بثلاث خطوات" },
+  4:  { label: "Connection within 4 steps",   labelAr: "ربط بأربع خطوات" },
+  5:  { label: "Landing connection 5",        labelAr: "ربط هبوط 5" },
+  6:  { label: "Landing connection 6",        labelAr: "ربط هبوط 6" },
+  7:  { label: "Landing connection 7",        labelAr: "ربط هبوط 7" },
+  8:  { label: "Kick connection 8",           labelAr: "ربط ركل 8" },
+  9:  { label: "Kick connection 9",           labelAr: "ربط ركل 9" },
+  10: { label: "Kick connection 10",          labelAr: "ربط ركل 10" },
+  11: { label: "Kick connection 11",          labelAr: "ربط ركل 11" },
 };
 
-/** True for a bare numeric connection slot code, `1` … `11`. */
+/** True for a bare numeric connection slot code, `0` … `11`. */
 export function parseNumericConnection(raw: string): { code: string; ordinal: number } | null {
   const s = String(raw ?? "").trim();
   if (!/^\d{1,2}$/.test(s)) return null;
   const n = parseInt(s, 10);
-  if (n < 1 || n > 11) return null;
+  if (n < 0 || n > 11) return null;
   return { code: String(n), ordinal: n };
 }
 
@@ -226,6 +227,17 @@ export function lookupConnection(code: string, ctx: ConnectionContext = {}): Con
   }
   const plus = parsePlusConnection(raw.toUpperCase());
   if (plus) {
+    // "+3" / "+6" are the same connection slots as the bare numbers.
+    const slot = /^\d{1,2}$/.test(plus.suffix) ? parseNumericConnection(plus.suffix) : null;
+    if (slot) {
+      const meta = NUMERIC_CONNECTION_LABELS[slot.ordinal]!;
+      return {
+        code: `+${slot.code}`,
+        label: meta.label,
+        labelAr: meta.labelAr,
+        value: connectionValueFor(ctx.style, grade),
+      };
+    }
     // "+0.15" carries an explicit value; a bare "+" is priced from context.
     const explicit = /^[.,]?\d*[.,]\d+$/.test(plus.suffix);
     return {
