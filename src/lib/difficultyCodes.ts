@@ -189,9 +189,15 @@ export function parseDifficultyCodes(raw: unknown): string[] {
  * Build a Group C difficulty sheet from a list of codes. Unknown codes get a
  * sensible fallback so judges still see them and can score them.
  */
-export function buildDifficultySheet(codes: string[]): DifficultyMovement[] {
-  return codes.map(lookupCode);
+export function buildDifficultySheet(codes: string[], style?: string | null): DifficultyMovement[] {
+  let prevCode: string | null = null;
+  return codes.map((code) => {
+    const meta = lookupCode(code, { style, prevCode });
+    if (!isConnectionCode(code)) prevCode = code;
+    return meta;
+  });
 }
+
 
 /* ───────── Connection codes (وضعيات الربط) ─────────
    Excel sheets may express a connection as a combined code such as
