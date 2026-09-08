@@ -267,16 +267,32 @@ export function JudgeCPanel() {
 
   const attemptIndex = (code: string) => judgeCAttempts.findIndex(a => a.code === code);
 
+  /** Force a timeline item into an accepted/rejected state (idempotent). */
+  const setAttemptState = (
+    code: string, label: string, value: number,
+    kind: "movement" | "connection", ok: boolean,
+  ) => {
+    const idx = attemptIndex(code);
+    if (idx >= 0) {
+      if (judgeCAttempts[idx]!.successful !== ok) toggleJudgeCAttempt(idx);
+      return;
+    }
+    addJudgeCAttempt({ code, label, value, successful: ok, kind });
+  };
+
+  /** IWUF cascade — a rejected movement voids every connection attached to it. */
+  const rejectLinkedConnections = (movementCode: string) => {
+    for (const t of connectionsOfMovement(movementCode)) {
+      if (!t.connection) continue;
+      setAttemptState(t.connection.code, t.connection.label, t.connection.value, "connection", false);
+    }
+  };
+
   /** Confirm / Unconfirm a specific movement of the athlete's sheet. */
   const validateMovement = (d: DifficultyMovement, ok: boolean) => {
     if (locked) { toast.error("التقييم مقفل"); return; }
-    const idx = attemptIndex(d.code);
-    if (idx >= 0) {
-      const cur = judgeCAttempts[idx];
-      if (cur.successful !== ok) toggleJudgeCAttempt(idx);
-      return;
-    }
-    addJudgeCAttempt({ code: d.code, label: d.label, value: d.value, successful: ok, kind: "movement" });
+    setAttemptState(d.code, d.label, d.value, "movement", ok);
+    if (!ok) rejectLinkedConnections(d.code);
   };
 
   /** Manual entry: add an extra / changed difficulty code during performance. */
@@ -284,23 +300,36 @@ export function JudgeCPanel() {
   const addManualCode = () => {
     const code = manualCode.trim().toUpperCase();
     if (!code) return;
-    const meta = lookupCode(code);
+    const prevCode = [...fullSheet].reverse().find(d => !isConnectionCode(d.code))?.code ?? null;
+    const meta = lookupCode(code, { style: liveStyle ?? undefined, prevCode });
     setExtraMovements(prev => prev.some(p => p.code === meta.code) ? prev : [...prev, meta]);
     setManualCode("");
     toast.success(`تمت إضافة الكود ${meta.code} · +${meta.value.toFixed(2)}`);
   };
 
-
-  const tapConnection = (b: ConnectionBonus) => {
+  /**
+   * Tap a connection slot. Rejecting a connection also invalidates the
+   * dependent (following) difficulty movement, per IWUF connection rules.
+   */
+  const tapConnection = (b: ConnectionBonus, nextMovementCode?: string | null) => {
     if (locked) { toast.error("التقييم مقفل"); return; }
     const idx = attemptIndex(b.code);
-    if (idx >= 0) { toggleJudgeCAttempt(idx); return; }
-    if (connectionTotal + b.value > MAX_C_CONNECTION + 1e-6) {
+    const nextOk = idx >= 0 ? !judgeCAttempts[idx]!.successful : true;
+    if (nextOk && idx < 0 && connectionTotal + b.value > MAX_C_CONNECTION + 1e-6) {
       toast.error(`سقف وضعيات الربط ${MAX_C_CONNECTION.toFixed(2)}`);
       return;
     }
-    addJudgeCAttempt({ code: b.code, label: b.label, value: b.value, successful: true, kind: "connection" });
+    setAttemptState(b.code, b.label, b.value, "connection", nextOk);
+    if (!nextOk && nextMovementCode) {
+      const dep = fullSheet.find(d => d.code === nextMovementCode);
+      if (dep) {
+        setAttemptState(dep.code, dep.label, dep.value, "movement", false);
+        rejectLinkedConnections(dep.code);
+        toast.info(`تم إلغاء الحركة المرتبطة ${dep.code}`);
+      }
+    }
   };
+
 
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
@@ -586,12 +615,10 @@ export function JudgeCPanel() {
             style={{ height: "150px" }}
           >
             <div className="flex min-w-max h-full items-stretch p-2" dir="ltr">
-              {fullSheet.map((d, timelineIndex) => {
-                const isConnection = isConnectionCode(d.code);
-                const movementIndex = isConnection ? -1 : sheet.findIndex(item => item.code === d.code);
-                const attempt = judgeCAttempts.find(a => a.code === d.code);
+              {timeline.map(({ item: d, index: timelineIndex, isConnection, connection, nextCode }) => {
+                const movementIndex = isConnection ? -1 : sheet.findIndex(m => m.code === d.code);
+                const attempt = judgeCAttempts.find(a => a.code === (connection?.code ?? d.code));
                 const isActive = movementIndex === activeIndex && !attempt;
-                const connection = isConnection ? lookupConnection(d.code) : null;
                 const status = !attempt ? "Pending" : attempt.successful ? "Accepted" : "Rejected";
                 return (
                   <motion.button
@@ -602,11 +629,12 @@ export function JudgeCPanel() {
                     onClick={(e) => {
                       e.currentTarget.blur();
                       if (isConnection && connection) {
-                        tapConnection(connection);
+                        tapConnection(connection, nextCode);
                         return;
                       }
                       validateMovement(d, attempt ? !attempt.successful : true);
                     }}
+
                     whileTap={locked ? undefined : { scale: 0.97 }}
                     className={`relative shrink-0 w-32 md:w-36 px-3 py-2 text-left border-y border-r first:border-l first:rounded-l-md last:rounded-r-md disabled:cursor-not-allowed disabled:opacity-50 transition-colors flex flex-col justify-between ${
                       attempt?.successful
