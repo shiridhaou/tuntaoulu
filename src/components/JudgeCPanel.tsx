@@ -615,12 +615,10 @@ export function JudgeCPanel() {
             style={{ height: "150px" }}
           >
             <div className="flex min-w-max h-full items-stretch p-2" dir="ltr">
-              {fullSheet.map((d, timelineIndex) => {
-                const isConnection = isConnectionCode(d.code);
-                const movementIndex = isConnection ? -1 : sheet.findIndex(item => item.code === d.code);
-                const attempt = judgeCAttempts.find(a => a.code === d.code);
+              {timeline.map(({ item: d, index: timelineIndex, isConnection, connection, nextCode }) => {
+                const movementIndex = isConnection ? -1 : sheet.findIndex(m => m.code === d.code);
+                const attempt = judgeCAttempts.find(a => a.code === (connection?.code ?? d.code));
                 const isActive = movementIndex === activeIndex && !attempt;
-                const connection = isConnection ? lookupConnection(d.code) : null;
                 const status = !attempt ? "Pending" : attempt.successful ? "Accepted" : "Rejected";
                 return (
                   <motion.button
@@ -631,11 +629,12 @@ export function JudgeCPanel() {
                     onClick={(e) => {
                       e.currentTarget.blur();
                       if (isConnection && connection) {
-                        tapConnection(connection);
+                        tapConnection(connection, nextCode);
                         return;
                       }
                       validateMovement(d, attempt ? !attempt.successful : true);
                     }}
+
                     whileTap={locked ? undefined : { scale: 0.97 }}
                     className={`relative shrink-0 w-32 md:w-36 px-3 py-2 text-left border-y border-r first:border-l first:rounded-l-md last:rounded-r-md disabled:cursor-not-allowed disabled:opacity-50 transition-colors flex flex-col justify-between ${
                       attempt?.successful
