@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { ListChecks, Send, CheckCircle2, Trash2, Plus, ShieldCheck, ShieldAlert } from "lucide-react";
 import { validateDifficultySheet } from "@/lib/groupCValidation";
