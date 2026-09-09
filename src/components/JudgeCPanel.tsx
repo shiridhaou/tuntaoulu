@@ -120,7 +120,11 @@ export function JudgeCPanel() {
 
   const [extraMovements, setExtraMovements] = useState<DifficultyMovement[]>([]);
   const fullSheet: DifficultyMovement[] = useMemo(() => {
-    const base = athlete?.difficultySheet?.length ? athlete.difficultySheet : DEFAULT_SHEET;
+    // The sample sheet is only a placeholder for an idle screen — as soon as an
+    // athlete is on the mat, only the TA-pushed sequence is shown.
+    const base = athlete?.difficultySheet?.length
+      ? athlete.difficultySheet
+      : (athlete ? [] : DEFAULT_SHEET);
     const extra = extraMovements.filter(e => !base.some(b => b.code === e.code));
     return [...base, ...extra];
   }, [athlete, extraMovements]);
