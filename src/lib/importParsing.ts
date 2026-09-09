@@ -168,18 +168,23 @@ export function normalizeRow(row: Record<string, any>, tournamentId: string): No
   for (let i = 1; i <= 20; i++) {
     const code = pick(row, [
       `C${i}_code`, `c${i}_code`, `c${i} code`, `code${i}`, `code ${i}`,
+      // P-prefixed sequence columns (P1_code … P14_code)
+      `P${i}_code`, `p${i}_code`, `p${i} code`, `P${i}-code`, `p${i}-code`,
       `movement${i}_code`, `m${i}_code`, `movement_${i}`, `صعوبة${i}`, `حركة${i}`,
       // Pattern B — shorthand single column
-      `C${i}`, `c${i}`, `c-${i}`, `c ${i}`, `d${i}`, `diff${i}`, `difficulty${i}`,
+      `C${i}`, `c${i}`, `c-${i}`, `c ${i}`, `P${i}`, `p${i}`, `p-${i}`, `p ${i}`,
+      `d${i}`, `diff${i}`, `difficulty${i}`,
     ]);
     if (!code) continue;
     const valRaw = pick(row, [
       `C${i}_value`, `c${i}_value`, `c${i} value`, `C${i}_val`, `c${i}_val`, `c${i} val`,
+      `P${i}_value`, `p${i}_value`, `p${i} value`, `P${i}_val`, `p${i}_val`, `p${i} val`,
+      `P${i}_pts`, `p${i}_points`,
       `value${i}`, `val${i}`, `points${i}`, `pts${i}`, `C${i}_pts`, `c${i}_points`, `قيمة${i}`,
     ]);
     const label = pick(row, [
-      `C${i}_label`, `c${i}_label`, `c${i} label`, `label${i}`,
-      `name${i}`, `movement${i}_name`, `اسم${i}`,
+      `C${i}_label`, `c${i}_label`, `c${i} label`, `P${i}_label`, `p${i}_label`, `p${i} label`,
+      `label${i}`, `name${i}`, `movement${i}_name`, `اسم${i}`,
     ]);
     const cleanCode = code.toUpperCase().trim();
     const v = parseFloat(valRaw.replace(",", "."));
