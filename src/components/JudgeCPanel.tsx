@@ -166,7 +166,8 @@ export function JudgeCPanel() {
     timeline.filter(t => t.isConnection && t.prevCode === movementCode);
 
 
-  // Notify Judge C when a NEW difficulty sheet arrives from the TA
+  // Notify Judge C when a NEW difficulty sheet arrives from the TA, and clear
+  // any judging done against the previous sequence so the strip starts at item 1.
   const lastSheetSigRef = useRef<string>("");
   useEffect(() => {
     if (!athlete?.difficultySheet?.length) return;
@@ -174,10 +175,14 @@ export function JudgeCPanel() {
     if (sig === lastSheetSigRef.current) return;
     const isFirst = lastSheetSigRef.current === "";
     lastSheetSigRef.current = sig;
+    setExtraMovements([]);
+    resetJudgeCAttempts();
+    setSentC(false);
     toast.success(`📋 استمارة الصعوبة ${isFirst ? "محمّلة" : "وصلت"} — ${athlete.difficultySheet.length} حركة`, {
       description: `${athlete.name ?? ""} · ${athlete.difficultySheet.map(d => d.code).join(" · ")}`,
       duration: 6000,
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [athlete?.id, athlete?.difficultySheet, athlete?.name]);
 
   const handleSubmit = async () => {
