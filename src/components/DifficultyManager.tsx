@@ -23,6 +23,8 @@ import type { JudgeStatusRow } from "@/types/matchTypes";
 export interface DifficultyManagerAthlete extends DifficultySheetSourceAthlete {
   full_name: string;
   bib_number: string | null;
+  /** Discipline used to validate the sequence (Changquan / Nanquan / Taiji). */
+  style?: string | null;
 }
 
 interface DifficultyManagerProps {
@@ -50,12 +52,14 @@ export function DifficultyManager({
 }: DifficultyManagerProps) {
   // Defensive: never throw when optional props are missing.
   const statuses = Array.isArray(judgeStatuses) ? judgeStatuses : [];
+  const [override, setOverride] = useState(false);
   const { sheet, total, pushed, saving, addRow, removeRow, updateRow, saveSheet } =
     useDifficultySheet({
       sessionCode,
       targetAthlete,
       isLive,
       onSaved: () => { if (typeof onSaved === "function") onSaved(); },
+      allowAutoPush: validationAllowsPush,
     });
 
   // Local UI-only state for the "add movement" row — raw text input parsing
