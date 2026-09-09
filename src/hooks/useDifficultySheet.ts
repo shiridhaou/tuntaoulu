@@ -40,6 +40,9 @@ interface UseDifficultySheetOptions {
   isLive: boolean;
   /** Called after every successful save (silent save or broadcast push). */
   onSaved?: () => void;
+  /** When false, the automatic broadcast is held back (e.g. the form failed
+   *  IWUF validation and the TA has not overridden it yet). */
+  allowAutoPush?: boolean;
 }
 
 interface UseDifficultySheetResult {
