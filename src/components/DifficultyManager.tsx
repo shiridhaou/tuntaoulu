@@ -168,12 +168,53 @@ export function DifficultyManager({
             className="h-8 border-white/20 text-white/80 hover:bg-white/10 text-xs">
             <CheckCircle2 className="h-3 w-3 ml-1" /> حفظ
           </Button>
-          <Button type="button" onClick={() => void saveSheet(true)} size="sm" disabled={saving || !sessionCode || sheet.length === 0}
+          <Button type="button" onClick={() => void saveSheet(true)} size="sm"
+            disabled={saving || !sessionCode || sheet.length === 0 || !canPush}
             className="h-8 bg-cyber-orange text-black hover:brightness-110 font-bold text-xs disabled:opacity-40">
             <Send className="h-3 w-3 ml-1" /> دفع لحكام C
           </Button>
         </div>
       </div>
+
+      {/* ===== FORM STATUS — IWUF compliance ===== */}
+      {sheet.length > 0 && (
+        <div className={`mb-3 rounded-xl border px-3 py-2 ${
+          compliant
+            ? "border-emerald-500/40 bg-emerald-500/10"
+            : "border-fed-red/50 bg-fed-red/10"
+        }`}>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              {compliant
+                ? <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                : <ShieldAlert className="h-4 w-4 text-fed-red" />}
+              <span className={`text-[11px] font-bold ${compliant ? "text-emerald-300" : "text-fed-red"}`} dir="ltr">
+                {compliant ? "Form Status: VALIDATED (IWUF Compliant)" : "Form Status: REJECTED / NON-COMPLIANT"}
+              </span>
+              <span className="text-[10px] text-white/50" dir="ltr">{validation.style}</span>
+            </div>
+            {!compliant && (
+              <Button type="button" size="sm" variant="outline" onClick={() => setOverride((v) => !v)}
+                className="h-7 text-[10px] border-white/20 text-white/80 hover:bg-white/10">
+                {override ? "إلغاء التجاوز اليدوي" : "تجاوز يدوي والسماح بالإرسال"}
+              </Button>
+            )}
+          </div>
+          {!compliant && (
+            <ul className="mt-1.5 space-y-0.5">
+              {errors.map((iss, i) => (
+                <li key={i} className="text-[10px] text-fed-red/90">
+                  {iss.position ? `#${iss.position} — ` : ""}{iss.message}
+                </li>
+              ))}
+            </ul>
+          )}
+          {!compliant && override && (
+            <p className="text-[10px] text-amber-300 mt-1">⚠️ تم تفعيل التجاوز اليدوي — الإرسال متاح على مسؤولية المساعد التقني.</p>
+          )}
+        </div>
+      )}
+
 
       {/* Sheet rows */}
       <div className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
