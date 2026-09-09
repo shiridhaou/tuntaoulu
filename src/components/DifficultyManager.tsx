@@ -135,6 +135,20 @@ export function DifficultyManager({
             <span className="text-[9px] text-white/50" dir="ltr">Movements</span>
             <span className="text-sm font-heading font-black text-white">{sheet.length}</span>
           </div>
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
+            validation.movementTotal > MAX_C_MOVEMENT
+              ? "border-fed-red/60 bg-fed-red/10" : "border-white/10 bg-white/5"
+          }`}>
+            <span className="text-[9px] text-white/50" dir="ltr">D {MAX_C_MOVEMENT.toFixed(2)}</span>
+            <span className="text-sm font-heading font-black text-white tabular-nums">{validation.movementTotal.toFixed(2)}</span>
+          </div>
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
+            validation.connectionTotal > MAX_C_CONNECTION
+              ? "border-fed-red/60 bg-fed-red/10" : "border-white/10 bg-white/5"
+          }`}>
+            <span className="text-[9px] text-white/50" dir="ltr">C {MAX_C_CONNECTION.toFixed(2)}</span>
+            <span className="text-sm font-heading font-black text-white tabular-nums">{validation.connectionTotal.toFixed(2)}</span>
+          </div>
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-cyber-orange/40 bg-cyber-orange/10">
             <span className="text-[9px] text-cyber-orange/80" dir="ltr">Total</span>
             <span className="text-sm font-heading font-black text-cyber-orange tabular-nums">{total.toFixed(2)}</span>
