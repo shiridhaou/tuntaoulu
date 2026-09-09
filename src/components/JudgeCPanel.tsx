@@ -78,16 +78,9 @@ export function JudgeCPanel() {
     let cancelled = false;
     const syncSession = async () => {
       try {
-        const { error } = await (supabase as any).from("active_sessions").upsert(
-          {
-            device_id: deviceIdRef.current,
-            session_code: code,
-            role: "C",
-            judge_slot: judgeId,
-            last_active: new Date().toISOString(),
-          },
-          { onConflict: "device_id" },
-        );
+        // Liveness probe against the session row itself (no side table needed).
+        const { error } = await supabase
+          .from("sessions").select("code").eq("code", code).maybeSingle();
         if (error) throw error;
         if (!cancelled) setReconnecting(false);
       } catch {
