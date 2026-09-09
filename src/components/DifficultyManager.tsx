@@ -53,14 +53,28 @@ export function DifficultyManager({
   // Defensive: never throw when optional props are missing.
   const statuses = Array.isArray(judgeStatuses) ? judgeStatuses : [];
   const [override, setOverride] = useState(false);
+  const [allowAutoPush, setAllowAutoPush] = useState(true);
   const { sheet, total, pushed, saving, addRow, removeRow, updateRow, saveSheet } =
     useDifficultySheet({
       sessionCode,
       targetAthlete,
       isLive,
       onSaved: () => { if (typeof onSaved === "function") onSaved(); },
-      allowAutoPush: validationAllowsPush,
+      allowAutoPush,
     });
+
+  // ── IWUF compliance check (discipline-aware) ──────────────────────────────
+  const validation = useMemo(
+    () => validateDifficultySheet(sheet, targetAthlete?.style ?? null),
+    [sheet, targetAthlete?.style],
+  );
+  const errors = validation.issues.filter((x) => x.severity === "error");
+  const compliant = validation.valid;
+  const canPush = compliant || override;
+
+  useEffect(() => { setOverride(false); }, [targetAthlete?.id]);
+  useEffect(() => { setAllowAutoPush(canPush); }, [canPush]);
+
 
   // Local UI-only state for the "add movement" row — raw text input parsing
   // (comma decimal support) stays here; the hook deals in numbers only.
