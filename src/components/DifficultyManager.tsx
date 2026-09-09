@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { ListChecks, Send, CheckCircle2, Trash2, Plus } from "lucide-react";
+import { ListChecks, Send, CheckCircle2, Trash2, Plus, ShieldCheck, ShieldAlert } from "lucide-react";
+import { validateDifficultySheet } from "@/lib/groupCValidation";
+import { MAX_C_MOVEMENT, MAX_C_CONNECTION } from "@/lib/difficultyCodes";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useDifficultySheet, type DifficultySheetSourceAthlete } from "@/hooks/useDifficultySheet";
