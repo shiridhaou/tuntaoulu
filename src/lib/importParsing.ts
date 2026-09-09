@@ -148,9 +148,15 @@ export function normalizeRow(row: Record<string, any>, tournamentId: string): No
 
   const styleRaw = pick(row, ["style", "styles", "discipline", "epreuve", "épreuve", "event", "event_type", "speciality", "specialty", "الأسلوب", "الاسلوب", "الاختصاص", "النوع"]);
   const modeRaw = pick(row, ["match_mode", "mode", "match mode", "type", "category_type", "نوع المنافسة", "النمط", "نمط", "نوع"]);
+  // Pattern B2 — a single free-text sequence column ("323A 6 353B + 324C").
+  const sequenceRaw = pick(row, [
+    "sequence_text", "sequence", "seq", "sequence text", "seq_text",
+    "movement_sequence", "movements_sequence", "التسلسل", "تسلسل الحركات",
+  ]);
   // Pattern C — one combined column holding all Group C codes.
   const diffRaw = pick(row, [
-    "difficulty_codes", "difficulty codes", "difficulty", "difficulties", "codes",
+    "difficulty_codes", "difficulty_code", "difficulty_cod", "difficulty codes", "difficulty code",
+    "difficulty", "difficulties", "codes",
     "group_c", "group c", "groupc", "c_codes", "c codes", "movements", "difficulty_sheet",
     "صعوبة", "الصعوبة", "أكواد الصعوبة", "حركات الصعوبة", "المجموعة ج",
   ]);
@@ -197,11 +203,14 @@ export function normalizeRow(row: Record<string, any>, tournamentId: string): No
     if (!isConnectionCode(cleanCode)) lastMovementCode = cleanCode;
   }
 
-  // Pattern C — parse the combined column and build a sheet when no
-  // per-movement columns were present.
-  const codes = diffRaw
-    ? parseDifficultyCodes(diffRaw)
-    : sheet.map((s) => s.code);
+  // Fallback priority: (A) sequential P#/C# columns win, then (B) a free-text
+  // `sequence_text`, then (C) a comma-separated `difficulty_code(s)` column.
+  const fallbackRaw = sequenceRaw || diffRaw;
+  const codes = sheet.length
+    ? sheet.map((s) => s.code)
+    : fallbackRaw
+      ? parseDifficultyCodes(fallbackRaw)
+      : [];
 
   if (!sheet.length && codes.length) {
     let prev: string | null = null;
