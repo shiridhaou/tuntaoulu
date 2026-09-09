@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { ListChecks, Send, CheckCircle2, Trash2, Plus } from "lucide-react";
+import { ListChecks, Send, CheckCircle2, Trash2, Plus, ShieldCheck, ShieldAlert } from "lucide-react";
+import { validateDifficultySheet } from "@/lib/groupCValidation";
+import { MAX_C_MOVEMENT, MAX_C_CONNECTION } from "@/lib/difficultyCodes";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useDifficultySheet, type DifficultySheetSourceAthlete } from "@/hooks/useDifficultySheet";
@@ -21,6 +23,8 @@ import type { JudgeStatusRow } from "@/types/matchTypes";
 export interface DifficultyManagerAthlete extends DifficultySheetSourceAthlete {
   full_name: string;
   bib_number: string | null;
+  /** Discipline used to validate the sequence (Changquan / Nanquan / Taiji). */
+  style?: string | null;
 }
 
 interface DifficultyManagerProps {
@@ -48,13 +52,29 @@ export function DifficultyManager({
 }: DifficultyManagerProps) {
   // Defensive: never throw when optional props are missing.
   const statuses = Array.isArray(judgeStatuses) ? judgeStatuses : [];
+  const [override, setOverride] = useState(false);
+  const [allowAutoPush, setAllowAutoPush] = useState(true);
   const { sheet, total, pushed, saving, addRow, removeRow, updateRow, saveSheet } =
     useDifficultySheet({
       sessionCode,
       targetAthlete,
       isLive,
       onSaved: () => { if (typeof onSaved === "function") onSaved(); },
+      allowAutoPush,
     });
+
+  // ── IWUF compliance check (discipline-aware) ──────────────────────────────
+  const validation = useMemo(
+    () => validateDifficultySheet(sheet, targetAthlete?.style ?? null),
+    [sheet, targetAthlete?.style],
+  );
+  const errors = validation.issues.filter((x) => x.severity === "error");
+  const compliant = validation.valid;
+  const canPush = compliant || override;
+
+  useEffect(() => { setOverride(false); }, [targetAthlete?.id]);
+  useEffect(() => { setAllowAutoPush(canPush); }, [canPush]);
+
 
   // Local UI-only state for the "add movement" row — raw text input parsing
   // (comma decimal support) stays here; the hook deals in numbers only.
@@ -115,6 +135,20 @@ export function DifficultyManager({
             <span className="text-[9px] text-white/50" dir="ltr">Movements</span>
             <span className="text-sm font-heading font-black text-white">{sheet.length}</span>
           </div>
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
+            validation.movementTotal > MAX_C_MOVEMENT
+              ? "border-fed-red/60 bg-fed-red/10" : "border-white/10 bg-white/5"
+          }`}>
+            <span className="text-[9px] text-white/50" dir="ltr">D {MAX_C_MOVEMENT.toFixed(2)}</span>
+            <span className="text-sm font-heading font-black text-white tabular-nums">{validation.movementTotal.toFixed(2)}</span>
+          </div>
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
+            validation.connectionTotal > MAX_C_CONNECTION
+              ? "border-fed-red/60 bg-fed-red/10" : "border-white/10 bg-white/5"
+          }`}>
+            <span className="text-[9px] text-white/50" dir="ltr">C {MAX_C_CONNECTION.toFixed(2)}</span>
+            <span className="text-sm font-heading font-black text-white tabular-nums">{validation.connectionTotal.toFixed(2)}</span>
+          </div>
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-cyber-orange/40 bg-cyber-orange/10">
             <span className="text-[9px] text-cyber-orange/80" dir="ltr">Total</span>
             <span className="text-sm font-heading font-black text-cyber-orange tabular-nums">{total.toFixed(2)}</span>
@@ -134,12 +168,53 @@ export function DifficultyManager({
             className="h-8 border-white/20 text-white/80 hover:bg-white/10 text-xs">
             <CheckCircle2 className="h-3 w-3 ml-1" /> حفظ
           </Button>
-          <Button type="button" onClick={() => void saveSheet(true)} size="sm" disabled={saving || !sessionCode || sheet.length === 0}
+          <Button type="button" onClick={() => void saveSheet(true)} size="sm"
+            disabled={saving || !sessionCode || sheet.length === 0 || !canPush}
             className="h-8 bg-cyber-orange text-black hover:brightness-110 font-bold text-xs disabled:opacity-40">
             <Send className="h-3 w-3 ml-1" /> دفع لحكام C
           </Button>
         </div>
       </div>
+
+      {/* ===== FORM STATUS — IWUF compliance ===== */}
+      {sheet.length > 0 && (
+        <div className={`mb-3 rounded-xl border px-3 py-2 ${
+          compliant
+            ? "border-emerald-500/40 bg-emerald-500/10"
+            : "border-fed-red/50 bg-fed-red/10"
+        }`}>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              {compliant
+                ? <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                : <ShieldAlert className="h-4 w-4 text-fed-red" />}
+              <span className={`text-[11px] font-bold ${compliant ? "text-emerald-300" : "text-fed-red"}`} dir="ltr">
+                {compliant ? "Form Status: VALIDATED (IWUF Compliant)" : "Form Status: REJECTED / NON-COMPLIANT"}
+              </span>
+              <span className="text-[10px] text-white/50" dir="ltr">{validation.style}</span>
+            </div>
+            {!compliant && (
+              <Button type="button" size="sm" variant="outline" onClick={() => setOverride((v) => !v)}
+                className="h-7 text-[10px] border-white/20 text-white/80 hover:bg-white/10">
+                {override ? "إلغاء التجاوز اليدوي" : "تجاوز يدوي والسماح بالإرسال"}
+              </Button>
+            )}
+          </div>
+          {!compliant && (
+            <ul className="mt-1.5 space-y-0.5">
+              {errors.map((iss, i) => (
+                <li key={i} className="text-[10px] text-fed-red/90">
+                  {iss.position ? `#${iss.position} — ` : ""}{iss.message}
+                </li>
+              ))}
+            </ul>
+          )}
+          {!compliant && override && (
+            <p className="text-[10px] text-amber-300 mt-1">⚠️ تم تفعيل التجاوز اليدوي — الإرسال متاح على مسؤولية المساعد التقني.</p>
+          )}
+        </div>
+      )}
+
 
       {/* Sheet rows */}
       <div className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
