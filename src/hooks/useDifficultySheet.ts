@@ -69,6 +69,7 @@ export function useDifficultySheet({
   targetAthlete,
   isLive,
   onSaved,
+  allowAutoPush = true,
 }: UseDifficultySheetOptions): UseDifficultySheetResult {
   const [sheet, setSheet] = useState<DifficultyItem[]>([]);
   const [saving, setSaving] = useState(false);
@@ -198,11 +199,12 @@ export function useDifficultySheet({
   useEffect(() => {
     if (!targetAthlete || !sessionCode) return;
     if (sheet.length === 0) return;
+    if (!allowAutoPush) return;
     if (autoPushRef.current === targetAthlete.id) return;
     autoPushRef.current = targetAthlete.id;
     void saveSheet(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetAthlete?.id, isLive, sessionCode, sheet.length]);
+  }, [targetAthlete?.id, isLive, sessionCode, sheet.length, allowAutoPush]);
 
   return { sheet, total, pushed, saving, addRow, removeRow, updateRow, saveSheet };
 }
