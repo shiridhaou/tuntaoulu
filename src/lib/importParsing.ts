@@ -203,11 +203,14 @@ export function normalizeRow(row: Record<string, any>, tournamentId: string): No
     if (!isConnectionCode(cleanCode)) lastMovementCode = cleanCode;
   }
 
-  // Pattern C — parse the combined column and build a sheet when no
-  // per-movement columns were present.
-  const codes = diffRaw
-    ? parseDifficultyCodes(diffRaw)
-    : sheet.map((s) => s.code);
+  // Fallback priority: (A) sequential P#/C# columns win, then (B) a free-text
+  // `sequence_text`, then (C) a comma-separated `difficulty_code(s)` column.
+  const fallbackRaw = sequenceRaw || diffRaw;
+  const codes = sheet.length
+    ? sheet.map((s) => s.code)
+    : fallbackRaw
+      ? parseDifficultyCodes(fallbackRaw)
+      : [];
 
   if (!sheet.length && codes.length) {
     let prev: string | null = null;
