@@ -7,7 +7,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useDifficultySheet, type DifficultySheetSourceAthlete } from "@/hooks/useDifficultySheet";
 import { toWesternDigits } from "@/lib/numFormat";
-import { lookupCode, isConnectionCode } from "@/lib/difficultyCodes";
+import { lookupCode, isConnectionCode, isKnownCode, KNOWN_CODE_OPTIONS } from "@/lib/difficultyCodes";
 import type { JudgeStatusRow } from "@/types/matchTypes";
 
 // ============================================================================
@@ -216,6 +216,13 @@ export function DifficultyManager({
       )}
 
 
+      {/* Valid IWUF codes offered as inline suggestions in every code input */}
+      <datalist id="iwuf-code-options">
+        {KNOWN_CODE_OPTIONS.map((o) => (
+          <option key={o.code} value={o.code}>{`${o.label} — ${o.value.toFixed(2)}`}</option>
+        ))}
+      </datalist>
+
       {/* Sheet rows */}
       <div className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
         {sheet.length === 0 ? (
@@ -229,18 +236,39 @@ export function DifficultyManager({
                 <span className="col-span-1 text-[10px] text-white/40 font-mono text-center num-west">{i + 1}</span>
                 <Input
                   value={toWesternDigits(d.code)}
-                  onChange={(e) => updateRow(i, { code: toWesternDigits(e.target.value).toUpperCase() })}
-                  className="col-span-2 h-7 text-xs font-mono font-bold text-cyber-orange bg-black border-white/10 num-west"
+                  list="iwuf-code-options"
+                  onChange={(e) => {
+                    const code = toWesternDigits(e.target.value).toUpperCase();
+                    if (isKnownCode(code)) {
+                      const prevCode = [...sheet].slice(0, i).reverse().find((x) => !isConnectionCode(x.code))?.code ?? null;
+                      const meta = lookupCode(code, { style: targetAthlete?.style ?? null, prevCode });
+                      updateRow(i, { code, label: meta.label, value: meta.value });
+                    } else {
+                      updateRow(i, { code });
+                    }
+                  }}
+                  className={`col-span-2 h-7 text-xs font-mono font-bold bg-black num-west ${
+                    isKnownCode(d.code)
+                      ? "text-cyber-orange border-white/10"
+                      : "text-fed-red border-fed-red/60"
+                  }`}
                   dir="ltr"
                   lang="en"
                   inputMode="text"
                 />
-                <Input
-                  value={d.label}
-                  onChange={(e) => updateRow(i, { label: e.target.value })}
-                  placeholder="اسم الحركة / Label"
-                  className="col-span-7 h-7 text-xs bg-black border-white/10 text-white"
-                />
+                <div className="col-span-7 flex items-center gap-2">
+                  <Input
+                    value={d.label}
+                    onChange={(e) => updateRow(i, { label: e.target.value })}
+                    placeholder="اسم الحركة / Label"
+                    className="flex-1 h-7 text-xs bg-black border-white/10 text-white"
+                  />
+                  {!isKnownCode(d.code) && (
+                    <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold bg-fed-red/20 text-fed-red border border-fed-red/40" dir="ltr">
+                      Invalid Code
+                    </span>
+                  )}
+                </div>
                 <Input
                   type="number" step="0.05" min="0" max="1"
                   value={toWesternDigits(d.value)}
@@ -268,6 +296,7 @@ export function DifficultyManager({
           onChange={(e) => setNewCode(toWesternDigits(e.target.value).toUpperCase())}
           onKeyDown={(e) => e.key === "Enter" && handleAddRow()}
           placeholder="Code (e.g. 323A)"
+          list="iwuf-code-options"
           className="col-span-3 h-8 text-xs font-mono bg-black border-white/15 num-west"
           dir="ltr"
           lang="en"

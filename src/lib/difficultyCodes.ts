@@ -31,6 +31,25 @@ const CATALOG: Record<string, Omit<DifficultyMovement, "code">> = {
   "753A": { label: "Weapon Aerial 360°",    connection: "Independent", value: 0.3 },
 };
 
+/** Every difficulty code known to the internal Taolu rules table. */
+export const KNOWN_CODES: string[] = Object.keys(CATALOG).sort();
+
+/** Label + value pairs for TA drop-downs. */
+export const KNOWN_CODE_OPTIONS: { code: string; label: string; value: number }[] =
+  KNOWN_CODES.map((code) => ({ code, label: CATALOG[code]!.label, value: CATALOG[code]!.value }));
+
+/**
+ * True when a code can be resolved by the engine: a catalogued difficulty
+ * movement, a numeric connection slot (0…11), or a "+" connection node.
+ * Anything else is surfaced as "Invalid Code" in the TA table.
+ */
+export function isKnownCode(code: string): boolean {
+  const key = String(code ?? "").trim().toUpperCase();
+  if (!key) return false;
+  if (isConnectionCode(key)) return true;
+  return Object.prototype.hasOwnProperty.call(CATALOG, key);
+}
+
 /** Codes offered as one-tap shortcuts on the Group C judge panel. */
 export const QUICK_CODES: string[] = [
   "323A", "324B", "353C", "753A", "324C", "355B",

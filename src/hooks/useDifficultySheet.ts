@@ -27,6 +27,8 @@ export interface DifficultySheetSourceAthlete {
   id: string;
   difficulty_sheet?: DifficultyItem[] | null;
   difficulty_codes?: string[] | null;
+  /** Discipline used to price connection slots when rebuilding the sheet. */
+  style?: string | null;
 }
 
 interface UseDifficultySheetOptions {
@@ -104,7 +106,7 @@ export function useDifficultySheet({
         })));
       } else if (codes && codes.length) {
         const { buildDifficultySheet } = await import("@/lib/difficultyCodes");
-        setSheet(buildDifficultySheet(codes) as DifficultyItem[]);
+        setSheet(buildDifficultySheet(codes, targetAthlete.style ?? null) as DifficultyItem[]);
       } else {
         setSheet([]);
       }
