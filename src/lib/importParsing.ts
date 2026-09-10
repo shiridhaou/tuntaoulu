@@ -302,7 +302,10 @@ export function normalizeRow(row: Record<string, any>, tournamentId: string): No
 
 
 
-  const age_category = (categoryRaw && String(categoryRaw).trim()) || classifyAge(birth_date);
+  const categoryMode = detectMatchMode(categoryRaw);
+  const age_category = categoryRaw && !categoryMode
+    ? String(categoryRaw).trim()
+    : classifyAge(birth_date);
   const matchMode = inferMatchMode({
     mode: modeRaw,
     style: styleRaw,

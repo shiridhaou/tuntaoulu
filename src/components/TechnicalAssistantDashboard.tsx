@@ -540,7 +540,7 @@ function TADashboardInner() {
       const unsetCount = records.length - compCount - optCount;
       const moves = records.reduce((s, r) => s + (r.difficulty_sheet?.length ?? 0), 0);
       toast.success(
-        `تمت قراءة ${records.length} لاعب — إلزامي: ${compCount} • اختياري: ${optCount} لاعب (${optionalMoves} حركة)` +
+        `تمت قراءة ${records.length} لاعب — إلزامي: ${compCount} • اختياري: ${optionalMoves} حركة (${optCount} لاعب)` +
         (unsetCount ? ` • غير محدد: ${unsetCount}` : "") +
         (moves ? ` • ${moves} حركة صعوبة` : "") + " — راجع ثم اضغط تأكيد"
       );
@@ -694,8 +694,7 @@ function TADashboardInner() {
 
   async function startMatch(athlete: Athlete) {
     if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
-    const athleteMode = athlete.routine_mode
-      ?? ((athlete.difficulty_sheet?.length ?? athlete.difficulty_codes?.length ?? 0) > 0 ? "optional" : matchMode);
+    const athleteMode = routineModeForAthlete(athlete);
     if (!configLocked && athleteMode !== matchMode) setMatchMode(athleteMode);
     // RC-1: optimistic local status authority — the queue, the call box and the
     // match phase flip instantly even for athletes that only exist locally.
@@ -1172,16 +1171,15 @@ function TADashboardInner() {
   // for the Group C difficulty box (does NOT start the match).
   function selectAthlete(a: Athlete) {
     setSelectedId(a.id);
-    const importedMode = a.routine_mode
-      ?? ((a.difficulty_sheet?.length ?? a.difficulty_codes?.length ?? 0) > 0 ? "optional" : null);
+    const importedMode = routineModeForAthlete(a);
     if (!configLocked && importedMode === "optional") setMatchMode("optional");
-    void callAthlete(a, !configLocked && importedMode ? importedMode : matchMode);
+    void callAthlete(a, importedMode);
     pushLog("match", `🎯 اختيار: ${a.full_name}`);
   }
 
   // Unified call + start for the up-next athlete.
   async function callAndStart(a: Athlete) {
-    await callAthlete(a);
+    await callAthlete(a, routineModeForAthlete(a));
     await startMatch(a);
   }
 
