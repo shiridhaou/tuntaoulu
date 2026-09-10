@@ -687,6 +687,9 @@ function TADashboardInner() {
 
   async function startMatch(athlete: Athlete) {
     if (!sessionCode) { toast.error("لا يوجد رمز جلسة"); return; }
+    const athleteMode = athlete.routine_mode
+      ?? ((athlete.difficulty_sheet?.length ?? athlete.difficulty_codes?.length ?? 0) > 0 ? "optional" : matchMode);
+    if (!configLocked && athleteMode !== matchMode) setMatchMode(athleteMode);
     // RC-1: optimistic local status authority — the queue, the call box and the
     // match phase flip instantly even for athletes that only exist locally.
     setAthletes((prev) => prev.map((a) =>
@@ -731,7 +734,7 @@ function TADashboardInner() {
       category: athlete.age_category ?? null,
     };
     await mergeMatchPayload(sessionCode, {
-      match_mode: matchMode,
+      match_mode: athleteMode,
       style: liveStyle,
       time_rule_id: timeRuleId,
       locked: configLocked,
@@ -750,7 +753,7 @@ function TADashboardInner() {
     });
 
     // Instant MATCH_STATE_CHANGE fan-out (Chief, A/B/C, VAR) + C-sheet push.
-    await publishMatchState(athlete, "LIVE", difficultySheet);
+    await publishMatchState(athlete, "LIVE", difficultySheet, athleteMode);
 
     // Reset all existing judge slots to judging for this athlete
     await supabase.from("judge_status")
@@ -767,11 +770,11 @@ function TADashboardInner() {
     await matchControl.start(sessionCode);
     await emitEvent("match_started", {
       athlete_id: athlete.id, name: athlete.full_name,
-      match_mode: matchMode, style: styleCategory,
+      match_mode: athleteMode, style: styleCategory,
       difficulty_count: difficultySheet.length,
       difficulty_sheet: difficultySheet,
     });
-    pushLog("match", `▶ ${athlete.full_name} • ${styleCategory} • ${matchMode}`);
+    pushLog("match", `▶ ${athlete.full_name} • ${styleCategory} • ${athleteMode}`);
     toast.success(`بدأت مباراة ${athlete.full_name}`);
     void loadActive();
     void loadJudgeStatuses();
@@ -850,6 +853,7 @@ function TADashboardInner() {
     athlete: Athlete,
     status: "CALLED" | "LIVE",
     movements: DifficultyItem[],
+    routineMode: "compulsory" | "optional" = matchMode,
   ) {
     if (!sessionCode) return;
     const style = normalizeStyle(athlete.style ?? styleCategory, styleCategory);
@@ -862,7 +866,7 @@ function TADashboardInner() {
       category: athlete.age_category ?? null,
     };
     const patch = {
-      match_mode: matchMode,
+      match_mode: routineMode,
       style,
       time_rule_id: timeRuleId,
       locked: configLocked,
@@ -892,9 +896,9 @@ function TADashboardInner() {
     });
   }
 
-  async function callAthlete(athlete: Athlete) {
+  async function callAthlete(athlete: Athlete, routineMode: "compulsory" | "optional" = matchMode) {
     const movements = await resolveMovements(athlete);
-    await publishMatchState(athlete, "CALLED", movements);
+    await publishMatchState(athlete, "CALLED", movements, routineMode);
     await emitEvent("call_next", {
       athlete_id: athlete.id,
       name: athlete.full_name,
@@ -1164,7 +1168,7 @@ function TADashboardInner() {
     const importedMode = a.routine_mode
       ?? ((a.difficulty_sheet?.length ?? a.difficulty_codes?.length ?? 0) > 0 ? "optional" : null);
     if (!configLocked && importedMode === "optional") setMatchMode("optional");
-    void callAthlete(a);
+    void callAthlete(a, !configLocked && importedMode ? importedMode : matchMode);
     pushLog("match", `🎯 اختيار: ${a.full_name}`);
   }
 
