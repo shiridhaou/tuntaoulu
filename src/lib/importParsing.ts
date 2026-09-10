@@ -215,6 +215,56 @@ export function normalizeRow(row: Record<string, any>, tournamentId: string): No
     codes = sheet.map((s) => s.code);
   }
 
+  // ── Pattern D (100% dynamic fallback): scan ALL headers for anything that
+  //    looks like a difficulty source, regardless of exact naming.
+  //    Covers headers containing "diff", "code", "صعوب", "حرك", or matching
+  //    sequential patterns like C1/C1_code/P1/P1_code — in any language,
+  //    casing, or separator style. Values may be comma/space/slash/pipe
+  //    separated strings ("323A,324A,353A") or single codes per column.
+  if (!codes.length) {
+    const sequential: { idx: number; value: string }[] = [];
+    const combined: string[] = [];
+    for (const rk of Object.keys(row)) {
+      const nk = normalizeKey(rk);
+      const raw = row[rk];
+      if (raw == null || String(raw).trim() === "") continue;
+      const v = toWesternDigits(String(raw).trim()).trim();
+
+      // Sequential code columns: c1, c1code, p1, p1code, c-1, code1, diff1…
+      const seqMatch = nk.match(/^(?:[cp])?(\d+)(?:code|cod)?$/) ||
+        nk.match(/^(?:code|cod|diff|difficulty|صعوبه|حركه)(\d+)$/);
+      if (seqMatch) {
+        sequential.push({ idx: parseInt(seqMatch[1], 10), value: v });
+        continue;
+      }
+
+      // Combined difficulty columns: anything containing diff/code/صعوب/حرك
+      // (but not value/label/points companions of sequential columns).
+      if (
+        /(diff|code|cod|صعوب|حرك|تسلسل)/.test(nk) &&
+        !/(value|val|label|name|points|pts|قيمه|اسم)/.test(nk)
+      ) {
+        combined.push(v);
+      }
+    }
+
+    if (sequential.length) {
+      sequential.sort((a, b) => a.idx - b.idx);
+      codes = sequential.flatMap((s) => parseDifficultyCodes(s.value));
+    } else if (combined.length) {
+      codes = combined.flatMap((v) => parseDifficultyCodes(v));
+    }
+
+    if (codes.length && !sheet.length) {
+      let prev: string | null = null;
+      for (const c of codes) {
+        const meta = lookupCode(c, { style, prevCode: prev });
+        sheet.push({ code: meta.code, label: meta.label, value: meta.value });
+        if (!isConnectionCode(c)) prev = c;
+      }
+    }
+  }
+
   // Build a unified difficulty sheet from the resolved codes.
   if (!sheet.length && codes.length) {
     let prev: string | null = null;
