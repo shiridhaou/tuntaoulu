@@ -216,6 +216,13 @@ export function DifficultyManager({
       )}
 
 
+      {/* Valid IWUF codes offered as inline suggestions in every code input */}
+      <datalist id="iwuf-code-options">
+        {KNOWN_CODE_OPTIONS.map((o) => (
+          <option key={o.code} value={o.code}>{`${o.label} — ${o.value.toFixed(2)}`}</option>
+        ))}
+      </datalist>
+
       {/* Sheet rows */}
       <div className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
         {sheet.length === 0 ? (
