@@ -27,6 +27,8 @@ export interface DifficultySheetSourceAthlete {
   id: string;
   difficulty_sheet?: DifficultyItem[] | null;
   difficulty_codes?: string[] | null;
+  /** Discipline used to price connection slots when rebuilding the sheet. */
+  style?: string | null;
 }
 
 interface UseDifficultySheetOptions {
