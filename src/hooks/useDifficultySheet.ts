@@ -106,7 +106,7 @@ export function useDifficultySheet({
         })));
       } else if (codes && codes.length) {
         const { buildDifficultySheet } = await import("@/lib/difficultyCodes");
-        setSheet(buildDifficultySheet(codes) as DifficultyItem[]);
+        setSheet(buildDifficultySheet(codes, targetAthlete.style ?? null) as DifficultyItem[]);
       } else {
         setSheet([]);
       }
