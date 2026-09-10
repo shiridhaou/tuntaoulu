@@ -30,7 +30,7 @@ describe("optional difficulty imports", () => {
     }, "tournament");
 
     expect(row._mode).toBe("optional");
-    expect(row.difficulty_codes).toEqual(["324C", "6", "353B", "+323B"]);
+    expect(row.difficulty_codes).toEqual(["324C", "6", "353B", "+", "323B"]);
     expect(row.difficulty_sheet).toHaveLength(5);
   });
 
