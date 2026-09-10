@@ -296,6 +296,7 @@ export function DifficultyManager({
           onChange={(e) => setNewCode(toWesternDigits(e.target.value).toUpperCase())}
           onKeyDown={(e) => e.key === "Enter" && handleAddRow()}
           placeholder="Code (e.g. 323A)"
+          list="iwuf-code-options"
           className="col-span-3 h-8 text-xs font-mono bg-black border-white/15 num-west"
           dir="ltr"
           lang="en"
