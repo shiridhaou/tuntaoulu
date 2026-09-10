@@ -196,8 +196,9 @@ export function parseDifficultyCodes(raw: unknown): string[] {
   const s = String(raw).trim();
   if (!s) return [];
   return s
-    // keep "+ 0.10" / "+ 6" glued to their plus sign
-    .replace(/\+\s+(?=[\d.,])/g, "+")
+    // Keep explicit bonuses / ordinal slots glued ("+ 0.10", "+ 6"), but
+    // leave "+ 323B" as two timeline items: a connection then a movement.
+    .replace(/\+\s+(?=(?:0?[.,]\d+|\d{1,2})(?=$|[,;|/\s]))/g, "+")
     // "323A+353B" stays combined; a standalone "+" stays its own token
     .split(/[,;|/\s]+/)
     .map(c => c.trim().toUpperCase())

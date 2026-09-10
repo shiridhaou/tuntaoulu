@@ -27,6 +27,7 @@ import { normalizeRow, type NormalizedAthleteRow } from "@/lib/importParsing";
  *  and (eventually) persisted to the `athletes` table. */
 export type ImportedAthleteRecord = Omit<NormalizedAthleteRow, "_mode"> & {
   id: string;
+  routine_mode: NormalizedAthleteRow["_mode"];
 };
 
 interface UseAthleteImportOptions {
@@ -115,11 +116,13 @@ export function useAthleteImport({
       setPreview(records);
 
       const compCount = records.filter((r) => r._mode === "compulsory").length;
-      const optCount = records.filter((r) => r._mode === "optional").length;
+      const optionalRecords = records.filter((r) => r._mode === "optional");
+      const optCount = optionalRecords.length;
+      const optionalMoves = optionalRecords.reduce((sum, r) => sum + r.difficulty_sheet.length, 0);
       const unsetCount = records.length - compCount - optCount;
       const moves = records.reduce((s, r) => s + (r.difficulty_sheet?.length ?? 0), 0);
       toast.success(
-        `تمت قراءة ${records.length} لاعب — إلزامي: ${compCount} • اختياري: ${optCount}` +
+        `تمت قراءة ${records.length} لاعب — إلزامي: ${compCount} • اختياري: ${optionalMoves} حركة (${optCount} لاعب)` +
         (unsetCount ? ` • غير محدد: ${unsetCount}` : "") +
         (moves ? ` • ${moves} حركة صعوبة` : "") + " — راجع ثم اضغط تأكيد"
       );
@@ -173,6 +176,7 @@ export function useAthleteImport({
     const clean: ImportedAthleteRecord[] = records.map(({ _mode, ...rest }) => ({
       ...rest,
       id: cleanUuid((rest as { id?: string }).id) ?? newUuid(),
+      routine_mode: _mode,
     }));
 
     setPreview(null);
@@ -182,7 +186,7 @@ export function useAthleteImport({
     onImported?.(clean);
 
     // 2) Background database insert — never blocks the caller's UI.
-    void syncRecords(clean as unknown as Record<string, unknown>[]);
+    void syncRecords(clean.map(({ routine_mode, ...record }) => record) as unknown as Record<string, unknown>[]);
   }, [onImported, syncRecords]);
 
   const confirmImport = useCallback(() => {

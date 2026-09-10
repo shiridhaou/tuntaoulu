@@ -100,6 +100,29 @@ export function detectMatchMode(v: string): "compulsory" | "optional" | null {
   return null;
 }
 
+/** Infer the routine profile without overriding an explicit spreadsheet mode. */
+export function inferMatchMode({
+  mode,
+  style,
+  category,
+  ageCategory,
+  hasDifficulty,
+}: {
+  mode: string;
+  style: string;
+  category: string;
+  ageCategory: string | null;
+  hasDifficulty: boolean;
+}): "compulsory" | "optional" {
+  const explicit = detectMatchMode(mode);
+  if (explicit) return explicit;
+
+  const descriptive = detectMatchMode(`${style} ${category}`);
+  if (descriptive) return descriptive;
+  if (String(ageCategory ?? "").trim().toLowerCase() === "seniors") return "optional";
+  return hasDifficulty ? "optional" : "compulsory";
+}
+
 /** Detects/normalizes a Wushu style value (e.g. "Northern", "CQ", "شمالي")
  *  down to the canonical style key via the shared styleNames normalizer. */
 export function detectStyle(v: string): string | null {
@@ -150,7 +173,6 @@ export function normalizeRow(row: Record<string, any>, tournamentId: string): No
   const modeRaw = pick(row, ["match_mode", "mode", "match mode", "type", "category_type", "نوع المنافسة", "النمط", "نمط", "نوع"]);
   const birth_date = parseDate(birth);
   const style = detectStyle(styleRaw);
-  const matchMode = detectMatchMode(modeRaw);
 
   // ── Pattern A (primary): a single combined difficulty codes column.
   //    Accepts all common header variants and splits comma-, semicolon-, slash-,
@@ -163,21 +185,18 @@ export function normalizeRow(row: Record<string, any>, tournamentId: string): No
     "group_c", "group c", "groupc", "c_codes", "c codes", "movements", "difficulty_sheet",
     "صعوبة", "الصعوبة", "أكواد الصعوبة", "حركات الصعوبة", "المجموعة ج",
   ]);
-  let codes: string[] = diffRaw ? parseDifficultyCodes(diffRaw) : [];
+  let codes: string[] = [];
 
   // ── Pattern B (secondary): a free-text sequence column ("323A 6 353B + 324C").
   const sequenceRaw = pick(row, [
     "sequence_text", "sequence", "seq", "sequence text", "seq_text",
     "movement_sequence", "movements_sequence", "التسلسل", "تسلسل الحركات",
   ]);
-  if (!codes.length && sequenceRaw) {
-    codes = parseDifficultyCodes(sequenceRaw);
-  }
-
-  // ── Pattern C (fallback): per-movement columns C1_code/P1_code etc.
-  //    Only used when no combined column or sequence column produced codes.
+  // ── Pattern A (primary): per-movement columns C1_code/P1_code etc.
+  //    These take priority because their companion value/label columns carry
+  //    coach-entered overrides that a flattened code list cannot preserve.
   const sheet: DifficultyItem[] = [];
-  if (!codes.length) {
+  {
     // Connections ("+" or numeric slots 1..11) are priced from the discipline and
     // the grade of the difficulty movement they follow.
     let lastMovementCode: string | null = null;
@@ -214,6 +233,12 @@ export function normalizeRow(row: Record<string, any>, tournamentId: string): No
     }
     codes = sheet.map((s) => s.code);
   }
+
+  // ── Pattern B: free-text sequence, preserving movement/connection order.
+  if (!codes.length && sequenceRaw) codes = parseDifficultyCodes(sequenceRaw);
+
+  // ── Pattern C: one combined difficulty-code cell.
+  if (!codes.length && diffRaw) codes = parseDifficultyCodes(diffRaw);
 
   // ── Pattern D (100% dynamic fallback): scan ALL headers for anything that
   //    looks like a difficulty source, regardless of exact naming.
@@ -277,13 +302,25 @@ export function normalizeRow(row: Record<string, any>, tournamentId: string): No
 
 
 
+  const categoryMode = detectMatchMode(categoryRaw);
+  const age_category = categoryRaw && !categoryMode
+    ? String(categoryRaw).trim()
+    : classifyAge(birth_date);
+  const matchMode = inferMatchMode({
+    mode: modeRaw,
+    style: styleRaw,
+    category: categoryRaw,
+    ageCategory: age_category,
+    hasDifficulty: sheet.length > 0,
+  });
+
   return {
     tournament_id: tournamentId,
     bib_number: bib || null,
     full_name: name,
     gender: gender || null,
     birth_date,
-    age_category: (categoryRaw && String(categoryRaw).trim()) || classifyAge(birth_date),
+    age_category,
     club: club || null,
     country: country || null,
     style: style || null,
