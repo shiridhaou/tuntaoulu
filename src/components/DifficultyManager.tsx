@@ -7,7 +7,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useDifficultySheet, type DifficultySheetSourceAthlete } from "@/hooks/useDifficultySheet";
 import { toWesternDigits } from "@/lib/numFormat";
-import { lookupCode, isConnectionCode } from "@/lib/difficultyCodes";
+import { lookupCode, isConnectionCode, isKnownCode, KNOWN_CODE_OPTIONS } from "@/lib/difficultyCodes";
 import type { JudgeStatusRow } from "@/types/matchTypes";
 
 // ============================================================================
