@@ -221,6 +221,7 @@ function TADashboardInner() {
 
   // Manually selected athlete (from the queue table "اختيار / Select" action).
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const importedRoutineModes = useRef(new Map<string, "compulsory" | "optional">());
 
   // Match config (broadcast to judges via current_match.payload)
   const [matchMode, setMatchMode] = useState<"compulsory" | "optional">("optional");
@@ -353,7 +354,10 @@ function TADashboardInner() {
         .order("bib_number", { ascending: true });
       // Merge: never drop locally queued athletes that haven't synced yet.
       setAthletes((prev) => {
-        const remote = (a ?? []) as Athlete[];
+        const remote = ((a ?? []) as Athlete[]).map((athlete) => ({
+          ...athlete,
+          routine_mode: importedRoutineModes.current.get(athlete.id) ?? athlete.routine_mode,
+        }));
         const ids = new Set(remote.map((x) => x.id));
         return [...remote, ...prev.filter((x) => !ids.has(x.id))];
       });
@@ -559,6 +563,9 @@ function TADashboardInner() {
       id: newUuid(),
       routine_mode: _mode,
     }));
+    clean.forEach((record) => {
+      if (record.routine_mode) importedRoutineModes.current.set(record.id, record.routine_mode);
+    });
 
     // 1) Instant local queue + UI refresh.
     setAthletes((prev) => [...prev, ...(clean as Athlete[])]);

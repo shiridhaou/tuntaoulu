@@ -185,21 +185,18 @@ export function normalizeRow(row: Record<string, any>, tournamentId: string): No
     "group_c", "group c", "groupc", "c_codes", "c codes", "movements", "difficulty_sheet",
     "صعوبة", "الصعوبة", "أكواد الصعوبة", "حركات الصعوبة", "المجموعة ج",
   ]);
-  let codes: string[] = diffRaw ? parseDifficultyCodes(diffRaw) : [];
+  let codes: string[] = [];
 
   // ── Pattern B (secondary): a free-text sequence column ("323A 6 353B + 324C").
   const sequenceRaw = pick(row, [
     "sequence_text", "sequence", "seq", "sequence text", "seq_text",
     "movement_sequence", "movements_sequence", "التسلسل", "تسلسل الحركات",
   ]);
-  if (!codes.length && sequenceRaw) {
-    codes = parseDifficultyCodes(sequenceRaw);
-  }
-
-  // ── Pattern C (fallback): per-movement columns C1_code/P1_code etc.
-  //    Only used when no combined column or sequence column produced codes.
+  // ── Pattern A (primary): per-movement columns C1_code/P1_code etc.
+  //    These take priority because their companion value/label columns carry
+  //    coach-entered overrides that a flattened code list cannot preserve.
   const sheet: DifficultyItem[] = [];
-  if (!codes.length) {
+  {
     // Connections ("+" or numeric slots 1..11) are priced from the discipline and
     // the grade of the difficulty movement they follow.
     let lastMovementCode: string | null = null;
@@ -236,6 +233,12 @@ export function normalizeRow(row: Record<string, any>, tournamentId: string): No
     }
     codes = sheet.map((s) => s.code);
   }
+
+  // ── Pattern B: free-text sequence, preserving movement/connection order.
+  if (!codes.length && sequenceRaw) codes = parseDifficultyCodes(sequenceRaw);
+
+  // ── Pattern C: one combined difficulty-code cell.
+  if (!codes.length && diffRaw) codes = parseDifficultyCodes(diffRaw);
 
   // ── Pattern D (100% dynamic fallback): scan ALL headers for anything that
   //    looks like a difficulty source, regardless of exact naming.
