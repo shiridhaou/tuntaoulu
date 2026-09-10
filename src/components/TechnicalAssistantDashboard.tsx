@@ -1167,6 +1167,11 @@ function TADashboardInner() {
   const selectedAthlete = selectedId ? (athletes.find((a) => a.id === selectedId) ?? null) : null;
   const nextAthlete = selectedAthlete ?? athletes.find((a) => a.status === "waiting") ?? null;
 
+  function routineModeForAthlete(a: Athlete): "compulsory" | "optional" {
+    return a.routine_mode
+      ?? ((a.difficulty_sheet?.length ?? a.difficulty_codes?.length ?? 0) > 0 ? "optional" : matchMode);
+  }
+
   // Queue selection — announce the athlete and make them the "up next" target
   // for the Group C difficulty box (does NOT start the match).
   function selectAthlete(a: Athlete) {
