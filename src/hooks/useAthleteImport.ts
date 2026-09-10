@@ -115,11 +115,13 @@ export function useAthleteImport({
       setPreview(records);
 
       const compCount = records.filter((r) => r._mode === "compulsory").length;
-      const optCount = records.filter((r) => r._mode === "optional").length;
+      const optionalRecords = records.filter((r) => r._mode === "optional");
+      const optCount = optionalRecords.length;
+      const optionalMoves = optionalRecords.reduce((sum, r) => sum + r.difficulty_sheet.length, 0);
       const unsetCount = records.length - compCount - optCount;
       const moves = records.reduce((s, r) => s + (r.difficulty_sheet?.length ?? 0), 0);
       toast.success(
-        `تمت قراءة ${records.length} لاعب — إلزامي: ${compCount} • اختياري: ${optCount}` +
+        `تمت قراءة ${records.length} لاعب — إلزامي: ${compCount} • اختياري: ${optCount} لاعب (${optionalMoves} حركة)` +
         (unsetCount ? ` • غير محدد: ${unsetCount}` : "") +
         (moves ? ` • ${moves} حركة صعوبة` : "") + " — راجع ثم اضغط تأكيد"
       );

@@ -37,6 +37,7 @@ import { useCompetition } from "@/store/competition-store";
 
 import { classifyAge, AGE_CATEGORY_COLORS, type AgeCategory } from "@/lib/ageCategories";
 import { CATEGORY_TIME_RULES, DEFAULT_CATEGORY_RULE_ID, checkCategoryTime, getCategoryRule, fmtRuleWindow } from "@/lib/categoryTimeRules";
+import { normalizeRow } from "@/lib/importParsing";
 
 interface Tournament {
   id: string;
@@ -63,6 +64,8 @@ interface Athlete {
   style?: string | null;
   difficulty_codes?: string[] | null;
   difficulty_sheet?: DifficultyItem[] | null;
+  /** Local import metadata; difficulty data itself is persisted in the database. */
+  routine_mode?: "compulsory" | "optional" | null;
 }
 
 interface JudgeStatusRow {
@@ -527,11 +530,13 @@ function TADashboardInner() {
       // Show the confirmation preview — nothing is committed until "تأكيد".
       setPreview(records);
       const compCount = records.filter((r) => (r as any)._mode === "compulsory").length;
-      const optCount = records.filter((r) => (r as any)._mode === "optional").length;
+      const optionalRecords = records.filter((r) => r._mode === "optional");
+      const optCount = optionalRecords.length;
+      const optionalMoves = optionalRecords.reduce((sum, r) => sum + r.difficulty_sheet.length, 0);
       const unsetCount = records.length - compCount - optCount;
       const moves = records.reduce((s, r) => s + (r.difficulty_sheet?.length ?? 0), 0);
       toast.success(
-        `تمت قراءة ${records.length} لاعب — إلزامي: ${compCount} • اختياري: ${optCount}` +
+        `تمت قراءة ${records.length} لاعب — إلزامي: ${compCount} • اختياري: ${optCount} لاعب (${optionalMoves} حركة)` +
         (unsetCount ? ` • غير محدد: ${unsetCount}` : "") +
         (moves ? ` • ${moves} حركة صعوبة` : "") + " — راجع ثم اضغط تأكيد"
       );
@@ -549,9 +554,10 @@ function TADashboardInner() {
     if (!records.length) return;
 
     // Strip transient fields (e.g. _mode) before storing/persisting.
-    const clean = records.map(({ _mode, ...rest }: any) => ({
+    const clean = records.map(({ _mode, ...rest }) => ({
       ...rest,
       id: cleanUuid(rest.id) ?? newUuid(),
+      routine_mode: _mode,
     }));
 
     // 1) Instant local queue + UI refresh.
@@ -561,7 +567,7 @@ function TADashboardInner() {
     toast.success(`تمت إضافة ${clean.length} لاعب إلى قائمة المباريات`);
 
     // 2) Background database insert — never blocks the modal or the table.
-    void syncRecords(clean as Record<string, unknown>[]);
+    void syncRecords(clean.map(({ routine_mode, ...record }) => record) as Record<string, unknown>[]);
   }
 
   /**
@@ -1155,6 +1161,9 @@ function TADashboardInner() {
   // for the Group C difficulty box (does NOT start the match).
   function selectAthlete(a: Athlete) {
     setSelectedId(a.id);
+    const importedMode = a.routine_mode
+      ?? ((a.difficulty_sheet?.length ?? a.difficulty_codes?.length ?? 0) > 0 ? "optional" : null);
+    if (!configLocked && importedMode === "optional") setMatchMode("optional");
     void callAthlete(a);
     pushLog("match", `🎯 اختيار: ${a.full_name}`);
   }
