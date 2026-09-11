@@ -4,7 +4,7 @@ import { FederationLogo } from "./FederationLogo";
 import { ArrowRight, RotateCcw, Send, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { submitJudgeScore } from "@/lib/scoreSubmit";
+import { submitJudgeScore, pushLiveJudgeScore } from "@/lib/scoreSubmit";
 import { useMatchSync } from "@/hooks/useMatchSync";
 import { useScoringGate } from "@/hooks/useScoringGate";
 import { useJudgeStatus } from "@/hooks/useJudgeStatus";
@@ -236,6 +236,22 @@ export function JudgeCPanel() {
   const allJudged = firstUnjudgedIndex < 0;
 
   useEffect(() => { setSentC(false); }, [athlete?.id]);
+
+  // Live mirror: every accept/reject updates the running Group C total on the
+  // TA panel, the Chief dashboard and the public scoreboard (provisional row).
+  useEffect(() => {
+    const code = (sessionCode ?? activeSession ?? "").trim().toUpperCase();
+    if (!code || !judgeId || sentC) return;
+    const t = setTimeout(() => {
+      void pushLiveJudgeScore({
+        sessionCode: code, judgeSlot: judgeId, judgeRole: "C",
+        athleteId: athlete?.id ?? null, score: judgeCScore,
+        payload: { attempts: judgeCAttempts, live: true },
+      });
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [judgeCScore, judgeCAttempts, sessionCode, activeSession, judgeId, athlete?.id, sentC]);
 
   const advance = () => {
     const next = sheet.findIndex((d, i) => i > activeIndex && !judgedCodes.has(d.code));
