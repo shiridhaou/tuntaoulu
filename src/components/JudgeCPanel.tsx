@@ -209,14 +209,19 @@ export function JudgeCPanel() {
   useJudgeStatus(sessionCode, judgeId, sentC ? "sent" : "judging", athlete?.id ?? null);
 
   const judgedCodes = useMemo(() => new Set(judgeCAttempts.map(a => a.code)), [judgeCAttempts]);
+  /** Scoring key of a timeline entry (connections score under their own code). */
+  const keyOf = (t: { item: DifficultyMovement; connection: ConnectionBonus | null }) =>
+    t.connection?.code ?? t.item.code;
+  // Sequential evaluation walks the WHOLE timeline: movements AND connections.
   const firstUnjudgedIndex = useMemo(
-    () => sheet.findIndex(d => !judgedCodes.has(d.code)),
-    [sheet, judgedCodes]
+    () => timeline.findIndex(t => !judgedCodes.has(keyOf(t))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [timeline, judgedCodes]
   );
   const [activeIndex, setActiveIndex] = useState(0);
   useEffect(() => {
-    setActiveIndex(firstUnjudgedIndex >= 0 ? firstUnjudgedIndex : sheet.length - 1);
-  }, [firstUnjudgedIndex, sheet.length]);
+    setActiveIndex(firstUnjudgedIndex >= 0 ? firstUnjudgedIndex : Math.max(0, timeline.length - 1));
+  }, [firstUnjudgedIndex, timeline.length]);
 
   // Auto-center the active card horizontally inside the track WITHOUT touching
   // any vertical scroll. Using scrollIntoView() previously caused the whole page
