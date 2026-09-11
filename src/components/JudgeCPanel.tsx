@@ -237,7 +237,12 @@ export function JudgeCPanel() {
     track.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
   }, [activeIndex]);
 
-  const current = sheet[activeIndex];
+  const currentEntry = timeline[activeIndex];
+  const current = currentEntry?.item;
+  const currentIsConnection = !!currentEntry?.isConnection;
+  const currentKey = currentEntry ? keyOf(currentEntry) : "";
+  const currentValue = currentEntry?.connection?.value ?? current?.value ?? 0;
+  const currentLabel = currentEntry?.connection?.label ?? current?.label ?? "";
   const allJudged = firstUnjudgedIndex < 0;
 
   useEffect(() => { setSentC(false); }, [athlete?.id]);
