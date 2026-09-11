@@ -263,24 +263,44 @@ export function JudgeCPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [judgeCScore, judgeCAttempts, sessionCode, activeSession, judgeId, athlete?.id, sentC]);
 
-  const advance = () => {
-    const next = sheet.findIndex((d, i) => i > activeIndex && !judgedCodes.has(d.code));
+  /** Move the focus to the next still-pending item of the sequence. */
+  const advance = (judgedNow: string[] = []) => {
+    const done = new Set([...judgedCodes, ...judgedNow]);
+    const next = timeline.findIndex((t, i) => i > activeIndex && !done.has(keyOf(t)));
     if (next >= 0) setActiveIndex(next);
+    else {
+      const anyLeft = timeline.findIndex(t => !done.has(keyOf(t)));
+      if (anyLeft >= 0) setActiveIndex(anyLeft);
+    }
   };
 
-  const handleYes = () => {
+  /** YES / NO always evaluate ONLY the currently active timeline item. */
+  const evaluateCurrent = (ok: boolean) => {
     if (locked) { toast.error("التقييم مقفل"); return; }
-    if (!current || judgedCodes.has(current.code)) return;
-    addJudgeCAttempt({ code: current.code, label: current.label, value: current.value, successful: true, kind: "movement" });
-    advance();
+    if (!currentEntry || !current) return;
+    const judgedNow: string[] = [currentKey];
+    if (currentIsConnection && currentEntry.connection) {
+      const c = currentEntry.connection;
+      if (ok && connectionTotal + c.value > MAX_C_CONNECTION + 1e-6) {
+        toast.error(`سقف وضعيات الربط ${MAX_C_CONNECTION.toFixed(2)}`);
+        return;
+      }
+      setAttemptState(c.code, c.label, c.value, "connection", ok);
+    } else {
+      setAttemptState(current.code, current.label, current.value, "movement", ok);
+      if (!ok) {
+        // Smart assist — attached connections default to REJECTED (still editable).
+        for (const t of connectionsOfMovement(current.code)) {
+          if (t.connection) judgedNow.push(t.connection.code);
+        }
+        rejectLinkedConnections(current.code);
+      }
+    }
+    advance(judgedNow);
   };
-  const handleNo = () => {
-    if (locked) { toast.error("التقييم مقفل"); return; }
-    if (!current || judgedCodes.has(current.code)) return;
-    addJudgeCAttempt({ code: current.code, label: current.label, value: current.value, successful: false, kind: "movement" });
-    rejectLinkedConnections(current.code);
-    advance();
-  };
+
+  const handleYes = () => evaluateCurrent(true);
+  const handleNo = () => evaluateCurrent(false);
 
 
   // ── Quick international code tags + connection bonuses (Group C = 1.40 + 0.60) ──
