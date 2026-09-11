@@ -128,7 +128,7 @@ export function JudgeAPanel() {
   const handleSend = useCallback(async () => {
     if (locked) { toast.error("التقييم مقفل — لا يمكن الإرسال"); return; }
     if (!canSend) { toast.error("الإرسال غير متاح — انتظر إيقاف المؤقت"); return; }
-    if (confirmed.length === 0) { toast.error("لا توجد أكواد للإرسال"); return; }
+    // Zero deductions is a valid perfect score (5.00 / 7.00) — never block it.
     haptic([60, 40, 60]);
 
     confirmed.forEach(c => addJudgeADeduction({ code: c.code, value: c.value, label: c.label }));
@@ -327,13 +327,13 @@ export function JudgeAPanel() {
         </button>
         <button
           onClick={handleSend}
-          disabled={!canSend || confirmed.length === 0 || submitted}
+          disabled={!canSend || submitted}
           className="h-14 px-6 rounded-xl font-black text-sm flex items-center gap-2 transition-all active:scale-95 disabled:opacity-25"
           style={{
-            background: canSend && confirmed.length > 0 ? "linear-gradient(135deg, #10b981, #059669)" : "rgba(255,255,255,0.04)",
-            color: canSend && confirmed.length > 0 ? "#fff" : "rgba(255,255,255,0.4)",
-            border: canSend && confirmed.length > 0 ? "1px solid rgba(16,185,129,0.6)" : "1px solid rgba(255,255,255,0.1)",
-            boxShadow: canSend && confirmed.length > 0 ? "0 0 30px rgba(16,185,129,0.55)" : "none",
+            background: canSend ? "linear-gradient(135deg, #10b981, #059669)" : "rgba(255,255,255,0.04)",
+            color: canSend ? "#fff" : "rgba(255,255,255,0.4)",
+            border: canSend ? "1px solid rgba(16,185,129,0.6)" : "1px solid rgba(255,255,255,0.1)",
+            boxShadow: canSend ? "0 0 30px rgba(16,185,129,0.55)" : "none",
           }}
           title={canSend ? "Send to Chief" : "Wait until timer stops"}
         >
