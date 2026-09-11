@@ -209,14 +209,19 @@ export function JudgeCPanel() {
   useJudgeStatus(sessionCode, judgeId, sentC ? "sent" : "judging", athlete?.id ?? null);
 
   const judgedCodes = useMemo(() => new Set(judgeCAttempts.map(a => a.code)), [judgeCAttempts]);
+  /** Scoring key of a timeline entry (connections score under their own code). */
+  const keyOf = (t: { item: DifficultyMovement; connection: ConnectionBonus | null }) =>
+    t.connection?.code ?? t.item.code;
+  // Sequential evaluation walks the WHOLE timeline: movements AND connections.
   const firstUnjudgedIndex = useMemo(
-    () => sheet.findIndex(d => !judgedCodes.has(d.code)),
-    [sheet, judgedCodes]
+    () => timeline.findIndex(t => !judgedCodes.has(keyOf(t))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [timeline, judgedCodes]
   );
   const [activeIndex, setActiveIndex] = useState(0);
   useEffect(() => {
-    setActiveIndex(firstUnjudgedIndex >= 0 ? firstUnjudgedIndex : sheet.length - 1);
-  }, [firstUnjudgedIndex, sheet.length]);
+    setActiveIndex(firstUnjudgedIndex >= 0 ? firstUnjudgedIndex : Math.max(0, timeline.length - 1));
+  }, [firstUnjudgedIndex, timeline.length]);
 
   // Auto-center the active card horizontally inside the track WITHOUT touching
   // any vertical scroll. Using scrollIntoView() previously caused the whole page
@@ -232,7 +237,12 @@ export function JudgeCPanel() {
     track.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
   }, [activeIndex]);
 
-  const current = sheet[activeIndex];
+  const currentEntry = timeline[activeIndex];
+  const current = currentEntry?.item;
+  const currentIsConnection = !!currentEntry?.isConnection;
+  const currentKey = currentEntry ? keyOf(currentEntry) : "";
+  const currentValue = currentEntry?.connection?.value ?? current?.value ?? 0;
+  const currentLabel = currentEntry?.connection?.label ?? current?.label ?? "";
   const allJudged = firstUnjudgedIndex < 0;
 
   useEffect(() => { setSentC(false); }, [athlete?.id]);
@@ -253,24 +263,44 @@ export function JudgeCPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [judgeCScore, judgeCAttempts, sessionCode, activeSession, judgeId, athlete?.id, sentC]);
 
-  const advance = () => {
-    const next = sheet.findIndex((d, i) => i > activeIndex && !judgedCodes.has(d.code));
+  /** Move the focus to the next still-pending item of the sequence. */
+  const advance = (judgedNow: string[] = []) => {
+    const done = new Set([...judgedCodes, ...judgedNow]);
+    const next = timeline.findIndex((t, i) => i > activeIndex && !done.has(keyOf(t)));
     if (next >= 0) setActiveIndex(next);
+    else {
+      const anyLeft = timeline.findIndex(t => !done.has(keyOf(t)));
+      if (anyLeft >= 0) setActiveIndex(anyLeft);
+    }
   };
 
-  const handleYes = () => {
+  /** YES / NO always evaluate ONLY the currently active timeline item. */
+  const evaluateCurrent = (ok: boolean) => {
     if (locked) { toast.error("التقييم مقفل"); return; }
-    if (!current || judgedCodes.has(current.code)) return;
-    addJudgeCAttempt({ code: current.code, label: current.label, value: current.value, successful: true, kind: "movement" });
-    advance();
+    if (!currentEntry || !current) return;
+    const judgedNow: string[] = [currentKey];
+    if (currentIsConnection && currentEntry.connection) {
+      const c = currentEntry.connection;
+      if (ok && connectionTotal + c.value > MAX_C_CONNECTION + 1e-6) {
+        toast.error(`سقف وضعيات الربط ${MAX_C_CONNECTION.toFixed(2)}`);
+        return;
+      }
+      setAttemptState(c.code, c.label, c.value, "connection", ok);
+    } else {
+      setAttemptState(current.code, current.label, current.value, "movement", ok);
+      if (!ok) {
+        // Smart assist — attached connections default to REJECTED (still editable).
+        for (const t of connectionsOfMovement(current.code)) {
+          if (t.connection) judgedNow.push(t.connection.code);
+        }
+        rejectLinkedConnections(current.code);
+      }
+    }
+    advance(judgedNow);
   };
-  const handleNo = () => {
-    if (locked) { toast.error("التقييم مقفل"); return; }
-    if (!current || judgedCodes.has(current.code)) return;
-    addJudgeCAttempt({ code: current.code, label: current.label, value: current.value, successful: false, kind: "movement" });
-    rejectLinkedConnections(current.code);
-    advance();
-  };
+
+  const handleYes = () => evaluateCurrent(true);
+  const handleNo = () => evaluateCurrent(false);
 
 
   // ── Quick international code tags + connection bonuses (Group C = 1.40 + 0.60) ──
@@ -340,10 +370,10 @@ export function JudgeCPanel() {
     if (locked) { toast.error("التقييم مقفل"); return; }
     const idx = attemptIndex(b.code);
     const nextOk = idx >= 0 ? !judgeCAttempts[idx]!.successful : true;
-    // A connection can never be accepted when its prerequisite movement failed.
+    // Smart assist — the connection defaults to rejected when its base movement
+    // failed, but the judge may still override it manually.
     if (nextOk && isConnectionBlocked(prevMovementCode)) {
-      toast.error(`الحركة ${prevMovementCode} مرفوضة — لا يمكن احتساب الربط`);
-      return;
+      toast.warning(`تنبيه: الحركة ${prevMovementCode} مرفوضة — تم احتساب الربط يدوياً`);
     }
     if (nextOk && idx < 0 && connectionTotal + b.value > MAX_C_CONNECTION + 1e-6) {
       toast.error(`سقف وضعيات الربط ${MAX_C_CONNECTION.toFixed(2)}`);
@@ -482,7 +512,7 @@ export function JudgeCPanel() {
           <div className="flex items-center gap-2">
             <div className="rounded-lg px-2.5 py-1 border border-white/10 bg-white/5 text-center">
               <p className="text-[8px] text-white/50 font-body leading-none" dir="ltr">Judged</p>
-              <p className="text-sm font-heading font-black text-white leading-tight">{judgeCAttempts.length}/{sheet.length}</p>
+              <p className="text-sm font-heading font-black text-white leading-tight">{timeline.filter(t => judgedCodes.has(keyOf(t))).length}/{timeline.length}</p>
             </div>
             <div className="rounded-lg px-2.5 py-1 border border-cyber-orange/40 bg-cyber-orange/10 text-center">
               <p className="text-[8px] text-white/60 font-body leading-none" dir="ltr">Group C / 2.00</p>
@@ -540,7 +570,7 @@ export function JudgeCPanel() {
           <AnimatePresence mode="wait">
             {current && (
               <motion.div
-                key={current.code}
+                key={`${currentKey}-${activeIndex}`}
                 initial={{ opacity: 0, y: -10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -549,16 +579,19 @@ export function JudgeCPanel() {
                 <div className="flex items-center justify-center gap-3 flex-wrap">
                   <span className="text-3xl md:text-4xl font-heading font-black text-white" dir="ltr"
                         style={{ textShadow: "0 0 24px oklch(0.70 0.22 45 / 0.5)" }}>
-                    {current.code}
+                    {currentKey}
                   </span>
                   <span className="text-xs font-bold px-2.5 py-1 rounded-lg border border-cyber-orange/50 bg-cyber-orange/15 text-cyber-orange" dir="ltr">
-                    +{current.value.toFixed(2)}
+                    +{currentValue.toFixed(2)}
                   </span>
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-lg border border-white/15 bg-white/5 text-white/80" dir="ltr">
-                    {current.connection}
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${currentIsConnection ? "border-cyan-400/50 bg-cyan-400/10 text-cyan-300" : "border-white/15 bg-white/5 text-white/80"}`} dir="ltr">
+                    {currentIsConnection ? "Connection" : current.connection}
+                  </span>
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-lg border border-white/15 bg-white/5 text-white/60 tabular-nums" dir="ltr">
+                    {activeIndex + 1} / {timeline.length}
                   </span>
                 </div>
-                <p className="text-base text-white/80 font-body mt-1" dir="ltr">{current.label}</p>
+                <p className="text-base text-white/80 font-body mt-1" dir="ltr">{currentLabel}</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -568,7 +601,7 @@ export function JudgeCPanel() {
         <div className="flex items-center justify-center gap-6 md:gap-10 w-full max-w-2xl">
           <motion.button
             whileTap={{ scale: 0.92 }}
-            disabled={locked || !current || allJudged || judgedCodes.has(current?.code ?? "")}
+            disabled={locked || !currentEntry || judgedCodes.has(currentKey)}
             onClick={(e) => { e.preventDefault(); e.currentTarget.blur(); handleYes(); }}
             type="button"
             className="btn-3d-green flex-1 h-36 md:h-44 rounded-3xl flex flex-col items-center justify-center font-heading font-black disabled:opacity-40 disabled:cursor-not-allowed"
@@ -580,7 +613,7 @@ export function JudgeCPanel() {
 
           <motion.button
             whileTap={{ scale: 0.92 }}
-            disabled={locked || !current || allJudged || judgedCodes.has(current?.code ?? "")}
+            disabled={locked || !currentEntry || judgedCodes.has(currentKey)}
             onClick={(e) => { e.preventDefault(); e.currentTarget.blur(); handleNo(); }}
             type="button"
             className="btn-3d-red flex-1 h-36 md:h-44 rounded-3xl flex flex-col items-center justify-center font-heading font-black disabled:opacity-40 disabled:cursor-not-allowed"
@@ -648,7 +681,7 @@ export function JudgeCPanel() {
               {timeline.map(({ item: d, index: timelineIndex, isConnection, connection, prevCode, nextCode }) => {
                 const movementIndex = isConnection ? -1 : sheet.findIndex(m => m.code === d.code);
                 const attempt = judgeCAttempts.find(a => a.code === (connection?.code ?? d.code));
-                const isActive = movementIndex === activeIndex && !attempt;
+                const isActive = timelineIndex === activeIndex;
                 const blocked = isConnection && isConnectionBlocked(prevCode);
                 const status = !attempt ? "Pending" : attempt.successful ? "Accepted" : "Rejected";
                 return (
@@ -656,9 +689,10 @@ export function JudgeCPanel() {
                     key={`${d.code}-${timelineIndex}`}
                     ref={isActive ? activeCardRef : undefined}
                     type="button"
-                    disabled={locked || (blocked && !attempt?.successful)}
+                    disabled={locked}
                     onClick={(e) => {
                       e.currentTarget.blur();
+                      setActiveIndex(timelineIndex);
                       if (isConnection && connection) {
                         tapConnection(connection, nextCode, prevCode);
                         return;
@@ -666,8 +700,10 @@ export function JudgeCPanel() {
                       validateMovement(d, attempt ? !attempt.successful : true);
                     }}
 
-                    whileTap={locked || blocked ? undefined : { scale: 0.97 }}
+                    whileTap={locked ? undefined : { scale: 0.97 }}
                     className={`relative shrink-0 w-32 md:w-36 px-3 py-2 text-left border-y border-r first:border-l first:rounded-l-md last:rounded-r-md disabled:cursor-not-allowed disabled:opacity-50 transition-colors flex flex-col justify-between ${
+                      isActive ? "z-10 ring-2 ring-cyber-orange ring-offset-1 ring-offset-black " : ""
+                    }${
                       attempt?.successful
                         ? "border-green-400/60 bg-green-400/15"
                         : attempt
