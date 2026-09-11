@@ -764,13 +764,13 @@ function ChiefRefereeDashboardInner() {
                         <span className="text-cyan-300">C {displayGroupCTotal.toFixed(2)}</span>
                       </>
                     )}
-                    <span className="text-white/30">−</span>
+                    <span className="text-white/30">·</span>
                     <span
                       key={`ta-${taPulse}`}
-                      className="text-red-400 ta-pulse px-1 rounded"
-                      title={`OOB ×${taOobCount}`}
+                      className="text-red-400/70 ta-pulse px-1 rounded"
+                      title={`OOB ×${taOobCount} — مطبّق ضمن نقاط المجموعة أ`}
                     >
-                      TA {displayTaDeduction.toFixed(2)}
+                      TA {displayTaDeduction.toFixed(2)} (info)
                     </span>
                   </div>
 
