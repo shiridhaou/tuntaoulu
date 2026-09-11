@@ -263,15 +263,24 @@ export function JudgeCPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [judgeCScore, judgeCAttempts, sessionCode, activeSession, judgeId, athlete?.id, sentC]);
 
-  /** Move the focus to the next still-pending item of the sequence. */
-  const advance = (judgedNow: string[] = []) => {
+  /**
+   * Move the focus forward.
+   * `toMovement` jumps straight to the next MOVEMENT (used after a rejected
+   * movement, whose attached connection is auto-rejected, and after evaluating
+   * a connection). Otherwise the very next pending item — movement OR
+   * connection — becomes active so it can be judged explicitly.
+   */
+  const advance = (judgedNow: string[] = [], toMovement = false) => {
     const done = new Set([...judgedCodes, ...judgedNow]);
-    const next = timeline.findIndex((t, i) => i > activeIndex && !done.has(keyOf(t)));
-    if (next >= 0) setActiveIndex(next);
-    else {
-      const anyLeft = timeline.findIndex(t => !done.has(keyOf(t)));
-      if (anyLeft >= 0) setActiveIndex(anyLeft);
+    const pending = (t: (typeof timeline)[number]) => !done.has(keyOf(t));
+    if (toMovement) {
+      const nextMove = timeline.findIndex((t, i) => i > activeIndex && !t.isConnection && pending(t));
+      if (nextMove >= 0) { setActiveIndex(nextMove); return; }
     }
+    const next = timeline.findIndex((t, i) => i > activeIndex && pending(t));
+    if (next >= 0) { setActiveIndex(next); return; }
+    const anyLeft = timeline.findIndex(pending);
+    if (anyLeft >= 0) setActiveIndex(anyLeft);
   };
 
   /** YES / NO always evaluate ONLY the currently active timeline item. */
@@ -286,18 +295,25 @@ export function JudgeCPanel() {
         return;
       }
       setAttemptState(c.code, c.label, c.value, "connection", ok);
-    } else {
-      setAttemptState(current.code, current.label, current.value, "movement", ok);
-      if (!ok) {
-        // Smart assist — attached connections default to REJECTED (still editable).
-        for (const t of connectionsOfMovement(current.code)) {
-          if (t.connection) judgedNow.push(t.connection.code);
-        }
-        rejectLinkedConnections(current.code);
-      }
+      // A connection always hands the focus back to the next movement.
+      advance(judgedNow, true);
+      return;
     }
+    setAttemptState(current.code, current.label, current.value, "movement", ok);
+    if (!ok) {
+      // Smart assist — attached connections are auto-REJECTED (still editable)
+      // and the focus skips them, landing on the next movement.
+      for (const t of connectionsOfMovement(current.code)) {
+        if (t.connection) judgedNow.push(t.connection.code);
+      }
+      rejectLinkedConnections(current.code);
+      advance(judgedNow, true);
+      return;
+    }
+    // Accepted movement → judge the very next element, connection included.
     advance(judgedNow);
   };
+
 
   const handleYes = () => evaluateCurrent(true);
   const handleNo = () => evaluateCurrent(false);
