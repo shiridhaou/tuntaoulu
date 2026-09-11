@@ -128,7 +128,7 @@ export function JudgeAPanel() {
   const handleSend = useCallback(async () => {
     if (locked) { toast.error("التقييم مقفل — لا يمكن الإرسال"); return; }
     if (!canSend) { toast.error("الإرسال غير متاح — انتظر إيقاف المؤقت"); return; }
-    if (confirmed.length === 0) { toast.error("لا توجد أكواد للإرسال"); return; }
+    // Zero deductions is a valid perfect score (5.00 / 7.00) — never block it.
     haptic([60, 40, 60]);
 
     confirmed.forEach(c => addJudgeADeduction({ code: c.code, value: c.value, label: c.label }));
