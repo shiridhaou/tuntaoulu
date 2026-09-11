@@ -629,27 +629,28 @@ export function JudgeCPanel() {
             style={{ height: "150px" }}
           >
             <div className="flex min-w-max h-full items-stretch p-2" dir="ltr">
-              {timeline.map(({ item: d, index: timelineIndex, isConnection, connection, nextCode }) => {
+              {timeline.map(({ item: d, index: timelineIndex, isConnection, connection, prevCode, nextCode }) => {
                 const movementIndex = isConnection ? -1 : sheet.findIndex(m => m.code === d.code);
                 const attempt = judgeCAttempts.find(a => a.code === (connection?.code ?? d.code));
                 const isActive = movementIndex === activeIndex && !attempt;
+                const blocked = isConnection && isConnectionBlocked(prevCode);
                 const status = !attempt ? "Pending" : attempt.successful ? "Accepted" : "Rejected";
                 return (
                   <motion.button
                     key={`${d.code}-${timelineIndex}`}
                     ref={isActive ? activeCardRef : undefined}
                     type="button"
-                    disabled={locked}
+                    disabled={locked || (blocked && !attempt?.successful)}
                     onClick={(e) => {
                       e.currentTarget.blur();
                       if (isConnection && connection) {
-                        tapConnection(connection, nextCode);
+                        tapConnection(connection, nextCode, prevCode);
                         return;
                       }
                       validateMovement(d, attempt ? !attempt.successful : true);
                     }}
 
-                    whileTap={locked ? undefined : { scale: 0.97 }}
+                    whileTap={locked || blocked ? undefined : { scale: 0.97 }}
                     className={`relative shrink-0 w-32 md:w-36 px-3 py-2 text-left border-y border-r first:border-l first:rounded-l-md last:rounded-r-md disabled:cursor-not-allowed disabled:opacity-50 transition-colors flex flex-col justify-between ${
                       attempt?.successful
                         ? "border-green-400/60 bg-green-400/15"
