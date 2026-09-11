@@ -370,10 +370,10 @@ export function JudgeCPanel() {
     if (locked) { toast.error("التقييم مقفل"); return; }
     const idx = attemptIndex(b.code);
     const nextOk = idx >= 0 ? !judgeCAttempts[idx]!.successful : true;
-    // A connection can never be accepted when its prerequisite movement failed.
+    // Smart assist — the connection defaults to rejected when its base movement
+    // failed, but the judge may still override it manually.
     if (nextOk && isConnectionBlocked(prevMovementCode)) {
-      toast.error(`الحركة ${prevMovementCode} مرفوضة — لا يمكن احتساب الربط`);
-      return;
+      toast.warning(`تنبيه: الحركة ${prevMovementCode} مرفوضة — تم احتساب الربط يدوياً`);
     }
     if (nextOk && idx < 0 && connectionTotal + b.value > MAX_C_CONNECTION + 1e-6) {
       toast.error(`سقف وضعيات الربط ${MAX_C_CONNECTION.toFixed(2)}`);
