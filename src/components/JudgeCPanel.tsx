@@ -662,7 +662,7 @@ export function JudgeCPanel() {
                               ? "border-cyan-400/25 bg-cyan-400/5 hover:bg-cyan-400/10"
                               : "border-white/15 bg-white/5 hover:bg-white/10"
                     }`}
-                    title={`${status}: ${d.label}`}
+                    title={blocked ? `الحركة ${prevCode} مرفوضة — الربط ملغى` : `${status}: ${d.label}`}
                   >
                     <div>
                       <div className="flex items-center justify-between gap-2">

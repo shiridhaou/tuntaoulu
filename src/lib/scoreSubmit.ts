@@ -14,6 +14,44 @@ import { ensureDeviceSession, joinSessionMembership } from "@/lib/sessionMembers
  * If validation fails the function returns `{ ok: false, error }` so the judge
  * UI can surface a real error toast instead of a misleading success.
  */
+/**
+ * Push a PROVISIONAL (not yet submitted) judge score so the Chief, TA and the
+ * public scoreboard follow the running total live. Rows are flagged
+ * `submitted: false` so they never count as a formal submission.
+ */
+export async function pushLiveJudgeScore(args: {
+  sessionCode: string;
+  judgeSlot: string;
+  judgeRole: "A" | "B" | "C";
+  athleteId: string | null;
+  score: number;
+  payload?: Record<string, unknown>;
+}): Promise<void> {
+  const sessionCode = (args.sessionCode ?? "").trim().toUpperCase();
+  if (!sessionCode || !args.judgeSlot) return;
+  try {
+    let del = supabase
+      .from("judge_scores")
+      .delete()
+      .eq("session_code", sessionCode)
+      .eq("judge_slot", args.judgeSlot)
+      .eq("submitted", false);
+    del = args.athleteId ? del.eq("athlete_id", args.athleteId) : del.is("athlete_id", null);
+    await del;
+    await supabase.from("judge_scores").insert({
+      session_code: sessionCode,
+      judge_slot: args.judgeSlot,
+      judge_role: args.judgeRole,
+      athlete_id: args.athleteId,
+      score: args.score,
+      payload: (args.payload ?? {}) as never,
+      submitted: false,
+    });
+  } catch {
+    /* live preview only — silent */
+  }
+}
+
 export async function submitJudgeScore(args: {
   sessionCode: string;
   judgeSlot: string;        // e.g. "A1", "B3", "C2"
