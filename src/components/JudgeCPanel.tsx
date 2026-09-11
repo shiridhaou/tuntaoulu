@@ -282,6 +282,13 @@ export function JudgeCPanel() {
     addJudgeCAttempt({ code, label, value, successful: ok, kind });
   };
 
+  /** True when the movement a connection depends on has been rejected. */
+  const isConnectionBlocked = (prevMovementCode?: string | null) => {
+    if (!prevMovementCode) return false;
+    const prev = judgeCAttempts.find(a => a.code === prevMovementCode);
+    return !!prev && !prev.successful;
+  };
+
   /** IWUF cascade — a rejected movement voids every connection attached to it. */
   const rejectLinkedConnections = (movementCode: string) => {
     for (const t of connectionsOfMovement(movementCode)) {
@@ -313,10 +320,15 @@ export function JudgeCPanel() {
    * Tap a connection slot. Rejecting a connection also invalidates the
    * dependent (following) difficulty movement, per IWUF connection rules.
    */
-  const tapConnection = (b: ConnectionBonus, nextMovementCode?: string | null) => {
+  const tapConnection = (b: ConnectionBonus, nextMovementCode?: string | null, prevMovementCode?: string | null) => {
     if (locked) { toast.error("التقييم مقفل"); return; }
     const idx = attemptIndex(b.code);
     const nextOk = idx >= 0 ? !judgeCAttempts[idx]!.successful : true;
+    // A connection can never be accepted when its prerequisite movement failed.
+    if (nextOk && isConnectionBlocked(prevMovementCode)) {
+      toast.error(`الحركة ${prevMovementCode} مرفوضة — لا يمكن احتساب الربط`);
+      return;
+    }
     if (nextOk && idx < 0 && connectionTotal + b.value > MAX_C_CONNECTION + 1e-6) {
       toast.error(`سقف وضعيات الربط ${MAX_C_CONNECTION.toFixed(2)}`);
       return;
