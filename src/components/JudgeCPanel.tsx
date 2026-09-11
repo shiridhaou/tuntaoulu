@@ -512,7 +512,7 @@ export function JudgeCPanel() {
           <div className="flex items-center gap-2">
             <div className="rounded-lg px-2.5 py-1 border border-white/10 bg-white/5 text-center">
               <p className="text-[8px] text-white/50 font-body leading-none" dir="ltr">Judged</p>
-              <p className="text-sm font-heading font-black text-white leading-tight">{judgeCAttempts.length}/{sheet.length}</p>
+              <p className="text-sm font-heading font-black text-white leading-tight">{timeline.filter(t => judgedCodes.has(keyOf(t))).length}/{timeline.length}</p>
             </div>
             <div className="rounded-lg px-2.5 py-1 border border-cyber-orange/40 bg-cyber-orange/10 text-center">
               <p className="text-[8px] text-white/60 font-body leading-none" dir="ltr">Group C / 2.00</p>
