@@ -330,10 +330,10 @@ export function JudgeAPanel() {
           disabled={!canSend || submitted}
           className="h-14 px-6 rounded-xl font-black text-sm flex items-center gap-2 transition-all active:scale-95 disabled:opacity-25"
           style={{
-            background: canSend && confirmed.length > 0 ? "linear-gradient(135deg, #10b981, #059669)" : "rgba(255,255,255,0.04)",
-            color: canSend && confirmed.length > 0 ? "#fff" : "rgba(255,255,255,0.4)",
-            border: canSend && confirmed.length > 0 ? "1px solid rgba(16,185,129,0.6)" : "1px solid rgba(255,255,255,0.1)",
-            boxShadow: canSend && confirmed.length > 0 ? "0 0 30px rgba(16,185,129,0.55)" : "none",
+            background: canSend ? "linear-gradient(135deg, #10b981, #059669)" : "rgba(255,255,255,0.04)",
+            color: canSend ? "#fff" : "rgba(255,255,255,0.4)",
+            border: canSend ? "1px solid rgba(16,185,129,0.6)" : "1px solid rgba(255,255,255,0.1)",
+            boxShadow: canSend ? "0 0 30px rgba(16,185,129,0.55)" : "none",
           }}
           title={canSend ? "Send to Chief" : "Wait until timer stops"}
         >
