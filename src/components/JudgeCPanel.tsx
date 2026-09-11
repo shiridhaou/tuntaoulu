@@ -681,7 +681,7 @@ export function JudgeCPanel() {
               {timeline.map(({ item: d, index: timelineIndex, isConnection, connection, prevCode, nextCode }) => {
                 const movementIndex = isConnection ? -1 : sheet.findIndex(m => m.code === d.code);
                 const attempt = judgeCAttempts.find(a => a.code === (connection?.code ?? d.code));
-                const isActive = movementIndex === activeIndex && !attempt;
+                const isActive = timelineIndex === activeIndex;
                 const blocked = isConnection && isConnectionBlocked(prevCode);
                 const status = !attempt ? "Pending" : attempt.successful ? "Accepted" : "Rejected";
                 return (
@@ -689,9 +689,10 @@ export function JudgeCPanel() {
                     key={`${d.code}-${timelineIndex}`}
                     ref={isActive ? activeCardRef : undefined}
                     type="button"
-                    disabled={locked || (blocked && !attempt?.successful)}
+                    disabled={locked}
                     onClick={(e) => {
                       e.currentTarget.blur();
+                      setActiveIndex(timelineIndex);
                       if (isConnection && connection) {
                         tapConnection(connection, nextCode, prevCode);
                         return;
