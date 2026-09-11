@@ -496,9 +496,10 @@ function ChiefRefereeDashboardInner() {
     ? Math.round((cSubmitted.reduce((s, v) => s + v, 0) / cSubmitted.length) * 100) / 100
     : 0;
 
-  // Aggregate final score (post TA deductions, mode-aware)
+  // Aggregate final score — strict sum A + B + C (mode-aware).
+  // Group A already arrives net of its deductions, so nothing is subtracted here.
   const cContrib = matchMode === "optional" ? groupCTotal : 0;
-  const aggregateFinal = Math.max(0, groupATotal + groupBNet + cContrib - taDeduction);
+  const aggregateFinal = Math.max(0, groupATotal + groupBNet + cContrib);
   // Show real aggregates whenever ANY judge has submitted — even if TA hasn't
   // formally "called" the athlete via current_match.athlete_id yet. This fixes
   // the case where group totals + final stay at 0.00 despite scores arriving.

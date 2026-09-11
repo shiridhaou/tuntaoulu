@@ -757,6 +757,9 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
           setJudgeBScores(prev => prev.map((v, i) => i === idx ? s : v));
         }
       }
+      // Provisional live rows (submitted = false) update the running total but
+      // must NOT mark the slot as having formally submitted.
+      if (r.submitted === false) return;
       setSubmittedSlots(prev => prev.includes(r.judge_slot) ? prev : [...prev, r.judge_slot]);
     };
 
