@@ -700,8 +700,10 @@ export function JudgeCPanel() {
                       validateMovement(d, attempt ? !attempt.successful : true);
                     }}
 
-                    whileTap={locked || blocked ? undefined : { scale: 0.97 }}
+                    whileTap={locked ? undefined : { scale: 0.97 }}
                     className={`relative shrink-0 w-32 md:w-36 px-3 py-2 text-left border-y border-r first:border-l first:rounded-l-md last:rounded-r-md disabled:cursor-not-allowed disabled:opacity-50 transition-colors flex flex-col justify-between ${
+                      isActive ? "z-10 ring-2 ring-cyber-orange ring-offset-1 ring-offset-black " : ""
+                    }${
                       attempt?.successful
                         ? "border-green-400/60 bg-green-400/15"
                         : attempt
