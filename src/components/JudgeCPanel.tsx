@@ -570,7 +570,7 @@ export function JudgeCPanel() {
           <AnimatePresence mode="wait">
             {current && (
               <motion.div
-                key={current.code}
+                key={`${currentKey}-${activeIndex}`}
                 initial={{ opacity: 0, y: -10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -579,16 +579,19 @@ export function JudgeCPanel() {
                 <div className="flex items-center justify-center gap-3 flex-wrap">
                   <span className="text-3xl md:text-4xl font-heading font-black text-white" dir="ltr"
                         style={{ textShadow: "0 0 24px oklch(0.70 0.22 45 / 0.5)" }}>
-                    {current.code}
+                    {currentKey}
                   </span>
                   <span className="text-xs font-bold px-2.5 py-1 rounded-lg border border-cyber-orange/50 bg-cyber-orange/15 text-cyber-orange" dir="ltr">
-                    +{current.value.toFixed(2)}
+                    +{currentValue.toFixed(2)}
                   </span>
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-lg border border-white/15 bg-white/5 text-white/80" dir="ltr">
-                    {current.connection}
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${currentIsConnection ? "border-cyan-400/50 bg-cyan-400/10 text-cyan-300" : "border-white/15 bg-white/5 text-white/80"}`} dir="ltr">
+                    {currentIsConnection ? "Connection" : current.connection}
+                  </span>
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-lg border border-white/15 bg-white/5 text-white/60 tabular-nums" dir="ltr">
+                    {activeIndex + 1} / {timeline.length}
                   </span>
                 </div>
-                <p className="text-base text-white/80 font-body mt-1" dir="ltr">{current.label}</p>
+                <p className="text-base text-white/80 font-body mt-1" dir="ltr">{currentLabel}</p>
               </motion.div>
             )}
           </AnimatePresence>
