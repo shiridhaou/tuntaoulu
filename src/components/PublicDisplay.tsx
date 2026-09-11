@@ -1238,7 +1238,7 @@ export function PublicDisplay() {
                   {displayCMovements.map((m, i) => {
                     const ok = m.success === true;
                     const fail = m.success === false;
-                    const color = ok ? CYAN : fail ? RED : "#9ca3af";
+                    const color = ok ? GREEN : fail ? RED : "#9ca3af";
                     return (
                       <span key={`${m.code}-${i}`}
                         title={ok ? "Success" : fail ? "Failed" : "Pending"}
