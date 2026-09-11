@@ -496,9 +496,10 @@ function ChiefRefereeDashboardInner() {
     ? Math.round((cSubmitted.reduce((s, v) => s + v, 0) / cSubmitted.length) * 100) / 100
     : 0;
 
-  // Aggregate final score (post TA deductions, mode-aware)
+  // Aggregate final score — strict sum A + B + C (mode-aware).
+  // Group A already arrives net of its deductions, so nothing is subtracted here.
   const cContrib = matchMode === "optional" ? groupCTotal : 0;
-  const aggregateFinal = Math.max(0, groupATotal + groupBNet + cContrib - taDeduction);
+  const aggregateFinal = Math.max(0, groupATotal + groupBNet + cContrib);
   // Show real aggregates whenever ANY judge has submitted — even if TA hasn't
   // formally "called" the athlete via current_match.athlete_id yet. This fixes
   // the case where group totals + final stay at 0.00 despite scores arriving.
@@ -728,11 +729,11 @@ function ChiefRefereeDashboardInner() {
         {(() => {
           const cContrib = matchMode === "optional" ? displayGroupCTotal : 0;
           const subtotal = displayGroupATotal + displayGroupBNet + cContrib;
-          const aggregateFinal = Math.max(0, subtotal - displayTaDeduction);
+          const aggregateFinal = Math.max(0, subtotal);
           const maxTotal = effMaxA + effMaxB + (matchMode === "optional" ? effMaxC : 0);
           const formula = matchMode === "optional"
-            ? "A + B(avg) + C − TA"
-            : "A + B(avg) − TA";
+            ? "A + B(avg) + C"
+            : "A + B(avg)";
           return (
             <div className="rounded-3xl border backdrop-blur-xl px-6 py-3 shrink-0"
               style={{
@@ -763,13 +764,13 @@ function ChiefRefereeDashboardInner() {
                         <span className="text-cyan-300">C {displayGroupCTotal.toFixed(2)}</span>
                       </>
                     )}
-                    <span className="text-white/30">−</span>
+                    <span className="text-white/30">·</span>
                     <span
                       key={`ta-${taPulse}`}
-                      className="text-red-400 ta-pulse px-1 rounded"
-                      title={`OOB ×${taOobCount}`}
+                      className="text-red-400/70 ta-pulse px-1 rounded"
+                      title={`OOB ×${taOobCount} — مطبّق ضمن نقاط المجموعة أ`}
                     >
-                      TA {displayTaDeduction.toFixed(2)}
+                      TA {displayTaDeduction.toFixed(2)} (info)
                     </span>
                   </div>
 

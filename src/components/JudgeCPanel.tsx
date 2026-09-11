@@ -4,7 +4,7 @@ import { FederationLogo } from "./FederationLogo";
 import { ArrowRight, RotateCcw, Send, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { submitJudgeScore } from "@/lib/scoreSubmit";
+import { submitJudgeScore, pushLiveJudgeScore } from "@/lib/scoreSubmit";
 import { useMatchSync } from "@/hooks/useMatchSync";
 import { useScoringGate } from "@/hooks/useScoringGate";
 import { useJudgeStatus } from "@/hooks/useJudgeStatus";
@@ -237,6 +237,22 @@ export function JudgeCPanel() {
 
   useEffect(() => { setSentC(false); }, [athlete?.id]);
 
+  // Live mirror: every accept/reject updates the running Group C total on the
+  // TA panel, the Chief dashboard and the public scoreboard (provisional row).
+  useEffect(() => {
+    const code = (sessionCode ?? activeSession ?? "").trim().toUpperCase();
+    if (!code || !judgeId || sentC) return;
+    const t = setTimeout(() => {
+      void pushLiveJudgeScore({
+        sessionCode: code, judgeSlot: judgeId, judgeRole: "C",
+        athleteId: athlete?.id ?? null, score: judgeCScore,
+        payload: { attempts: judgeCAttempts, live: true },
+      });
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [judgeCScore, judgeCAttempts, sessionCode, activeSession, judgeId, athlete?.id, sentC]);
+
   const advance = () => {
     const next = sheet.findIndex((d, i) => i > activeIndex && !judgedCodes.has(d.code));
     if (next >= 0) setActiveIndex(next);
@@ -282,6 +298,13 @@ export function JudgeCPanel() {
     addJudgeCAttempt({ code, label, value, successful: ok, kind });
   };
 
+  /** True when the movement a connection depends on has been rejected. */
+  const isConnectionBlocked = (prevMovementCode?: string | null) => {
+    if (!prevMovementCode) return false;
+    const prev = judgeCAttempts.find(a => a.code === prevMovementCode);
+    return !!prev && !prev.successful;
+  };
+
   /** IWUF cascade — a rejected movement voids every connection attached to it. */
   const rejectLinkedConnections = (movementCode: string) => {
     for (const t of connectionsOfMovement(movementCode)) {
@@ -313,10 +336,15 @@ export function JudgeCPanel() {
    * Tap a connection slot. Rejecting a connection also invalidates the
    * dependent (following) difficulty movement, per IWUF connection rules.
    */
-  const tapConnection = (b: ConnectionBonus, nextMovementCode?: string | null) => {
+  const tapConnection = (b: ConnectionBonus, nextMovementCode?: string | null, prevMovementCode?: string | null) => {
     if (locked) { toast.error("التقييم مقفل"); return; }
     const idx = attemptIndex(b.code);
     const nextOk = idx >= 0 ? !judgeCAttempts[idx]!.successful : true;
+    // A connection can never be accepted when its prerequisite movement failed.
+    if (nextOk && isConnectionBlocked(prevMovementCode)) {
+      toast.error(`الحركة ${prevMovementCode} مرفوضة — لا يمكن احتساب الربط`);
+      return;
+    }
     if (nextOk && idx < 0 && connectionTotal + b.value > MAX_C_CONNECTION + 1e-6) {
       toast.error(`سقف وضعيات الربط ${MAX_C_CONNECTION.toFixed(2)}`);
       return;
@@ -617,27 +645,28 @@ export function JudgeCPanel() {
             style={{ height: "150px" }}
           >
             <div className="flex min-w-max h-full items-stretch p-2" dir="ltr">
-              {timeline.map(({ item: d, index: timelineIndex, isConnection, connection, nextCode }) => {
+              {timeline.map(({ item: d, index: timelineIndex, isConnection, connection, prevCode, nextCode }) => {
                 const movementIndex = isConnection ? -1 : sheet.findIndex(m => m.code === d.code);
                 const attempt = judgeCAttempts.find(a => a.code === (connection?.code ?? d.code));
                 const isActive = movementIndex === activeIndex && !attempt;
+                const blocked = isConnection && isConnectionBlocked(prevCode);
                 const status = !attempt ? "Pending" : attempt.successful ? "Accepted" : "Rejected";
                 return (
                   <motion.button
                     key={`${d.code}-${timelineIndex}`}
                     ref={isActive ? activeCardRef : undefined}
                     type="button"
-                    disabled={locked}
+                    disabled={locked || (blocked && !attempt?.successful)}
                     onClick={(e) => {
                       e.currentTarget.blur();
                       if (isConnection && connection) {
-                        tapConnection(connection, nextCode);
+                        tapConnection(connection, nextCode, prevCode);
                         return;
                       }
                       validateMovement(d, attempt ? !attempt.successful : true);
                     }}
 
-                    whileTap={locked ? undefined : { scale: 0.97 }}
+                    whileTap={locked || blocked ? undefined : { scale: 0.97 }}
                     className={`relative shrink-0 w-32 md:w-36 px-3 py-2 text-left border-y border-r first:border-l first:rounded-l-md last:rounded-r-md disabled:cursor-not-allowed disabled:opacity-50 transition-colors flex flex-col justify-between ${
                       attempt?.successful
                         ? "border-green-400/60 bg-green-400/15"
@@ -649,7 +678,7 @@ export function JudgeCPanel() {
                               ? "border-cyan-400/25 bg-cyan-400/5 hover:bg-cyan-400/10"
                               : "border-white/15 bg-white/5 hover:bg-white/10"
                     }`}
-                    title={`${status}: ${d.label}`}
+                    title={blocked ? `الحركة ${prevCode} مرفوضة — الربط ملغى` : `${status}: ${d.label}`}
                   >
                     <div>
                       <div className="flex items-center justify-between gap-2">
