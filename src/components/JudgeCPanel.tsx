@@ -601,7 +601,7 @@ export function JudgeCPanel() {
         <div className="flex items-center justify-center gap-6 md:gap-10 w-full max-w-2xl">
           <motion.button
             whileTap={{ scale: 0.92 }}
-            disabled={locked || !current || allJudged || judgedCodes.has(current?.code ?? "")}
+            disabled={locked || !currentEntry || judgedCodes.has(currentKey)}
             onClick={(e) => { e.preventDefault(); e.currentTarget.blur(); handleYes(); }}
             type="button"
             className="btn-3d-green flex-1 h-36 md:h-44 rounded-3xl flex flex-col items-center justify-center font-heading font-black disabled:opacity-40 disabled:cursor-not-allowed"
@@ -613,7 +613,7 @@ export function JudgeCPanel() {
 
           <motion.button
             whileTap={{ scale: 0.92 }}
-            disabled={locked || !current || allJudged || judgedCodes.has(current?.code ?? "")}
+            disabled={locked || !currentEntry || judgedCodes.has(currentKey)}
             onClick={(e) => { e.preventDefault(); e.currentTarget.blur(); handleNo(); }}
             type="button"
             className="btn-3d-red flex-1 h-36 md:h-44 rounded-3xl flex flex-col items-center justify-center font-heading font-black disabled:opacity-40 disabled:cursor-not-allowed"
