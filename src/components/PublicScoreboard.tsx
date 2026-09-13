@@ -174,10 +174,20 @@ function usePublishedResult(sessionCode: string | null) {
     let cancelled = false;
 
     const loadLatest = async () => {
+      // Past results stay published (session ranking history), so the reveal is
+      // scoped to the athlete currently called on the floor.
+      const { data: cm } = await supabase
+        .from("current_match")
+        .select("athlete_id")
+        .eq("session_code", sessionCode)
+        .maybeSingle();
+      const liveId = (cm as { athlete_id: string | null } | null)?.athlete_id ?? null;
+      if (!liveId) { if (!cancelled) { setResult(null); setAthlete(null); } return; }
       let query = supabase
         .from("match_results")
         .select("athlete_id,athlete_name,final_score,score_a,score_b,score_c,deductions,published,payload,style,updated_at")
         .eq("published", true)
+        .eq("athlete_id", liveId)
         .order("updated_at", { ascending: false })
         .limit(1);
       if (sessionCode) query = query.eq("session_code", sessionCode);
@@ -199,6 +209,9 @@ function usePublishedResult(sessionCode: string | null) {
       .channel(`scoreboard-published-${sessionCode}`)
       .on("postgres_changes",
         { event: "*", schema: "public", table: "match_results" },
+        () => { void loadLatest(); })
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "current_match", filter: `session_code=eq.${sessionCode}` },
         () => { void loadLatest(); })
       .subscribe();
 
@@ -289,9 +302,10 @@ function LiveScoreboard() {
     const aid = publishedResult?.athlete_id ?? liveAthlete?.id ?? null;
     if (!aid || !showFinal) return null;
     const mine = Number(publishedResult?.final_score ?? displayFinal);
-    const ahead = placingRanking.filter((r) => r.athlete_id !== aid && r.final_score > mine).length;
-    // Initial state / single published score: rank is always 1.
-    return { rank: ahead + 1, total: Math.max(1, placingRanking.length) };
+    const others = placingRanking.filter((r) => r.athlete_id !== aid);
+    const ahead = others.filter((r) => r.final_score > mine).length;
+    // Initial state / single scored athlete: rank is always 1 OF 1.
+    return { rank: ahead + 1, total: others.length + 1 };
   }, [publishedResult?.athlete_id, publishedResult?.final_score, liveAthlete?.id, showFinal, displayFinal, placingRanking]);
 
   // ── Staggered reveal: A → B → C with 1s delay each, after publish/reveal ──
