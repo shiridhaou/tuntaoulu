@@ -9,6 +9,7 @@ import { FullscreenToggle } from "./FullscreenToggle";
 import { SessionBadge } from "@/components/SessionBadge";
 import { useRoomPresence } from "@/hooks/useRoomPresence";
 import { LeaderboardModal } from "./LeaderboardModal";
+import { PodiumOverlay } from "./PodiumOverlay";
 import { countryFlag } from "@/lib/affiliation";
 
 
