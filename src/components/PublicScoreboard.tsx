@@ -543,6 +543,25 @@ function LiveScoreboard() {
             </p>
             <p className="text-base font-heading font-black mt-2 tracking-widest" style={{ color: WHITE }} dir="rtl">
               {showFinal ? "النتيجة النهائية" : "في انتظار اعتماد الحكم الرئيسي…"}
+            {/* CURRENT PLACING — always rendered at the bottom-left of the
+                FINAL SCORE panel (never conditionally hidden). */}
+            <div className="w-full flex justify-start px-2 pt-4" dir="ltr">
+              <div className="inline-flex min-w-[220px] items-center justify-between gap-4 rounded-xl border px-4 py-2"
+                style={{ borderColor: `${NEON_ORANGE}99`, background: "rgba(255,122,26,0.12)" }}>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.3em] font-heading font-black text-white/75">
+                    Current Placing
+                  </p>
+                  <p className="text-[9px] tracking-[0.2em] text-white/45">
+                    OF {currentPlacing?.total ?? Math.max(1, placingRanking.length)}
+                  </p>
+                </div>
+                <span className="text-4xl md:text-5xl font-heading font-black tabular-nums leading-none"
+                  style={{ color: "#FACC15", textShadow: "none" }}>
+                  {currentPlacing?.rank ?? (showFinal ? 1 : "—")}
+                </span>
+              </div>
+            </div>
             </p>
             {isPublished && (
               <span
