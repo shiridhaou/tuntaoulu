@@ -110,6 +110,16 @@ function ChiefRefereeDashboardInner() {
   const [standingsOpen, setStandingsOpen] = useState(false);
   // Post-group podium flag: display-only signal for the public screen.
   const [groupCompleted, setGroupCompleted] = useState(false);
+  const toggleGroupCompleted = async () => {
+    if (!sessionCode) return;
+    const next = !groupCompleted;
+    setGroupCompleted(next);
+    await supabase.from("match_events").insert({
+      session_code: sessionCode,
+      event_type: next ? "group_completed" : "group_reopened",
+      payload: { at: Date.now() } as never,
+    });
+  };
 
   const [matchMode, setMatchMode] = useState<"compulsory" | "optional">("optional");
   const [taDeduction, setTaDeduction] = useState<number>(0);
