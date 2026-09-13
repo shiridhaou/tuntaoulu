@@ -591,7 +591,18 @@ function ChiefRefereeDashboardInner() {
           </div>
 
           <div className="flex items-center justify-end gap-1.5">
+            {/* STANDINGS — read-only ranked leaderboard overlay */}
+            <button
+              onClick={() => setStandingsOpen(true)}
+              title="الترتيب العام · Standings"
+              className="h-8 px-3 rounded-full border flex items-center gap-1.5 font-heading font-black text-[10px] tracking-[0.2em] transition-all"
+              style={{ background: `${GOLD}15`, borderColor: `${GOLD}88`, color: GOLD }}
+            >
+              <Trophy className="h-3.5 w-3.5" />
+              <span>STANDINGS</span>
+            </button>
             {/* VAR BROADCAST — promoted to header for high visibility (v1.1.5) */}
+
             <button
               onClick={() => setIsVarLiveOnPublic(!isVarLiveOnPublic)}
               title={isVarLiveOnPublic ? "إيقاف بث VAR للجمهور" : "بث VAR للجمهور"}
@@ -961,7 +972,16 @@ function ChiefRefereeDashboardInner() {
         />
       )}
 
+      {/* EVENT STANDINGS — strictly read-only overlay */}
+      <LeaderboardModal
+        sessionCode={sessionCode}
+        open={standingsOpen}
+        onClose={() => setStandingsOpen(false)}
+        styleFilter={(timerSync.style ?? competitionStyle) ?? null}
+      />
+
       {/* FINAL SCORE SHEET — shown after COMMIT */}
+
       {qrModalOpen && currentAthlete && scoreRevealed && (
         <FinalScoreSheetModal
           onClose={() => setQrModalOpen(false)}
