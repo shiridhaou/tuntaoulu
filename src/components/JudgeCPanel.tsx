@@ -10,6 +10,8 @@ import { useScoringGate } from "@/hooks/useScoringGate";
 import { useJudgeStatus } from "@/hooks/useJudgeStatus";
 import { toast } from "sonner";
 import { SessionBadge } from "@/components/SessionBadge";
+import { AthleteAffiliation } from "@/components/AthleteAffiliation";
+
 import { useActiveSessionCode } from "@/hooks/useActiveSession";
 import { useRoomPresence } from "@/hooks/useRoomPresence";
 import { MAX_C_MOVEMENT, MAX_C_CONNECTION, lookupCode, isConnectionCode, lookupConnection, type ConnectionBonus } from "@/lib/difficultyCodes";
