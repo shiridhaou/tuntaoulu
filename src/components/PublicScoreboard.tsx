@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Trophy } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useCompetition, STYLE_CONFIGS } from "@/store/competition-store";
@@ -86,6 +86,45 @@ function useLiveSession() {
 
 
   return { activeSessionCode, liveAthlete, liveTimerSec, callBanner };
+}
+
+// ── Live published ranking for CURRENT PLACING (v1.7) ────────────────
+// Reads every published match_results row for the session, keeps the latest
+// row per athlete, sorts descending (highest score = rank 1) and live-updates
+// the moment the Chief publishes a new result.
+type PlacingRow = { athlete_id: string; final_score: number };
+function useLivePlacingRanking(sessionCode: string | null) {
+  const [rows, setRows] = useState<PlacingRow[]>([]);
+  useEffect(() => {
+    if (!sessionCode) { setRows([]); return; }
+    let cancelled = false;
+    const load = async () => {
+      const { data } = await supabase
+        .from("match_results")
+        .select("athlete_id, final_score, updated_at")
+        .eq("session_code", sessionCode)
+        .eq("published", true)
+        .order("updated_at", { ascending: false });
+      if (cancelled) return;
+      const latest = new Map<string, number>();
+      (data ?? []).forEach((r: any) => {
+        if (!latest.has(r.athlete_id)) latest.set(r.athlete_id, Number(r.final_score));
+      });
+      const arr = Array.from(latest.entries())
+        .map(([athlete_id, final_score]) => ({ athlete_id, final_score }))
+        .sort((a, b) => b.final_score - a.final_score);
+      setRows(arr);
+    };
+    load();
+    const ch = supabase
+      .channel(`sb-placing-${sessionCode}`)
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "match_results", filter: `session_code=eq.${sessionCode}` },
+        () => load())
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [sessionCode]);
+  return rows;
 }
 
 const STYLE_LABELS: Record<string, string> = {
@@ -240,6 +279,20 @@ function LiveScoreboard() {
   const isPublished = !!publishedResult?.published;
   const displayFinal = Number(publishedResult?.final_score ?? finalScore);
   const showFinal = isPublished || scoreRevealed;
+
+  // ── CURRENT PLACING — live rank of the published score against every
+  // previously published athlete of this session (v1.7). Recomputed in
+  // real time whenever any result is published: a higher score takes
+  // rank 1 and previous leaders automatically drop one place.
+  const placingRanking = useLivePlacingRanking(activeSessionCode ?? sessionCode);
+  const currentPlacing = useMemo(() => {
+    const aid = publishedResult?.athlete_id ?? liveAthlete?.id ?? null;
+    if (!aid || !showFinal) return null;
+    const mine = Number(publishedResult?.final_score ?? displayFinal);
+    const ahead = placingRanking.filter((r) => r.athlete_id !== aid && r.final_score > mine).length;
+    // Initial state / single published score: rank is always 1.
+    return { rank: ahead + 1, total: Math.max(1, placingRanking.length) };
+  }, [publishedResult?.athlete_id, publishedResult?.final_score, liveAthlete?.id, showFinal, displayFinal, placingRanking]);
 
   // ── Staggered reveal: A → B → C with 1s delay each, after publish/reveal ──
   const [revealStage, setRevealStage] = useState(0); // 0=none, 1=A, 2=A+B, 3=A+B+C
@@ -490,6 +543,25 @@ function LiveScoreboard() {
             </p>
             <p className="text-base font-heading font-black mt-2 tracking-widest" style={{ color: WHITE }} dir="rtl">
               {showFinal ? "النتيجة النهائية" : "في انتظار اعتماد الحكم الرئيسي…"}
+            {/* CURRENT PLACING — always rendered at the bottom-left of the
+                FINAL SCORE panel (never conditionally hidden). */}
+            <div className="w-full flex justify-start px-2 pt-4" dir="ltr">
+              <div className="inline-flex min-w-[220px] items-center justify-between gap-4 rounded-xl border px-4 py-2"
+                style={{ borderColor: `${NEON_ORANGE}99`, background: "rgba(255,122,26,0.12)" }}>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.3em] font-heading font-black text-white/75">
+                    Current Placing
+                  </p>
+                  <p className="text-[9px] tracking-[0.2em] text-white/45">
+                    OF {currentPlacing?.total ?? Math.max(1, placingRanking.length)}
+                  </p>
+                </div>
+                <span className="text-4xl md:text-5xl font-heading font-black tabular-nums leading-none"
+                  style={{ color: "#FACC15", textShadow: "none" }}>
+                  {currentPlacing?.rank ?? (showFinal ? 1 : "—")}
+                </span>
+              </div>
+            </div>
             </p>
             {isPublished && (
               <span
