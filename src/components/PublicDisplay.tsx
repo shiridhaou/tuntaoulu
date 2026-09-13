@@ -8,6 +8,9 @@ import { useCompetition } from "@/store/competition-store";
 import { FullscreenToggle } from "./FullscreenToggle";
 import { SessionBadge } from "@/components/SessionBadge";
 import { useRoomPresence } from "@/hooks/useRoomPresence";
+import { LeaderboardModal } from "./LeaderboardModal";
+import { countryFlag } from "@/lib/affiliation";
+
 
 /**
  * PublicDisplay — full-screen public results screen at /public-display.
@@ -1015,9 +1018,10 @@ export function PublicDisplay() {
               )}
               {athlete.country && (
                 <span className="px-2 py-1 rounded text-[10px] font-heading font-black border" style={{ borderColor: `${ORANGE}66`, color: ORANGE, background: `${ORANGE}15` }} dir="ltr">
-                  {athlete.country}
+                  {countryFlag(athlete.country) ? `${countryFlag(athlete.country)} ` : ""}{athlete.country}
                 </span>
               )}
+
               {currentRank && (
                 <span className="px-2 py-1 rounded text-[10px] font-heading font-black border inline-flex items-center gap-1" style={{ borderColor: `${GOLD}88`, color: GOLD, background: `${GOLD}15` }} dir="ltr">
                   <Trophy className="h-3 w-3" /> RANK #{currentRank.rank} / {currentRank.total}
@@ -1259,7 +1263,22 @@ export function PublicDisplay() {
           )}
         </aside>
       </main>
+      {/* STANDINGS — read-only ranked leaderboard overlay */}
+      <button
+        onClick={() => setStandingsOpen(true)}
+        title="الترتيب العام · Standings"
+        className="fixed bottom-4 left-4 z-[110] h-10 px-4 rounded-full border flex items-center gap-2 font-heading font-black text-[11px] tracking-[0.2em]"
+        style={{ background: `${GOLD}18`, borderColor: `${GOLD}88`, color: GOLD, backdropFilter: "blur(8px)" }}
+      >
+        <Trophy className="h-4 w-4" /> STANDINGS
+      </button>
+      <LeaderboardModal
+        sessionCode={sessionCode}
+        open={standingsOpen}
+        onClose={() => setStandingsOpen(false)}
+      />
       <FullscreenToggle />
+
     </div>
   );
 }
