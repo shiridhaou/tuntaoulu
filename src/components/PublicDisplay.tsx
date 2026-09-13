@@ -628,7 +628,9 @@ function VarBroadcastView({
 // ── Component ─────────────────────────────────────────────────────────
 export function PublicDisplay() {
   const sessionCode = useActiveSession();
+  const [standingsOpen, setStandingsOpen] = useState(false);
   useRoomPresence(sessionCode, { role: "display" });
+
   const { athlete, judgeScores, result, liveTaDeduction, liveTaPulse } = useLiveDisplay(sessionCode);
   const varLive = useVarBroadcastFlag(sessionCode);
   const liveVideoUrl = useLiveVideoUrl(sessionCode);
