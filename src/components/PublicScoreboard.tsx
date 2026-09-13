@@ -286,7 +286,7 @@ function LiveScoreboard() {
   // rank 1 and previous leaders automatically drop one place.
   const placingRanking = useLivePlacingRanking(activeSessionCode ?? sessionCode);
   const currentPlacing = useMemo(() => {
-    const aid = publishedResult?.athlete_id ?? displayAthlete?.id ?? null;
+    const aid = publishedResult?.athlete_id ?? liveAthlete?.id ?? null;
     if (!aid || !showFinal) return null;
     const mine = Number(publishedResult?.final_score ?? displayFinal);
     const ahead = placingRanking.filter((r) => r.athlete_id !== aid && r.final_score > mine).length;
