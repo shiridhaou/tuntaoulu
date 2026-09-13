@@ -9,6 +9,7 @@ import { FullscreenToggle } from "./FullscreenToggle";
 import { SessionBadge } from "@/components/SessionBadge";
 import { useRoomPresence } from "@/hooks/useRoomPresence";
 import { LeaderboardModal } from "./LeaderboardModal";
+import { PodiumOverlay } from "./PodiumOverlay";
 import { countryFlag } from "@/lib/affiliation";
 
 
@@ -337,6 +338,41 @@ function useVarBroadcastFlag(sessionCode: string | null) {
   return on;
 }
 
+// ── Post-group completion flag (v1.6) ─────────────────────────────────
+// Chief/TA marks the group COMPLETED -> public TV switches to the TOP 4
+// podium view. Purely presentational: reads `match_events` only, never
+// writes and never touches scoring state.
+function useGroupCompleted(sessionCode: string | null) {
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    if (!sessionCode) { setDone(false); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("match_events")
+        .select("event_type")
+        .eq("session_code", sessionCode)
+        .in("event_type", ["group_completed", "group_reopened"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!cancelled && data) setDone(data.event_type === "group_completed");
+    })();
+    const ch = supabase
+      .channel(`pd-group-${sessionCode}`)
+      .on("postgres_changes",
+        { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${sessionCode}` },
+        (payload) => {
+          const ev = (payload.new as { event_type?: string }).event_type;
+          if (ev === "group_completed") setDone(true);
+          else if (ev === "group_reopened") setDone(false);
+        })
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [sessionCode]);
+  return done;
+}
+
 // ── Active VAR camera (v1.4.8) ────────────────────────────────────────
 // Mirrors the AHJ "Multi-Camera Switcher". When VAR is broadcasting we show
 // which physical camera is currently feeding the rolling buffer.
@@ -636,6 +672,7 @@ export function PublicDisplay() {
   const liveVideoUrl = useLiveVideoUrl(sessionCode);
   const ahjClips = useVerifiedClips(sessionCode, athlete?.id ?? null);
   const ranking = useLiveRanking(sessionCode);
+  const groupCompleted = useGroupCompleted(sessionCode);
   const reportRef = useRef<HTMLDivElement | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [origin, setOrigin] = useState("");
@@ -656,6 +693,15 @@ export function PublicDisplay() {
     const idx = ranking.findIndex(r => r.athlete_id === athlete.id);
     return idx >= 0 ? { rank: idx + 1, total: ranking.length } : null;
   }, [athlete?.id, ranking]);
+
+  // CURRENT PLACING — live rank of the published score against strictly
+  // finished (published) athletes of this group. Display only.
+  const currentPlacing = useMemo(() => {
+    if (!athlete?.id) return null;
+    const others = ranking.filter(r => r.athlete_id !== athlete.id);
+    const ahead = others.filter(r => r.final_score > finalScore).length;
+    return { rank: ahead + 1, total: others.length + 1 };
+  }, [athlete?.id, ranking, finalScore]);
 
   const handleDownloadPdf = async () => {
     if (!reportRef.current) return;
@@ -787,6 +833,21 @@ export function PublicDisplay() {
         <FederationLogo size="lg" />
         <p className="mt-6 text-lg font-heading font-bold tracking-widest">NO ACTIVE SESSION</p>
         <p className="mt-1 text-sm text-white/50">في انتظار بدء جلسة من الحكم الرئيسي</p>
+        <FullscreenToggle />
+      </div>
+    );
+  }
+
+  // ── POST-GROUP TOP 4 PODIUM (read-only overlay) ─────────
+  // Stays on screen until the group is reopened or a new session starts.
+  if (groupCompleted) {
+    return (
+      <div className="h-screen w-screen relative overflow-hidden" style={{ background: NAVY }}>
+        <PodiumOverlay
+          sessionCode={sessionCode}
+          open
+          styleFilter={result?.style ?? athlete?.style ?? null}
+        />
         <FullscreenToggle />
       </div>
     );
@@ -1037,7 +1098,27 @@ export function PublicDisplay() {
               {[athlete.club, athlete.age_category, result?.style ?? athlete.style].filter(Boolean).join("  ·  ") || "—"}
             </p>
             <div className="mt-5 flex items-end justify-between gap-3">
-              <p className="text-[10px] uppercase tracking-[0.4em] text-white/50 font-body">Final Score</p>
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-[0.4em] text-white/50 font-body">Final Score</p>
+                {/* CURRENT PLACING — read-only, computed from published results */}
+                {currentPlacing && (
+                  <div className="mt-3 inline-flex items-center gap-3 rounded-xl border px-4 py-2"
+                    style={{ borderColor: `${GOLD}88`, background: `${GOLD}12` }}>
+                    <div>
+                      <p className="text-[9px] uppercase tracking-[0.3em] font-heading font-black text-white/60" dir="ltr">
+                        Current Placing
+                      </p>
+                      <p className="text-[9px] tracking-[0.2em] text-white/40" dir="ltr">
+                        OF {currentPlacing.total}
+                      </p>
+                    </div>
+                    <span className="text-4xl md:text-5xl font-heading font-black tabular-nums leading-none"
+                      style={{ color: GOLD }} dir="ltr">
+                      {currentPlacing.rank}
+                    </span>
+                  </div>
+                )}
+              </div>
               <p className="text-7xl md:text-8xl font-heading font-black tabular-nums leading-none text-yellow-400"
                 style={{ color: "#FACC15", textShadow: "none" }} dir="ltr">
                 {animated.toFixed(2)}

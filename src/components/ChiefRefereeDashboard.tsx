@@ -108,6 +108,18 @@ function ChiefRefereeDashboardInner() {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [contentSheetOpen, setContentSheetOpen] = useState(false);
   const [standingsOpen, setStandingsOpen] = useState(false);
+  // Post-group podium flag: display-only signal for the public screen.
+  const [groupCompleted, setGroupCompleted] = useState(false);
+  const toggleGroupCompleted = async () => {
+    if (!sessionCode) return;
+    const next = !groupCompleted;
+    setGroupCompleted(next);
+    await supabase.from("match_events").insert({
+      session_code: sessionCode,
+      event_type: next ? "group_completed" : "group_reopened",
+      payload: { at: Date.now() } as never,
+    });
+  };
 
   const [matchMode, setMatchMode] = useState<"compulsory" | "optional">("optional");
   const [taDeduction, setTaDeduction] = useState<number>(0);
@@ -600,6 +612,18 @@ function ChiefRefereeDashboardInner() {
             >
               <Trophy className="h-3.5 w-3.5" />
               <span>STANDINGS</span>
+            </button>
+            {/* GROUP COMPLETED — flips the public TV to the TOP 4 podium view */}
+            <button
+              onClick={() => void toggleGroupCompleted()}
+              title={groupCompleted ? "إعادة فتح المجموعة" : "إنهاء المجموعة · عرض المراكز الأربعة"}
+              className="h-8 px-3 rounded-full border flex items-center gap-1.5 font-heading font-black text-[10px] tracking-[0.2em] transition-all"
+              style={groupCompleted
+                ? { background: `${GOLD}30`, borderColor: GOLD, color: GOLD }
+                : { background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.7)" }}
+            >
+              <Trophy className="h-3.5 w-3.5" />
+              <span>{groupCompleted ? "REOPEN GROUP" : "COMPLETE GROUP"}</span>
             </button>
             {/* VAR BROADCAST — promoted to header for high visibility (v1.1.5) */}
 
