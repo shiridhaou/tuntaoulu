@@ -337,6 +337,41 @@ function useVarBroadcastFlag(sessionCode: string | null) {
   return on;
 }
 
+// ── Post-group completion flag (v1.6) ─────────────────────────────────
+// Chief/TA marks the group COMPLETED -> public TV switches to the TOP 4
+// podium view. Purely presentational: reads `match_events` only, never
+// writes and never touches scoring state.
+function useGroupCompleted(sessionCode: string | null) {
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    if (!sessionCode) { setDone(false); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("match_events")
+        .select("event_type")
+        .eq("session_code", sessionCode)
+        .in("event_type", ["group_completed", "group_reopened"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!cancelled && data) setDone(data.event_type === "group_completed");
+    })();
+    const ch = supabase
+      .channel(`pd-group-${sessionCode}`)
+      .on("postgres_changes",
+        { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${sessionCode}` },
+        (payload) => {
+          const ev = (payload.new as { event_type?: string }).event_type;
+          if (ev === "group_completed") setDone(true);
+          else if (ev === "group_reopened") setDone(false);
+        })
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [sessionCode]);
+  return done;
+}
+
 // ── Active VAR camera (v1.4.8) ────────────────────────────────────────
 // Mirrors the AHJ "Multi-Camera Switcher". When VAR is broadcasting we show
 // which physical camera is currently feeding the rolling buffer.
