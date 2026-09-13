@@ -671,6 +671,7 @@ export function PublicDisplay() {
   const liveVideoUrl = useLiveVideoUrl(sessionCode);
   const ahjClips = useVerifiedClips(sessionCode, athlete?.id ?? null);
   const ranking = useLiveRanking(sessionCode);
+  const groupCompleted = useGroupCompleted(sessionCode);
   const reportRef = useRef<HTMLDivElement | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [origin, setOrigin] = useState("");
