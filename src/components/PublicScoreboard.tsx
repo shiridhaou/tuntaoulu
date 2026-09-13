@@ -88,6 +88,45 @@ function useLiveSession() {
   return { activeSessionCode, liveAthlete, liveTimerSec, callBanner };
 }
 
+// ── Live published ranking for CURRENT PLACING (v1.7) ────────────────
+// Reads every published match_results row for the session, keeps the latest
+// row per athlete, sorts descending (highest score = rank 1) and live-updates
+// the moment the Chief publishes a new result.
+type PlacingRow = { athlete_id: string; final_score: number };
+function useLivePlacingRanking(sessionCode: string | null) {
+  const [rows, setRows] = useState<PlacingRow[]>([]);
+  useEffect(() => {
+    if (!sessionCode) { setRows([]); return; }
+    let cancelled = false;
+    const load = async () => {
+      const { data } = await supabase
+        .from("match_results")
+        .select("athlete_id, final_score, updated_at")
+        .eq("session_code", sessionCode)
+        .eq("published", true)
+        .order("updated_at", { ascending: false });
+      if (cancelled) return;
+      const latest = new Map<string, number>();
+      (data ?? []).forEach((r: any) => {
+        if (!latest.has(r.athlete_id)) latest.set(r.athlete_id, Number(r.final_score));
+      });
+      const arr = Array.from(latest.entries())
+        .map(([athlete_id, final_score]) => ({ athlete_id, final_score }))
+        .sort((a, b) => b.final_score - a.final_score);
+      setRows(arr);
+    };
+    load();
+    const ch = supabase
+      .channel(`sb-placing-${sessionCode}`)
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "match_results", filter: `session_code=eq.${sessionCode}` },
+        () => load())
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [sessionCode]);
+  return rows;
+}
+
 const STYLE_LABELS: Record<string, string> = {
   changquan: "Changquan",
   nanquan: "Nanquan",
