@@ -13,6 +13,9 @@ import { WaitingSidebar } from "./WaitingSidebar";
 import { VideoEvidenceIndicator } from "./VideoEvidenceIndicator";
 import { ConsensusCodesPanel } from "./ConsensusCodesPanel";
 import { FinalScoreSheetModal } from "./FinalScoreSheetModal";
+import { LeaderboardModal } from "./LeaderboardModal";
+import { countryFlag } from "@/lib/affiliation";
+
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMatchSync, broadcastSessionState } from "@/hooks/useMatchSync";
@@ -104,6 +107,8 @@ function ChiefRefereeDashboardInner() {
   const [groupDetail, setGroupDetail] = useState<GroupKey | null>(null);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [contentSheetOpen, setContentSheetOpen] = useState(false);
+  const [standingsOpen, setStandingsOpen] = useState(false);
+
   const [matchMode, setMatchMode] = useState<"compulsory" | "optional">("optional");
   const [taDeduction, setTaDeduction] = useState<number>(0);
   const [taOobCount, setTaOobCount] = useState<number>(0);
@@ -554,8 +559,15 @@ function ChiefRefereeDashboardInner() {
                 #{String(currentAthleteIndex + 1).padStart(4, "0")}
               </span>
               <span className="px-1.5 py-0 rounded text-[9px] font-heading font-bold border" style={{ background: `${ORANGE}1A`, borderColor: `${ORANGE}40`, color: ORANGE }} dir="ltr">
+                {countryFlag(currentAthlete?.country) ? `${countryFlag(currentAthlete?.country)} ` : ""}
                 {currentAthlete?.country || "---"}
               </span>
+              {currentAthlete?.club && (
+                <span className="px-1.5 py-0 rounded text-[9px] font-heading font-bold border border-white/15 bg-white/5 text-white/70 truncate max-w-[160px]">
+                  {currentAthlete.club}
+                </span>
+              )}
+
               <h1 className="text-base md:text-lg font-heading font-black leading-none truncate" style={{ color: GOLD }}>
                 {currentAthlete?.name || "بانتظار مناداة اللاعب"}
               </h1>
