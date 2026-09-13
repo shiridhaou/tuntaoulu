@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Trophy } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useCompetition, STYLE_CONFIGS } from "@/store/competition-store";
@@ -279,6 +279,20 @@ function LiveScoreboard() {
   const isPublished = !!publishedResult?.published;
   const displayFinal = Number(publishedResult?.final_score ?? finalScore);
   const showFinal = isPublished || scoreRevealed;
+
+  // ── CURRENT PLACING — live rank of the published score against every
+  // previously published athlete of this session (v1.7). Recomputed in
+  // real time whenever any result is published: a higher score takes
+  // rank 1 and previous leaders automatically drop one place.
+  const placingRanking = useLivePlacingRanking(activeSessionCode ?? sessionCode);
+  const currentPlacing = useMemo(() => {
+    const aid = publishedResult?.athlete_id ?? displayAthlete?.id ?? null;
+    if (!aid || !showFinal) return null;
+    const mine = Number(publishedResult?.final_score ?? displayFinal);
+    const ahead = placingRanking.filter((r) => r.athlete_id !== aid && r.final_score > mine).length;
+    // Initial state / single published score: rank is always 1.
+    return { rank: ahead + 1, total: Math.max(1, placingRanking.length) };
+  }, [publishedResult?.athlete_id, publishedResult?.final_score, displayAthlete?.id, showFinal, displayFinal, placingRanking]);
 
   // ── Staggered reveal: A → B → C with 1s delay each, after publish/reveal ──
   const [revealStage, setRevealStage] = useState(0); // 0=none, 1=A, 2=A+B, 3=A+B+C
