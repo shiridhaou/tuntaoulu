@@ -681,6 +681,8 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
           id: athleteId,
           name: athleteMeta?.name ?? "—",
           country: athleteMeta?.country ?? "—",
+          club: athleteMeta?.club ?? null,
+          bib: athleteMeta?.bib ?? null,
           category: "—",
           order: prev.length + 1,
           difficultySheet: sheet ?? [],
@@ -689,16 +691,20 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
       const a = prev[idx];
       const sheetSame = !sheet || (a.difficultySheet && JSON.stringify(a.difficultySheet) === JSON.stringify(sheet));
       const nameSame = !athleteMeta?.name || a.name === athleteMeta.name;
-      if (sheetSame && nameSame) return prev;
+      const clubSame = !athleteMeta?.club || a.club === athleteMeta.club;
+      if (sheetSame && nameSame && clubSame) return prev;
       const next = [...prev];
       next[idx] = {
         ...a,
         name: athleteMeta?.name ?? a.name,
         country: athleteMeta?.country ?? a.country,
+        club: athleteMeta?.club ?? a.club ?? null,
+        bib: athleteMeta?.bib ?? a.bib ?? null,
         difficultySheet: sheet ?? a.difficultySheet,
       };
       return next;
     });
+
   }, [isTA, sync.payload, sync.athleteId]);
 
   // Followers: keep currentAthleteIndex pinned to the TA's athleteId.

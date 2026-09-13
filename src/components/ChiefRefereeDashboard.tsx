@@ -13,6 +13,9 @@ import { WaitingSidebar } from "./WaitingSidebar";
 import { VideoEvidenceIndicator } from "./VideoEvidenceIndicator";
 import { ConsensusCodesPanel } from "./ConsensusCodesPanel";
 import { FinalScoreSheetModal } from "./FinalScoreSheetModal";
+import { LeaderboardModal } from "./LeaderboardModal";
+import { countryFlag } from "@/lib/affiliation";
+
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMatchSync, broadcastSessionState } from "@/hooks/useMatchSync";
@@ -104,6 +107,8 @@ function ChiefRefereeDashboardInner() {
   const [groupDetail, setGroupDetail] = useState<GroupKey | null>(null);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [contentSheetOpen, setContentSheetOpen] = useState(false);
+  const [standingsOpen, setStandingsOpen] = useState(false);
+
   const [matchMode, setMatchMode] = useState<"compulsory" | "optional">("optional");
   const [taDeduction, setTaDeduction] = useState<number>(0);
   const [taOobCount, setTaOobCount] = useState<number>(0);
@@ -554,8 +559,15 @@ function ChiefRefereeDashboardInner() {
                 #{String(currentAthleteIndex + 1).padStart(4, "0")}
               </span>
               <span className="px-1.5 py-0 rounded text-[9px] font-heading font-bold border" style={{ background: `${ORANGE}1A`, borderColor: `${ORANGE}40`, color: ORANGE }} dir="ltr">
+                {countryFlag(currentAthlete?.country) ? `${countryFlag(currentAthlete?.country)} ` : ""}
                 {currentAthlete?.country || "---"}
               </span>
+              {currentAthlete?.club && (
+                <span className="px-1.5 py-0 rounded text-[9px] font-heading font-bold border border-white/15 bg-white/5 text-white/70 truncate max-w-[160px]">
+                  {currentAthlete.club}
+                </span>
+              )}
+
               <h1 className="text-base md:text-lg font-heading font-black leading-none truncate" style={{ color: GOLD }}>
                 {currentAthlete?.name || "بانتظار مناداة اللاعب"}
               </h1>
@@ -579,7 +591,18 @@ function ChiefRefereeDashboardInner() {
           </div>
 
           <div className="flex items-center justify-end gap-1.5">
+            {/* STANDINGS — read-only ranked leaderboard overlay */}
+            <button
+              onClick={() => setStandingsOpen(true)}
+              title="الترتيب العام · Standings"
+              className="h-8 px-3 rounded-full border flex items-center gap-1.5 font-heading font-black text-[10px] tracking-[0.2em] transition-all"
+              style={{ background: `${GOLD}15`, borderColor: `${GOLD}88`, color: GOLD }}
+            >
+              <Trophy className="h-3.5 w-3.5" />
+              <span>STANDINGS</span>
+            </button>
             {/* VAR BROADCAST — promoted to header for high visibility (v1.1.5) */}
+
             <button
               onClick={() => setIsVarLiveOnPublic(!isVarLiveOnPublic)}
               title={isVarLiveOnPublic ? "إيقاف بث VAR للجمهور" : "بث VAR للجمهور"}
@@ -949,7 +972,16 @@ function ChiefRefereeDashboardInner() {
         />
       )}
 
+      {/* EVENT STANDINGS — strictly read-only overlay */}
+      <LeaderboardModal
+        sessionCode={sessionCode}
+        open={standingsOpen}
+        onClose={() => setStandingsOpen(false)}
+        styleFilter={(timerSync.style ?? competitionStyle) ?? null}
+      />
+
       {/* FINAL SCORE SHEET — shown after COMMIT */}
+
       {qrModalOpen && currentAthlete && scoreRevealed && (
         <FinalScoreSheetModal
           onClose={() => setQrModalOpen(false)}

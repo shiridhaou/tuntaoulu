@@ -15,6 +15,8 @@ import { enabledKeysForStyle, rulesForKey, type GroupARule } from "@/config/grou
 import { GroupAKeypad } from "@/components/GroupAKeypad";
 import { styleShort, styleLabelAr } from "@/lib/styleNames";
 import { SessionBadge } from "@/components/SessionBadge";
+import { AthleteAffiliation } from "@/components/AthleteAffiliation";
+
 import { useActiveSessionCode } from "@/hooks/useActiveSession";
 import { useRoomPresence } from "@/hooks/useRoomPresence";
 
@@ -190,8 +192,16 @@ export function JudgeAPanel() {
         </div>
         <div className="flex shrink-0 items-center gap-3">
           {currentAthlete && (
-            <span className="text-[11px] text-white/80 font-bold truncate max-w-[140px]">{currentAthlete.name}</span>
+            <AthleteAffiliation
+              compact
+              className="max-w-[180px] text-right"
+              name={currentAthlete.name}
+              club={currentAthlete.club}
+              country={currentAthlete.country}
+              bib={currentAthlete.bib}
+            />
           )}
+
           {/* Authoritative match clock (mirrors TA / Chief / Judges B & C): elapsed, with remaining as a hint. */}
           <span className={`tabular-nums text-sm font-black ${timeUp ? "text-red-400 animate-pulse" : timerRunning ? "text-emerald-300" : "text-white/60"}`} dir="ltr">
             {fmtTime(timerElapsed)}

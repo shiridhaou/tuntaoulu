@@ -10,6 +10,8 @@ import { useScoringGate } from "@/hooks/useScoringGate";
 import { useJudgeStatus } from "@/hooks/useJudgeStatus";
 import { toast } from "sonner";
 import { SessionBadge } from "@/components/SessionBadge";
+import { AthleteAffiliation } from "@/components/AthleteAffiliation";
+
 import { useActiveSessionCode } from "@/hooks/useActiveSession";
 import { useRoomPresence } from "@/hooks/useRoomPresence";
 import { MAX_C_MOVEMENT, MAX_C_CONNECTION, lookupCode, isConnectionCode, lookupConnection, type ConnectionBonus } from "@/lib/difficultyCodes";
@@ -506,12 +508,17 @@ export function JudgeCPanel() {
                 ⚠ Reconnecting…
               </span>
             )}
-            <div className="min-w-0">
-              <p className="text-sm font-heading font-bold text-white truncate">{athlete?.name ?? "—"}</p>
-              <p className="text-[10px] text-white/60 font-body truncate" dir="ltr">
-                {athlete?.country ?? "—"} • {competitionStyle ?? "—"}
-              </p>
+            <div className="min-w-0 flex items-center gap-2">
+              <AthleteAffiliation
+                className="max-w-[200px]"
+                name={athlete?.name ?? null}
+                club={athlete?.club}
+                country={athlete?.country}
+                bib={athlete?.bib}
+              />
+              <span className="shrink-0 text-[10px] text-white/50 font-body" dir="ltr">{competitionStyle ?? "—"}</span>
             </div>
+
           </div>
 
           {/* Big orange performance timer */}
