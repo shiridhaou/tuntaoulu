@@ -837,6 +837,21 @@ export function PublicDisplay() {
     );
   }
 
+  // ── POST-GROUP TOP 4 PODIUM (read-only overlay) ─────────
+  // Stays on screen until the group is reopened or a new session starts.
+  if (groupCompleted) {
+    return (
+      <div className="h-screen w-screen relative overflow-hidden" style={{ background: NAVY }}>
+        <PodiumOverlay
+          sessionCode={sessionCode}
+          open
+          styleFilter={result?.style ?? athlete?.style ?? null}
+        />
+        <FullscreenToggle />
+      </div>
+    );
+  }
+
   // ── VAR LIVE BROADCAST (v1.2.1) ─────────────────────────
   // When the Chief flips "Broadcast VAR to Audience", the public TV airs the
   // AHJ-verified mistake clips as a playlist (so the audience and a protesting
