@@ -236,6 +236,7 @@ function useLiveRanking(sessionCode: string | null) {
         .from("match_results")
         .select("athlete_id, athlete_name, final_score, updated_at")
         .eq("session_code", sessionCode)
+        .eq("published", true)
         .order("updated_at", { ascending: false });
       if (cancelled) return;
       // Keep latest per athlete
