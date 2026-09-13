@@ -210,6 +210,9 @@ function usePublishedResult(sessionCode: string | null) {
       .on("postgres_changes",
         { event: "*", schema: "public", table: "match_results" },
         () => { void loadLatest(); })
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "current_match", filter: `session_code=eq.${sessionCode}` },
+        () => { void loadLatest(); })
       .subscribe();
 
     // Instant path: the Chief broadcasts the published snapshot the moment the
