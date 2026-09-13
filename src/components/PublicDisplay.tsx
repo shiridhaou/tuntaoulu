@@ -1097,7 +1097,27 @@ export function PublicDisplay() {
               {[athlete.club, athlete.age_category, result?.style ?? athlete.style].filter(Boolean).join("  ·  ") || "—"}
             </p>
             <div className="mt-5 flex items-end justify-between gap-3">
-              <p className="text-[10px] uppercase tracking-[0.4em] text-white/50 font-body">Final Score</p>
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-[0.4em] text-white/50 font-body">Final Score</p>
+                {/* CURRENT PLACING — read-only, computed from published results */}
+                {currentPlacing && (
+                  <div className="mt-3 inline-flex items-center gap-3 rounded-xl border px-4 py-2"
+                    style={{ borderColor: `${GOLD}88`, background: `${GOLD}12` }}>
+                    <div>
+                      <p className="text-[9px] uppercase tracking-[0.3em] font-heading font-black text-white/60" dir="ltr">
+                        Current Placing
+                      </p>
+                      <p className="text-[9px] tracking-[0.2em] text-white/40" dir="ltr">
+                        OF {currentPlacing.total}
+                      </p>
+                    </div>
+                    <span className="text-4xl md:text-5xl font-heading font-black tabular-nums leading-none"
+                      style={{ color: GOLD }} dir="ltr">
+                      {currentPlacing.rank}
+                    </span>
+                  </div>
+                )}
+              </div>
               <p className="text-7xl md:text-8xl font-heading font-black tabular-nums leading-none text-yellow-400"
                 style={{ color: "#FACC15", textShadow: "none" }} dir="ltr">
                 {animated.toFixed(2)}
