@@ -22,10 +22,14 @@ export interface Athlete {
   id: string;
   name: string;
   country: string;
+  /** Club / team affiliation (national events). */
+  club?: string | null;
+  bib?: string | null;
   category: string;
   order: number;
   difficultySheet?: DifficultyMovement[];
 }
+
 
 export interface AppliedDeduction {
   code: string;
