@@ -506,12 +506,17 @@ export function JudgeCPanel() {
                 ⚠ Reconnecting…
               </span>
             )}
-            <div className="min-w-0">
-              <p className="text-sm font-heading font-bold text-white truncate">{athlete?.name ?? "—"}</p>
-              <p className="text-[10px] text-white/60 font-body truncate" dir="ltr">
-                {athlete?.country ?? "—"} • {competitionStyle ?? "—"}
-              </p>
+            <div className="min-w-0 flex items-center gap-2">
+              <AthleteAffiliation
+                className="max-w-[200px]"
+                name={athlete?.name ?? null}
+                club={athlete?.club}
+                country={athlete?.country}
+                bib={athlete?.bib}
+              />
+              <span className="shrink-0 text-[10px] text-white/50 font-body" dir="ltr">{competitionStyle ?? "—"}</span>
             </div>
+
           </div>
 
           {/* Big orange performance timer */}

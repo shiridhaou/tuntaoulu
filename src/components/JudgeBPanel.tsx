@@ -11,6 +11,8 @@ import { effectiveMaxB, type MatchMode } from "@/lib/matchMode";
 import { toast } from "sonner";
 import { ArrowRight, Minus, Plus, Send, AlertTriangle, RotateCcw, CheckCircle2, Delete } from "lucide-react";
 import { SessionBadge } from "@/components/SessionBadge";
+import { AthleteAffiliation } from "@/components/AthleteAffiliation";
+
 import { useActiveSessionCode } from "@/hooks/useActiveSession";
 import { useRoomPresence } from "@/hooks/useRoomPresence";
 
@@ -154,11 +156,15 @@ export function JudgeBPanel() {
 
           <div className="flex items-center gap-3">
             {currentAthlete && (
-              <div className="text-center">
-                <p className="text-[10px] text-muted-foreground font-body leading-none">الرياضي</p>
-                <p className="text-sm font-heading font-bold text-foreground leading-tight">{currentAthlete.name}</p>
-              </div>
+              <AthleteAffiliation
+                className="max-w-[200px] text-center"
+                name={currentAthlete.name}
+                club={currentAthlete.club}
+                country={currentAthlete.country}
+                bib={currentAthlete.bib}
+              />
             )}
+
             <div className="text-center px-3 py-1 rounded-lg border border-fed-blue/30 bg-fed-blue/5">
               <p className="text-[10px] text-muted-foreground font-body leading-none">الوقت</p>
               <p className="text-base font-heading font-black tabular-nums text-fed-blue leading-tight" dir="ltr">{mins}:{secs}</p>
