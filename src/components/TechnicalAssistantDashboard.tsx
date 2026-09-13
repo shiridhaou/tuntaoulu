@@ -816,9 +816,9 @@ function TADashboardInner() {
     await matchControl.reset(sessionCode);
     // 3) Wipe judge scores for this session
     await supabase.from("judge_scores").delete().eq("session_code", sessionCode);
-    // 4) Unpublish previous result so scoreboard goes back to "—.——"
-    await supabase.from("match_results")
-      .update({ published: false }).eq("session_code", sessionCode).eq("published", true);
+    // 4) Previous results stay PUBLISHED — they are the session's ranking
+    //    history (CURRENT PLACING / standings). The scoreboard clears itself
+    //    because current_match.athlete_id is now null.
     // 5) Broadcast events for any custom listeners
     await emitEvent("global_reset", { at: Date.now() });
     await emitEvent("timer_reset");

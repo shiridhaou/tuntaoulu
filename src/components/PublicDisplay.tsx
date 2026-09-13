@@ -136,17 +136,11 @@ function useLiveDisplay(sessionCode: string | null) {
     };
 
     const loadResult = async (athleteId: string | null) => {
+      // No live athlete → nothing to reveal. Past results remain published as
+      // session ranking history, so they must NOT be shown as the current one.
       if (!athleteId) {
-        const { data: latest } = await supabase
-          .from("match_results")
-          .select("id,session_code,athlete_id,athlete_name,final_score,score_a,score_b,score_c,deductions,published,payload,style,updated_at")
-          .eq("session_code", sessionCode)
-          .eq("published", true)
-          .order("updated_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        applyResult((latest as MatchResult) ?? null);
-        return (latest as MatchResult | null)?.athlete_id ?? null;
+        applyResult(null);
+        return null;
       }
       const { data } = await supabase
         .from("match_results")
