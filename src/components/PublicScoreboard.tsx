@@ -288,9 +288,10 @@ function LiveScoreboard() {
     const aid = publishedResult?.athlete_id ?? liveAthlete?.id ?? null;
     if (!aid || !showFinal) return null;
     const mine = Number(publishedResult?.final_score ?? displayFinal);
-    const ahead = placingRanking.filter((r) => r.athlete_id !== aid && r.final_score > mine).length;
-    // Initial state / single published score: rank is always 1.
-    return { rank: ahead + 1, total: Math.max(1, placingRanking.length) };
+    const others = placingRanking.filter((r) => r.athlete_id !== aid);
+    const ahead = others.filter((r) => r.final_score > mine).length;
+    // Initial state / single scored athlete: rank is always 1 OF 1.
+    return { rank: ahead + 1, total: others.length + 1 };
   }, [publishedResult?.athlete_id, publishedResult?.final_score, liveAthlete?.id, showFinal, displayFinal, placingRanking]);
 
   // ── Staggered reveal: A → B → C with 1s delay each, after publish/reveal ──
