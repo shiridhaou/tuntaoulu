@@ -697,11 +697,12 @@ export function PublicDisplay() {
   // CURRENT PLACING — live rank of the published score against strictly
   // finished (published) athletes of this group. Display only.
   const currentPlacing = useMemo(() => {
-    if (!athlete?.id) return null;
-    const others = ranking.filter(r => r.athlete_id !== athlete.id);
+    const activeAthleteId = result?.athlete_id ?? athlete?.id;
+    if (!activeAthleteId || !isPublished) return null;
+    const others = ranking.filter(r => r.athlete_id !== activeAthleteId);
     const ahead = others.filter(r => r.final_score > finalScore).length;
     return { rank: ahead + 1, total: others.length + 1 };
-  }, [athlete?.id, ranking, finalScore]);
+  }, [result?.athlete_id, athlete?.id, isPublished, ranking, finalScore]);
 
   const handleDownloadPdf = async () => {
     if (!reportRef.current) return;
@@ -1098,31 +1099,29 @@ export function PublicDisplay() {
               {[athlete.club, athlete.age_category, result?.style ?? athlete.style].filter(Boolean).join("  ·  ") || "—"}
             </p>
             <div className="mt-5 flex items-end justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-[0.4em] text-white/50 font-body">Final Score</p>
-                {/* CURRENT PLACING — read-only, computed from published results */}
-                {currentPlacing && (
-                  <div className="mt-3 inline-flex items-center gap-3 rounded-xl border px-4 py-2"
-                    style={{ borderColor: `${GOLD}88`, background: `${GOLD}12` }}>
-                    <div>
-                      <p className="text-[9px] uppercase tracking-[0.3em] font-heading font-black text-white/60" dir="ltr">
-                        Current Placing
-                      </p>
-                      <p className="text-[9px] tracking-[0.2em] text-white/40" dir="ltr">
-                        OF {currentPlacing.total}
-                      </p>
-                    </div>
-                    <span className="text-4xl md:text-5xl font-heading font-black tabular-nums leading-none"
-                      style={{ color: GOLD }} dir="ltr">
-                      {currentPlacing.rank}
-                    </span>
-                  </div>
-                )}
-              </div>
+              <p className="text-[10px] uppercase tracking-[0.4em] text-white/50 font-body">Final Score</p>
               <p className="text-7xl md:text-8xl font-heading font-black tabular-nums leading-none text-yellow-400"
                 style={{ color: "#FACC15", textShadow: "none" }} dir="ltr">
                 {animated.toFixed(2)}
               </p>
+            </div>
+            {/* Official IWUF-style placing block: always visible for a published result. */}
+            <div className="mt-5 flex justify-start" dir="ltr">
+              <div className="inline-flex min-w-[220px] items-center justify-between gap-5 rounded-xl border px-4 py-3"
+                style={{ borderColor: `${GOLD}88`, background: `${GOLD}12` }}>
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.25em] font-heading font-black text-white/75">
+                    Current Placing
+                  </p>
+                  <p className="mt-1 text-[9px] tracking-[0.2em] text-white/40">
+                    OF {currentPlacing?.total ?? Math.max(1, ranking.length)}
+                  </p>
+                </div>
+                <span className="text-5xl font-heading font-black tabular-nums leading-none"
+                  style={{ color: GOLD }}>
+                  {currentPlacing?.rank ?? 1}
+                </span>
+              </div>
             </div>
           </section>
 
