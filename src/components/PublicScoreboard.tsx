@@ -174,10 +174,20 @@ function usePublishedResult(sessionCode: string | null) {
     let cancelled = false;
 
     const loadLatest = async () => {
+      // Past results stay published (session ranking history), so the reveal is
+      // scoped to the athlete currently called on the floor.
+      const { data: cm } = await supabase
+        .from("current_match")
+        .select("athlete_id")
+        .eq("session_code", sessionCode)
+        .maybeSingle();
+      const liveId = (cm as { athlete_id: string | null } | null)?.athlete_id ?? null;
+      if (!liveId) { if (!cancelled) { setResult(null); setAthlete(null); } return; }
       let query = supabase
         .from("match_results")
         .select("athlete_id,athlete_name,final_score,score_a,score_b,score_c,deductions,published,payload,style,updated_at")
         .eq("published", true)
+        .eq("athlete_id", liveId)
         .order("updated_at", { ascending: false })
         .limit(1);
       if (sessionCode) query = query.eq("session_code", sessionCode);
