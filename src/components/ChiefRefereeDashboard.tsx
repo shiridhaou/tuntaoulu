@@ -108,6 +108,8 @@ function ChiefRefereeDashboardInner() {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [contentSheetOpen, setContentSheetOpen] = useState(false);
   const [standingsOpen, setStandingsOpen] = useState(false);
+  // Post-group podium flag: display-only signal for the public screen.
+  const [groupCompleted, setGroupCompleted] = useState(false);
 
   const [matchMode, setMatchMode] = useState<"compulsory" | "optional">("optional");
   const [taDeduction, setTaDeduction] = useState<number>(0);
