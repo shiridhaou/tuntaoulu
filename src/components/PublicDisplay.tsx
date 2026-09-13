@@ -693,6 +693,15 @@ export function PublicDisplay() {
     return idx >= 0 ? { rank: idx + 1, total: ranking.length } : null;
   }, [athlete?.id, ranking]);
 
+  // CURRENT PLACING — live rank of the published score against strictly
+  // finished (published) athletes of this group. Display only.
+  const currentPlacing = useMemo(() => {
+    if (!athlete?.id) return null;
+    const others = ranking.filter(r => r.athlete_id !== athlete.id);
+    const ahead = others.filter(r => r.final_score > finalScore).length;
+    return { rank: ahead + 1, total: others.length + 1 };
+  }, [athlete?.id, ranking, finalScore]);
+
   const handleDownloadPdf = async () => {
     if (!reportRef.current) return;
     setDownloading(true);
