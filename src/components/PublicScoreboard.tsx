@@ -292,7 +292,7 @@ function LiveScoreboard() {
     const ahead = placingRanking.filter((r) => r.athlete_id !== aid && r.final_score > mine).length;
     // Initial state / single published score: rank is always 1.
     return { rank: ahead + 1, total: Math.max(1, placingRanking.length) };
-  }, [publishedResult?.athlete_id, publishedResult?.final_score, displayAthlete?.id, showFinal, displayFinal, placingRanking]);
+  }, [publishedResult?.athlete_id, publishedResult?.final_score, liveAthlete?.id, showFinal, displayFinal, placingRanking]);
 
   // ── Staggered reveal: A → B → C with 1s delay each, after publish/reveal ──
   const [revealStage, setRevealStage] = useState(0); // 0=none, 1=A, 2=A+B, 3=A+B+C
