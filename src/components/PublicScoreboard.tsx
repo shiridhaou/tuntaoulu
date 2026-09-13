@@ -103,7 +103,6 @@ function useLivePlacingRanking(sessionCode: string | null) {
         .from("match_results")
         .select("athlete_id, final_score, updated_at")
         .eq("session_code", sessionCode)
-        .eq("published", true)
         .order("updated_at", { ascending: false });
       if (cancelled) return;
       const latest = new Map<string, number>();
