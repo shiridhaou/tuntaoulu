@@ -431,7 +431,7 @@ function useAutoPodium(
       // The just-published athlete may not be flagged "done" yet by the TA;
       // count them as done for the purpose of the completion check.
       const effectiveDone = roster.filter(
-        (a) => a.status === "done" || a.id === athlete.id,
+        (a) => a.status === "done" || a.id === athleteId,
       ).length;
       if (effectiveDone >= roster.length && doneCount + 1 >= roster.length) {
         timer = setTimeout(() => { if (!cancelled) setAutoPodium(true); }, 5000);
