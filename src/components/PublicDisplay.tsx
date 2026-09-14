@@ -412,15 +412,17 @@ function useAutoPodium(
 
   // Session-end detector: last athlete published → 5s delay → podium.
   useEffect(() => {
-    if (!sessionCode || !isPublished || !athlete?.id || !athlete.tournament_id) return;
+    const tournamentId = athlete?.tournament_id ?? null;
+    const athleteId = athlete?.id ?? null;
+    if (!sessionCode || !isPublished || !athleteId || !tournamentId) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     (async () => {
-      const style = result?.style ?? athlete.style ?? null;
+      const style = result?.style ?? athlete?.style ?? null;
       let q = supabase
         .from("athletes")
         .select("id,status")
-        .eq("tournament_id", athlete.tournament_id);
+        .eq("tournament_id", tournamentId);
       if (style) q = q.eq("style", style);
       const { data } = await q;
       if (cancelled || !data || data.length === 0) return;
