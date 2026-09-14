@@ -1,7 +1,11 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } from "@tanstack/react-router";
 import { CompetitionProvider } from "@/components/CompetitionProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { InstallPwaPrompt } from "@/components/InstallPwaPrompt";
+import { OfflineBanner } from "@/components/OfflineBanner";
+import { FullscreenToggle } from "@/components/FullscreenToggle";
+import { registerOfflineWorker } from "@/lib/pwa";
 import "../styles.css";
 
 function NotFoundComponent() {
@@ -53,12 +57,8 @@ export const Route = createRootRoute({
       { rel: "manifest", href: "/manifest.json" },
       { rel: "icon", type: "image/png", href: "/icons/tuntaolu-icon.png" },
       { rel: "apple-touch-icon", href: "/icons/tuntaolu-icon.png" },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@600;700;800;900&display=swap",
-      },
+      // Self-hosted fonts — no internet needed on a LAN / local server.
+      { rel: "stylesheet", href: "/fonts/fonts.css" },
     ],
   }),
   shellComponent: RootShell,
@@ -80,11 +80,24 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Screens that already render their own fullscreen toggle.
+const SELF_FULLSCREEN_ROUTES = ["/public-display", "/scoreboard"];
+
 function RootComponent() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  useEffect(() => {
+    registerOfflineWorker();
+  }, []);
+
+  const showFullscreen = !SELF_FULLSCREEN_ROUTES.some((p) => pathname.startsWith(p));
+
   return (
     <CompetitionProvider>
       <Outlet />
       <Toaster position="top-center" richColors />
+      <OfflineBanner />
+      {showFullscreen && <FullscreenToggle corner="bottom-left" />}
       <InstallPwaPrompt />
     </CompetitionProvider>
   );
