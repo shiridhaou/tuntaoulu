@@ -14,6 +14,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       injectRegister: null,
       filename: "sw.js",
+      // The client bundle (what browsers fetch) is emitted to dist/client.
+      outDir: "dist/client",
       devOptions: { enabled: false },
       manifest: false, // public/manifest.json is maintained by hand
       workbox: {
