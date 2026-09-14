@@ -46,6 +46,7 @@ type AthleteRow = {
   age_category: string | null;
   difficulty_codes: string[] | null;
   style: string | null;
+  tournament_id: string | null;
 };
 
 type MatchResult = {
@@ -110,7 +111,7 @@ function useLiveDisplay(sessionCode: string | null) {
       if (!athleteId) { setAthlete((prev) => (prev === null ? prev : null)); return; }
       const { data } = await supabase
         .from("athletes")
-        .select("id,full_name,bib_number,country,club,age_category,difficulty_codes,style")
+        .select("id,full_name,bib_number,country,club,age_category,difficulty_codes,style,tournament_id")
         .eq("id", athleteId)
         .maybeSingle();
       if (cancelled) return;
@@ -365,6 +366,81 @@ function useGroupCompleted(sessionCode: string | null) {
     return () => { cancelled = true; supabase.removeChannel(ch); };
   }, [sessionCode]);
   return done;
+}
+
+// ── Auto TOP 4 podium on session completion (read-only) ───────────────
+// Detects when the LAST athlete of the group roster has a published score
+// (every roster athlete of the active style is marked "done"), waits 5s so
+// the audience can read the final score + CURRENT PLACING, then fades into
+// the TOP 4 podium view. Stays up until a new athlete is loaded, the group
+// is reopened, or the session changes. Purely presentational — no writes.
+function useAutoPodium(
+  sessionCode: string | null,
+  athlete: AthleteRow | null,
+  result: MatchResult | null,
+  isPublished: boolean,
+) {
+  const [autoPodium, setAutoPodium] = useState(false);
+  const lastAthleteRef = useRef<string | null>(null);
+
+  // Reset when the session changes.
+  useEffect(() => { setAutoPodium(false); lastAthleteRef.current = null; }, [sessionCode]);
+
+  // Reset when a NEW athlete becomes active (TA loaded the next roster).
+  useEffect(() => {
+    const id = athlete?.id ?? null;
+    if (id && lastAthleteRef.current && id !== lastAthleteRef.current) {
+      setAutoPodium(false);
+    }
+    if (id) lastAthleteRef.current = id;
+  }, [athlete?.id]);
+
+  // Reset when the group is explicitly reopened.
+  useEffect(() => {
+    if (!sessionCode) return;
+    const ch = supabase
+      .channel(`pd-autopodium-${sessionCode}`)
+      .on("postgres_changes",
+        { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${sessionCode}` },
+        (payload) => {
+          const ev = (payload.new as { event_type?: string }).event_type;
+          if (ev === "group_reopened") setAutoPodium(false);
+        })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [sessionCode]);
+
+  // Session-end detector: last athlete published → 5s delay → podium.
+  useEffect(() => {
+    const tournamentId = athlete?.tournament_id ?? null;
+    const athleteId = athlete?.id ?? null;
+    if (!sessionCode || !isPublished || !athleteId || !tournamentId) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    (async () => {
+      const style = result?.style ?? athlete?.style ?? null;
+      let q = supabase
+        .from("athletes")
+        .select("id,status")
+        .eq("tournament_id", tournamentId);
+      if (style) q = q.eq("style", style);
+      const { data } = await q;
+      if (cancelled || !data || data.length === 0) return;
+      const roster = data as Array<{ id: string; status: string | null }>;
+      const doneCount = roster.filter((a) => a.status === "done").length;
+      // The just-published athlete may not be flagged "done" yet by the TA;
+      // count them as done for the purpose of the completion check.
+      const effectiveDone = roster.filter(
+        (a) => a.status === "done" || a.id === athleteId,
+      ).length;
+      if (effectiveDone >= roster.length && doneCount + 1 >= roster.length) {
+        timer = setTimeout(() => { if (!cancelled) setAutoPodium(true); }, 5000);
+      }
+    })();
+    return () => { cancelled = true; if (timer) clearTimeout(timer); };
+  }, [sessionCode, isPublished, athlete?.id, athlete?.tournament_id, athlete?.style, result?.style, result?.updated_at]);
+
+  return autoPodium;
 }
 
 // ── Active VAR camera (v1.4.8) ────────────────────────────────────────
@@ -676,6 +752,7 @@ export function PublicDisplay() {
   }, []);
 
   const isPublished = !!result?.published;
+  const autoPodium = useAutoPodium(sessionCode, athlete, result, isPublished);
   const matchMode: "compulsory" | "optional" = (result?.payload?.match_mode as any) ?? "optional";
   const finalScore = Number(result?.final_score ?? 0);
   const animated = useCountUp(isPublished ? finalScore : 0);
@@ -837,7 +914,7 @@ export function PublicDisplay() {
 
   // ── POST-GROUP TOP 4 PODIUM (read-only overlay) ─────────
   // Stays on screen until the group is reopened or a new session starts.
-  if (groupCompleted) {
+  if (groupCompleted || autoPodium) {
     return (
       <div className="h-screen w-screen relative overflow-hidden" style={{ background: NAVY }}>
         <PodiumOverlay
