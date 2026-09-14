@@ -46,6 +46,7 @@ type AthleteRow = {
   age_category: string | null;
   difficulty_codes: string[] | null;
   style: string | null;
+  tournament_id: string | null;
 };
 
 type MatchResult = {
@@ -110,7 +111,7 @@ function useLiveDisplay(sessionCode: string | null) {
       if (!athleteId) { setAthlete((prev) => (prev === null ? prev : null)); return; }
       const { data } = await supabase
         .from("athletes")
-        .select("id,full_name,bib_number,country,club,age_category,difficulty_codes,style")
+        .select("id,full_name,bib_number,country,club,age_category,difficulty_codes,style,tournament_id")
         .eq("id", athleteId)
         .maybeSingle();
       if (cancelled) return;
