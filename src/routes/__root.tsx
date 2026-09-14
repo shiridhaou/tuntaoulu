@@ -57,12 +57,8 @@ export const Route = createRootRoute({
       { rel: "manifest", href: "/manifest.json" },
       { rel: "icon", type: "image/png", href: "/icons/tuntaolu-icon.png" },
       { rel: "apple-touch-icon", href: "/icons/tuntaolu-icon.png" },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@600;700;800;900&display=swap",
-      },
+      // Self-hosted fonts — no internet needed on a LAN / local server.
+      { rel: "stylesheet", href: "/fonts/fonts.css" },
     ],
   }),
   shellComponent: RootShell,
