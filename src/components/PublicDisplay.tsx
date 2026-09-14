@@ -750,6 +750,7 @@ export function PublicDisplay() {
   }, []);
 
   const isPublished = !!result?.published;
+  const autoPodium = useAutoPodium(sessionCode, athlete, result, isPublished);
   const matchMode: "compulsory" | "optional" = (result?.payload?.match_mode as any) ?? "optional";
   const finalScore = Number(result?.final_score ?? 0);
   const animated = useCountUp(isPublished ? finalScore : 0);
