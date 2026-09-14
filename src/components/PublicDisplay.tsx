@@ -912,7 +912,7 @@ export function PublicDisplay() {
 
   // ── POST-GROUP TOP 4 PODIUM (read-only overlay) ─────────
   // Stays on screen until the group is reopened or a new session starts.
-  if (groupCompleted) {
+  if (groupCompleted || autoPodium) {
     return (
       <div className="h-screen w-screen relative overflow-hidden" style={{ background: NAVY }}>
         <PodiumOverlay
