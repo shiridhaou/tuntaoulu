@@ -1,7 +1,11 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } from "@tanstack/react-router";
 import { CompetitionProvider } from "@/components/CompetitionProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { InstallPwaPrompt } from "@/components/InstallPwaPrompt";
+import { OfflineBanner } from "@/components/OfflineBanner";
+import { FullscreenToggle } from "@/components/FullscreenToggle";
+import { registerOfflineWorker } from "@/lib/pwa";
 import "../styles.css";
 
 function NotFoundComponent() {
