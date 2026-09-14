@@ -80,11 +80,24 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Screens that already render their own fullscreen toggle.
+const SELF_FULLSCREEN_ROUTES = ["/public-display", "/scoreboard"];
+
 function RootComponent() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  useEffect(() => {
+    registerOfflineWorker();
+  }, []);
+
+  const showFullscreen = !SELF_FULLSCREEN_ROUTES.some((p) => pathname.startsWith(p));
+
   return (
     <CompetitionProvider>
       <Outlet />
       <Toaster position="top-center" richColors />
+      <OfflineBanner />
+      {showFullscreen && <FullscreenToggle corner="bottom-left" />}
       <InstallPwaPrompt />
     </CompetitionProvider>
   );
