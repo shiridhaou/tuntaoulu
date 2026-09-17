@@ -27,8 +27,12 @@ export function useGroupAConsensus(
     };
     void load();
 
+    // Unique suffix per mount: supabase.channel() reuses an existing channel
+    // for the same topic, so a fixed name here makes a second mounted instance
+    // add `.on()` after `.subscribe()` → "Cannot add postgres_changes callbacks
+    // for realtime channel after subscribe()" crash.
     const ch = supabase
-      .channel(`group-a-consensus-${sessionCode}`)
+      .channel(`group-a-consensus-${sessionCode}-${Math.random().toString(36).slice(2, 8)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "judge_scores", filter: `session_code=eq.${sessionCode}` },
