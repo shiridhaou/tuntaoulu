@@ -17,6 +17,7 @@ export interface FinalScoreSheetModalProps {
   matchMode: "compulsory" | "optional";
   taOobCount: number;
   taDeduction: number;
+  chiefDeduction: number;
   // Group A
   groupAScore: number;
   groupAMax: number;
@@ -33,7 +34,7 @@ export interface FinalScoreSheetModalProps {
 
 export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
   const {
-    onClose, matchMode, taOobCount, taDeduction,
+    onClose, matchMode, taOobCount, taDeduction, chiefDeduction,
     groupAScore, groupAMax, bIndividualScores, groupBAverage, groupBMax,
     groupCScore, groupCMax, finalScore,
   } = props;
@@ -122,13 +123,13 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
       code: m.code, label: m.label, connection: m.connection, value: m.value,
     })),
     groupCScore, groupCMax,
-    taOobCount, taDeduction,
+    taOobCount, taDeduction, chiefDeduction,
     finalScore,
     committedAt: Date.now(),
   }), [
     athlete, bib, club, competitionStyle, matchMode, sessionCode, timerElapsed,
     confirmedCodes, flaggedCodes, groupAScore, groupAMax, bIndividualScores,
-    groupBAverage, groupBMax, groupCScore, groupCMax, taOobCount, taDeduction, finalScore,
+    groupBAverage, groupBMax, groupCScore, groupCMax, taOobCount, taDeduction, chiefDeduction, finalScore,
   ]);
 
   // ── Actions ──────────────────────────────────────────────
@@ -200,6 +201,9 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
         b_individual: bIndividualScores,
         c_movements: sheetData.cMovements,
         ta_oob_count: taOobCount,
+        ta_deduction: taDeduction,
+        chief_deduction: chiefDeduction,
+        total_external_deduction: taDeduction + chiefDeduction,
         committed_at: sheetData.committedAt,
       };
       // Delete prior result for this athlete in this session, then insert fresh
@@ -217,7 +221,7 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
         score_a: groupAScore,
         score_b: groupBAverage,
         score_c: matchMode === "optional" ? groupCScore : null,
-        deductions: taDeduction,
+        deductions: taDeduction + chiefDeduction,
         final_score: finalScore,
         published: true,
         payload: payload as any,
@@ -445,6 +449,7 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
                 </p>
                 <Row label="Out of Bounds (OOB) events" value={String(taOobCount)} />
                 <Row label="TA total deduction" value={`− ${taDeduction.toFixed(2)}`} color={RED} />
+                <Row label="Chief Judge deduction · HD" value={`− ${chiefDeduction.toFixed(3)}`} color={RED} />
               </section>
 
               {/* Calculation */}
@@ -456,6 +461,7 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
                 <Row label="Group B (avg)" value={groupBAverage.toFixed(2)} />
                 {matchMode === "optional" && <Row label="Group C" value={groupCScore.toFixed(2)} />}
                 <Row label="TA deduction" value={`− ${taDeduction.toFixed(2)}`} color={RED} />
+                <Row label="Chief Judge deduction · HD" value={`− ${chiefDeduction.toFixed(3)}`} color={RED} />
                 <div className="mt-2 pt-2 border-t border-white/15 flex items-center justify-between">
                   <span className="text-xs font-heading font-black tracking-wider text-white">FINAL SCORE</span>
                   <span

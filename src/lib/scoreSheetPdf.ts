@@ -28,6 +28,7 @@ export interface ScoreSheetData {
   // TA
   taOobCount: number;
   taDeduction: number;
+  chiefDeduction: number;
   // Final
   finalScore: number;
   committedAt: number;
@@ -40,7 +41,7 @@ const GREEN = "#10B981";
 const RED = "#EF4444";
 const GREY = "#6B7280";
 
-function fmt(n: number, d = 2) {
+function fmt(n: number, d = 3) {
   return Number.isFinite(n) ? n.toFixed(d) : "—";
 }
 
@@ -280,6 +281,7 @@ export function buildScoreSheetPdf(d: ScoreSheetData): { blob: Blob; filename: s
   section("TECHNICAL ASSISTANT · DEDUCTIONS", NAVY);
   kv("Out of Bounds (OOB) events", String(d.taOobCount), NAVY);
   kv("TA total deduction", `− ${fmt(d.taDeduction)}`, RED);
+  kv("Chief Judge deduction · HD", `− ${fmt(d.chiefDeduction)}`, RED);
   y += 2;
 
   // ── Calculation summary ──────────────────────────────────
@@ -288,6 +290,7 @@ export function buildScoreSheetPdf(d: ScoreSheetData): { blob: Blob; filename: s
   kv("Group B (avg)", fmt(d.groupBAverage), NAVY);
   if (d.matchMode === "optional") kv("Group C", fmt(d.groupCScore), NAVY);
   kv("TA deduction", `− ${fmt(d.taDeduction)}`, RED);
+  kv("Chief Judge deduction · HD", `− ${fmt(d.chiefDeduction)}`, RED);
 
   ensure(12);
   pdf.setDrawColor(GOLD);

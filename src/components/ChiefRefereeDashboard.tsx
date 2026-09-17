@@ -26,6 +26,7 @@ import { TIME_WINDOWS, fmtWindow, type TimeWindow } from "@/lib/timeRules";
 import { modeCaps } from "@/lib/matchMode";
 import { computeGroupAConsensus } from "@/lib/groupAConsensus";
 import { useGroupAConsensus } from "@/hooks/useGroupAConsensus";
+import { roundScore } from "@/lib/numFormat";
 
 import { pushDisplaySettings, uploadSponsorLogo } from "@/hooks/useDisplaySettings";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -128,6 +129,8 @@ function ChiefRefereeDashboardInner() {
   const [taDeduction, setTaDeduction] = useState<number>(0);
   const [taOobCount, setTaOobCount] = useState<number>(0);
   const [taPulse, setTaPulse] = useState<number>(0); // increments on every TA deduction change for visual pulse
+  const [chiefDeduction, setChiefDeduction] = useState<number>(0);
+  const [chiefDeductionDraft, setChiefDeductionDraft] = useState("0.000");
   // Dynamic style: the TA's broadcast style (timerSync.style) is authoritative —
   // the local competitionStyle is only a fallback. This drives BOTH the score
   // caps and the performance-time window so Taiji athletes are never compared
@@ -278,7 +281,18 @@ function ChiefRefereeDashboardInner() {
   }, [sessionCode]);
 
   // Reset TA deductions when athlete changes
-  useEffect(() => { setTaDeduction(0); setTaOobCount(0); }, [currentAthleteIndex]);
+  useEffect(() => {
+    setTaDeduction(0);
+    setTaOobCount(0);
+    setChiefDeduction(0);
+    setChiefDeductionDraft("0.000");
+  }, [currentAthleteIndex]);
+
+  const applyChiefDeduction = (value: number) => {
+    const next = roundScore(Math.max(0, Number.isFinite(value) ? value : 0));
+    setChiefDeduction(next);
+    setChiefDeductionDraft(next.toFixed(3));
+  };
 
   // Setup gate handled by parent ChiefRefereeDashboard wrapper.
 
@@ -368,7 +382,7 @@ function ChiefRefereeDashboardInner() {
         score_a: groupATotal,
         score_b: groupBNet,
         score_c: matchMode === "optional" ? groupCTotal : null,
-        deductions: taDeduction,
+        deductions: roundScore(taDeduction + chiefDeduction),
         final_score: aggregateFinal,
         published: true,
         payload: {
@@ -378,6 +392,9 @@ function ChiefRefereeDashboardInner() {
           b_individual,
           c_movements,
           ta_oob_count: taOobCount,
+          ta_deduction: roundScore(taDeduction),
+          chief_deduction: chiefDeduction,
+          total_external_deduction: roundScore(taDeduction + chiefDeduction),
           committed_at: Date.now(),
         } as never,
       });
@@ -395,7 +412,9 @@ function ChiefRefereeDashboardInner() {
             score_a: groupATotal,
             score_b: groupBNet,
             score_c: matchMode === "optional" ? groupCTotal : null,
-            deductions: taDeduction,
+            deductions: roundScore(taDeduction + chiefDeduction),
+            ta_deduction: roundScore(taDeduction),
+            chief_deduction: chiefDeduction,
             final_score: aggregateFinal,
             status: "PUBLISHED",
             published_at: Date.now(),
@@ -405,7 +424,11 @@ function ChiefRefereeDashboardInner() {
       await supabase.from("match_events").insert({
         session_code: sessionCode,
         event_type: "score_published",
-        payload: { athlete_id: currentAthlete.id, final_score: aggregateFinal } as never,
+        payload: {
+          athlete_id: currentAthlete.id,
+          final_score: aggregateFinal,
+          chief_deduction: chiefDeduction,
+        } as never,
       });
       setScoreRevealed(true);
       commitCurrentResult();
@@ -417,7 +440,7 @@ function ChiefRefereeDashboardInner() {
         team: currentAthlete.country ?? null,
         style: competitionStyle,
         difficultyScore: matchMode === "optional" ? groupCTotal : null,
-        deductionScore: taDeduction,
+        deductionScore: roundScore(taDeduction + chiefDeduction),
         finalScore: aggregateFinal,
         timestamp: new Date().toISOString(),
       });
@@ -511,10 +534,10 @@ function ChiefRefereeDashboardInner() {
     ? Math.round((cSubmitted.reduce((s, v) => s + v, 0) / cSubmitted.length) * 100) / 100
     : 0;
 
-  // Aggregate final score — strict sum A + B + C (mode-aware).
-  // Group A already arrives net of its deductions, so nothing is subtracted here.
+  // Group A already arrives net of its own deductions. The only deduction
+  // applied after A+B+C here is the explicit Chief Judge deduction.
   const cContrib = matchMode === "optional" ? groupCTotal : 0;
-  const aggregateFinal = Math.max(0, groupATotal + groupBNet + cContrib);
+  const aggregateFinal = roundScore(Math.max(0, groupATotal + groupBNet + cContrib - chiefDeduction));
   // Show real aggregates whenever ANY judge has submitted — even if TA hasn't
   // formally "called" the athlete via current_match.athlete_id yet. This fixes
   // the case where group totals + final stay at 0.00 despite scores arriving.
@@ -774,11 +797,11 @@ function ChiefRefereeDashboardInner() {
         {(() => {
           const cContrib = matchMode === "optional" ? displayGroupCTotal : 0;
           const subtotal = displayGroupATotal + displayGroupBNet + cContrib;
-          const aggregateFinal = Math.max(0, subtotal);
+          const aggregateFinal = roundScore(Math.max(0, subtotal - chiefDeduction));
           const maxTotal = effMaxA + effMaxB + (matchMode === "optional" ? effMaxC : 0);
           const formula = matchMode === "optional"
-            ? "A + B(avg) + C"
-            : "A + B(avg)";
+            ? "A + B(avg) + C − HD"
+            : "A + B(avg) − HD";
           return (
             <div className="rounded-3xl border backdrop-blur-xl px-6 py-3 shrink-0"
               style={{
@@ -817,6 +840,45 @@ function ChiefRefereeDashboardInner() {
                     >
                       TA {displayTaDeduction.toFixed(2)} (info)
                     </span>
+                    <span className="text-white/30">−</span>
+                    <span className="font-black text-red-300">HD {chiefDeduction.toFixed(3)}</span>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5" dir="ltr">
+                    <span className="mr-1 text-[9px] font-heading font-black tracking-wider text-white/50" dir="rtl">
+                      خصم رئيس الحكام
+                    </span>
+                    {[0.1, 0.2, 0.5, 1].map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => applyChiefDeduction(value)}
+                        className="h-7 min-w-12 rounded-md border border-red-400/30 bg-red-500/10 px-2 text-[10px] font-heading font-black tabular-nums text-red-200 transition-colors hover:bg-red-500/20"
+                      >
+                        {value.toFixed(3)}
+                      </button>
+                    ))}
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      inputMode="decimal"
+                      aria-label="خصم رئيس الحكام"
+                      value={chiefDeductionDraft}
+                      onChange={(event) => setChiefDeductionDraft(event.target.value)}
+                      onBlur={() => applyChiefDeduction(Number(chiefDeductionDraft))}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") applyChiefDeduction(Number(chiefDeductionDraft));
+                      }}
+                      className="h-7 w-20 rounded-md border border-white/20 bg-black/40 px-2 text-center text-[10px] font-heading font-black tabular-nums text-white outline-none focus:border-red-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => applyChiefDeduction(0)}
+                      className="h-7 rounded-md border border-white/15 bg-white/5 px-2 text-[9px] font-bold text-white/60 hover:text-white"
+                    >
+                      CLEAR
+                    </button>
                   </div>
 
                   <div className="mt-1.5">
@@ -966,6 +1028,8 @@ function ChiefRefereeDashboardInner() {
             setScoreRevealed(false);
             setTaDeduction(0);
             setTaOobCount(0);
+            setChiefDeduction(0);
+            setChiefDeductionDraft("0.000");
           }}
         />
       </footer>
@@ -1010,6 +1074,7 @@ function ChiefRefereeDashboardInner() {
           matchMode={matchMode}
           taOobCount={taOobCount}
           taDeduction={taDeduction}
+          chiefDeduction={chiefDeduction}
           groupAScore={groupATotal}
           groupAMax={effMaxA}
           bIndividualScores={bIndividualScores}
