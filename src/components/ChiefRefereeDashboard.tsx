@@ -24,6 +24,9 @@ import { toast } from "sonner";
 import { styleLabelAr, styleLabelEn, normalizeStyle } from "@/lib/styleNames";
 import { TIME_WINDOWS, fmtWindow, type TimeWindow } from "@/lib/timeRules";
 import { modeCaps } from "@/lib/matchMode";
+import { computeGroupAConsensus } from "@/lib/groupAConsensus";
+import { useGroupAConsensus } from "@/hooks/useGroupAConsensus";
+
 import { pushDisplaySettings, uploadSponsorLogo } from "@/hooks/useDisplaySettings";
 import { ErrorBoundary } from "./ErrorBoundary";
 import {
@@ -156,6 +159,10 @@ function ChiefRefereeDashboardInner() {
         : selectedAthlete)
     : null;
   const hasActiveAthlete = Boolean(timerSync.athleteId);
+
+  // Group A consensus (IWUF): only codes recorded by ≥2 Group A judges count.
+  const groupAConsensus = useGroupAConsensus(sessionCode, currentAthlete?.id ?? null, effMaxA);
+
 
   const waitingCount = joinRequests.filter(r => r.status === "waiting").length;
 
@@ -309,23 +316,10 @@ function ChiefRefereeDashboardInner() {
         .eq("session_code", sessionCode)
         .eq("athlete_id", currentAthlete.id);
       const rows = (scoreRows ?? []) as { judge_slot: string; judge_role: string; score: number | null; payload: any }[];
-      const aRows = rows.filter(r => r.judge_role === "A" || r.judge_slot.startsWith("A"));
-      const threshold = new Set(aRows.map(r => r.judge_slot)).size >= 3 ? 2 : 1;
-      const codeSlots = new Map<string, Set<string>>();
-      aRows.forEach(r => {
-        const codes: string[] = Array.isArray(r.payload?.codes) ? r.payload.codes : [];
-        codes.forEach(code => {
-          if (!codeSlots.has(code)) codeSlots.set(code, new Set());
-          codeSlots.get(code)!.add(r.judge_slot);
-        });
-      });
-      const confirmed_codes: { code: string; count: number; slots: string[] }[] = [];
-      const flagged_codes: { code: string; slot: string }[] = [];
-      codeSlots.forEach((slots, code) => {
-        const list = Array.from(slots);
-        if (list.length >= threshold) confirmed_codes.push({ code, count: list.length, slots: list });
-        else flagged_codes.push({ code, slot: list[0] });
-      });
+      const consensus = computeGroupAConsensus(rows as never, effMaxA, { athleteId: currentAthlete.id });
+      const confirmed_codes = consensus.confirmed.map(c => ({ code: c.code, count: c.count, slots: c.slots }));
+      const flagged_codes = consensus.flagged.map(f => ({ code: f.code, slot: f.slot }));
+
       const liveBRows = rows.filter(r => (r.judge_role === "B" || r.judge_slot.startsWith("B")) && r.score !== null);
       const b_individual = liveBRows.length > 0
         ? liveBRows.sort((a, b) => a.judge_slot.localeCompare(b.judge_slot)).map(r => ({
@@ -501,11 +495,15 @@ function ChiefRefereeDashboardInner() {
   const groupB = judges.filter(j => j.group === "B");
   const groupC = judges.filter(j => j.group === "C");
 
-  // Group summaries — average across submitted slots (real consensus).
+  // Group summaries — Group A applies the consensus rule (a code counts only
+  // when ≥2 A judges recorded it); the per-slot average is the fallback when no
+  // code payloads are available.
   const aSubmitted = groupA.filter(j => typeof j.score === "number").map(j => j.score as number);
-  const groupATotal = aSubmitted.length
+  const aAverage = aSubmitted.length
     ? Math.round((aSubmitted.reduce((s, v) => s + v, 0) / aSubmitted.length) * 100) / 100
     : 0;
+  const groupATotal = groupAConsensus.score ?? aAverage;
+
   const bKept = groupB.filter(j => j.bRole === "kept" && j.score !== null).map(j => j.score as number);
   const groupBNet = bKept.length ? Math.round((bKept.reduce((s, v) => s + v, 0) / bKept.length) * 100) / 100 : 0;
   const cSubmitted = groupC.filter(j => typeof j.score === "number").map(j => j.score as number);
@@ -763,7 +761,7 @@ function ChiefRefereeDashboardInner() {
         </div>
 
         {/* Consensus codes (Group A — codes confirmed by ≥2 judges) */}
-        <ConsensusCodesPanel sessionCode={sessionCode} athleteId={currentAthlete?.id ?? null} />
+        <ConsensusCodesPanel sessionCode={sessionCode} athleteId={currentAthlete?.id ?? null} maxA={effMaxA} />
 
         {/* RAW judge submissions — full transparency for chief */}
         <RawJudgesBreakdown
