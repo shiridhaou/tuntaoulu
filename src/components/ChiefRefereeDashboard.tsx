@@ -26,6 +26,7 @@ import { TIME_WINDOWS, fmtWindow, type TimeWindow } from "@/lib/timeRules";
 import { modeCaps } from "@/lib/matchMode";
 import { computeGroupAConsensus } from "@/lib/groupAConsensus";
 import { useGroupAConsensus } from "@/hooks/useGroupAConsensus";
+import { roundScore } from "@/lib/numFormat";
 
 import { pushDisplaySettings, uploadSponsorLogo } from "@/hooks/useDisplaySettings";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -128,6 +129,8 @@ function ChiefRefereeDashboardInner() {
   const [taDeduction, setTaDeduction] = useState<number>(0);
   const [taOobCount, setTaOobCount] = useState<number>(0);
   const [taPulse, setTaPulse] = useState<number>(0); // increments on every TA deduction change for visual pulse
+  const [chiefDeduction, setChiefDeduction] = useState<number>(0);
+  const [chiefDeductionDraft, setChiefDeductionDraft] = useState("0.000");
   // Dynamic style: the TA's broadcast style (timerSync.style) is authoritative —
   // the local competitionStyle is only a fallback. This drives BOTH the score
   // caps and the performance-time window so Taiji athletes are never compared
@@ -278,7 +281,18 @@ function ChiefRefereeDashboardInner() {
   }, [sessionCode]);
 
   // Reset TA deductions when athlete changes
-  useEffect(() => { setTaDeduction(0); setTaOobCount(0); }, [currentAthleteIndex]);
+  useEffect(() => {
+    setTaDeduction(0);
+    setTaOobCount(0);
+    setChiefDeduction(0);
+    setChiefDeductionDraft("0.000");
+  }, [currentAthlete?.id]);
+
+  const applyChiefDeduction = (value: number) => {
+    const next = roundScore(Math.max(0, Number.isFinite(value) ? value : 0));
+    setChiefDeduction(next);
+    setChiefDeductionDraft(next.toFixed(3));
+  };
 
   // Setup gate handled by parent ChiefRefereeDashboard wrapper.
 
@@ -368,7 +382,7 @@ function ChiefRefereeDashboardInner() {
         score_a: groupATotal,
         score_b: groupBNet,
         score_c: matchMode === "optional" ? groupCTotal : null,
-        deductions: taDeduction,
+        deductions: roundScore(taDeduction + chiefDeduction),
         final_score: aggregateFinal,
         published: true,
         payload: {
@@ -378,6 +392,9 @@ function ChiefRefereeDashboardInner() {
           b_individual,
           c_movements,
           ta_oob_count: taOobCount,
+          ta_deduction: roundScore(taDeduction),
+          chief_deduction: chiefDeduction,
+          total_external_deduction: roundScore(taDeduction + chiefDeduction),
           committed_at: Date.now(),
         } as never,
       });
@@ -395,7 +412,9 @@ function ChiefRefereeDashboardInner() {
             score_a: groupATotal,
             score_b: groupBNet,
             score_c: matchMode === "optional" ? groupCTotal : null,
-            deductions: taDeduction,
+            deductions: roundScore(taDeduction + chiefDeduction),
+            ta_deduction: roundScore(taDeduction),
+            chief_deduction: chiefDeduction,
             final_score: aggregateFinal,
             status: "PUBLISHED",
             published_at: Date.now(),
@@ -405,7 +424,11 @@ function ChiefRefereeDashboardInner() {
       await supabase.from("match_events").insert({
         session_code: sessionCode,
         event_type: "score_published",
-        payload: { athlete_id: currentAthlete.id, final_score: aggregateFinal } as never,
+        payload: {
+          athlete_id: currentAthlete.id,
+          final_score: aggregateFinal,
+          chief_deduction: chiefDeduction,
+        } as never,
       });
       setScoreRevealed(true);
       commitCurrentResult();
@@ -417,7 +440,7 @@ function ChiefRefereeDashboardInner() {
         team: currentAthlete.country ?? null,
         style: competitionStyle,
         difficultyScore: matchMode === "optional" ? groupCTotal : null,
-        deductionScore: taDeduction,
+        deductionScore: roundScore(taDeduction + chiefDeduction),
         finalScore: aggregateFinal,
         timestamp: new Date().toISOString(),
       });
@@ -500,21 +523,21 @@ function ChiefRefereeDashboardInner() {
   // code payloads are available.
   const aSubmitted = groupA.filter(j => typeof j.score === "number").map(j => j.score as number);
   const aAverage = aSubmitted.length
-    ? Math.round((aSubmitted.reduce((s, v) => s + v, 0) / aSubmitted.length) * 100) / 100
+    ? roundScore(aSubmitted.reduce((s, v) => s + v, 0) / aSubmitted.length)
     : 0;
   const groupATotal = groupAConsensus.score ?? aAverage;
 
   const bKept = groupB.filter(j => j.bRole === "kept" && j.score !== null).map(j => j.score as number);
-  const groupBNet = bKept.length ? Math.round((bKept.reduce((s, v) => s + v, 0) / bKept.length) * 100) / 100 : 0;
+  const groupBNet = bKept.length ? roundScore(bKept.reduce((s, v) => s + v, 0) / bKept.length) : 0;
   const cSubmitted = groupC.filter(j => typeof j.score === "number").map(j => j.score as number);
   const groupCTotal = cSubmitted.length
-    ? Math.round((cSubmitted.reduce((s, v) => s + v, 0) / cSubmitted.length) * 100) / 100
+    ? roundScore(cSubmitted.reduce((s, v) => s + v, 0) / cSubmitted.length)
     : 0;
 
-  // Aggregate final score — strict sum A + B + C (mode-aware).
-  // Group A already arrives net of its deductions, so nothing is subtracted here.
+  // Group A already arrives net of its own deductions. The only deduction
+  // applied after A+B+C here is the explicit Chief Judge deduction.
   const cContrib = matchMode === "optional" ? groupCTotal : 0;
-  const aggregateFinal = Math.max(0, groupATotal + groupBNet + cContrib);
+  const aggregateFinal = roundScore(Math.max(0, groupATotal + groupBNet + cContrib - chiefDeduction));
   // Show real aggregates whenever ANY judge has submitted — even if TA hasn't
   // formally "called" the athlete via current_match.athlete_id yet. This fixes
   // the case where group totals + final stay at 0.00 despite scores arriving.
@@ -728,7 +751,7 @@ function ChiefRefereeDashboardInner() {
             subtitle="Quality"
             color="#22c55e"
             summary={displayGroupATotal}
-            summaryLabel={`/ ${effMaxA.toFixed(2)}`}
+            summaryLabel={`/ ${effMaxA.toFixed(3)}`}
             revealed={showLive}
             judges={groupA}
             timerRunning={timerRunning}
@@ -739,7 +762,7 @@ function ChiefRefereeDashboardInner() {
             subtitle="Performance · (B1+B2+B3)/3"
             color={GOLD}
             summary={displayGroupBNet}
-            summaryLabel={`/ ${effMaxB.toFixed(2)}`}
+            summaryLabel={`/ ${effMaxB.toFixed(3)}`}
             revealed={showLive}
             judges={groupB}
             timerRunning={timerRunning}
@@ -751,7 +774,7 @@ function ChiefRefereeDashboardInner() {
               subtitle="Difficulty"
               color="#22d3ee"
               summary={displayGroupCTotal}
-              summaryLabel={`/ ${effMaxC.toFixed(2)}`}
+              summaryLabel={`/ ${effMaxC.toFixed(3)}`}
               revealed={showLive}
               judges={groupC}
               timerRunning={timerRunning}
@@ -774,11 +797,11 @@ function ChiefRefereeDashboardInner() {
         {(() => {
           const cContrib = matchMode === "optional" ? displayGroupCTotal : 0;
           const subtotal = displayGroupATotal + displayGroupBNet + cContrib;
-          const aggregateFinal = Math.max(0, subtotal);
+          const aggregateFinal = roundScore(Math.max(0, subtotal - chiefDeduction));
           const maxTotal = effMaxA + effMaxB + (matchMode === "optional" ? effMaxC : 0);
           const formula = matchMode === "optional"
-            ? "A + B(avg) + C"
-            : "A + B(avg)";
+            ? "A + B(avg) + C − HD"
+            : "A + B(avg) − HD";
           return (
             <div className="rounded-3xl border backdrop-blur-xl px-6 py-3 shrink-0"
               style={{
@@ -800,13 +823,13 @@ function ChiefRefereeDashboardInner() {
 
                   {/* breakdown grid */}
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] font-heading tabular-nums" dir="ltr">
-                    <span className="text-emerald-400">A {displayGroupATotal.toFixed(2)}</span>
+                    <span className="text-emerald-400">A {displayGroupATotal.toFixed(3)}</span>
                     <span className="text-white/30">+</span>
-                    <span style={{ color: GOLD }}>B {displayGroupBNet.toFixed(2)}</span>
+                    <span style={{ color: GOLD }}>B {displayGroupBNet.toFixed(3)}</span>
                     {matchMode === "optional" && (
                       <>
                         <span className="text-white/30">+</span>
-                        <span className="text-cyan-300">C {displayGroupCTotal.toFixed(2)}</span>
+                        <span className="text-cyan-300">C {displayGroupCTotal.toFixed(3)}</span>
                       </>
                     )}
                     <span className="text-white/30">·</span>
@@ -815,8 +838,47 @@ function ChiefRefereeDashboardInner() {
                       className="text-red-400/70 ta-pulse px-1 rounded"
                       title={`OOB ×${taOobCount} — مطبّق ضمن نقاط المجموعة أ`}
                     >
-                      TA {displayTaDeduction.toFixed(2)} (info)
+                      TA {displayTaDeduction.toFixed(3)} (info)
                     </span>
+                    <span className="text-white/30">−</span>
+                    <span className="font-black text-red-300">HD {chiefDeduction.toFixed(3)}</span>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5" dir="ltr">
+                    <span className="mr-1 text-[9px] font-heading font-black tracking-wider text-white/50" dir="rtl">
+                      خصم رئيس الحكام
+                    </span>
+                    {[0.1, 0.2, 0.5, 1].map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => applyChiefDeduction(value)}
+                        className="h-7 min-w-12 rounded-md border border-red-400/30 bg-red-500/10 px-2 text-[10px] font-heading font-black tabular-nums text-red-200 transition-colors hover:bg-red-500/20"
+                      >
+                        {value.toFixed(3)}
+                      </button>
+                    ))}
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      inputMode="decimal"
+                      aria-label="خصم رئيس الحكام"
+                      value={chiefDeductionDraft}
+                      onChange={(event) => setChiefDeductionDraft(event.target.value)}
+                      onBlur={() => applyChiefDeduction(Number(chiefDeductionDraft))}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") applyChiefDeduction(Number(chiefDeductionDraft));
+                      }}
+                      className="h-7 w-20 rounded-md border border-white/20 bg-black/40 px-2 text-center text-[10px] font-heading font-black tabular-nums text-white outline-none focus:border-red-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => applyChiefDeduction(0)}
+                      className="h-7 rounded-md border border-white/15 bg-white/5 px-2 text-[9px] font-bold text-white/60 hover:text-white"
+                    >
+                      CLEAR
+                    </button>
                   </div>
 
                   <div className="mt-1.5">
@@ -832,13 +894,13 @@ function ChiefRefereeDashboardInner() {
                   }}
                   dir="ltr"
                 >
-                  {scoreVisible ? aggregateFinal.toFixed(2) : "—.——"}
+                  {scoreVisible ? aggregateFinal.toFixed(3) : "—.———"}
                 </p>
 
                 <div className="text-right whitespace-nowrap">
                   <p className="text-[10px] uppercase tracking-[0.3em] font-body text-white/40">Max</p>
                   <p className="text-lg font-heading font-black tabular-nums text-white/50" dir="ltr">
-                    {maxTotal.toFixed(2)}
+                    {maxTotal.toFixed(3)}
                   </p>
                   {displayTaDeduction > 0 && (
                     <p className="mt-1 text-[9px] text-red-400 font-body" dir="ltr">
@@ -918,7 +980,7 @@ function ChiefRefereeDashboardInner() {
                   }}
                 >
                   <CheckCircle className="h-3.5 w-3.5" />
-                  {minReady ? `COMPUTE FINAL · ${aggregateFinal.toFixed(2)}` : `WAITING ${missing.join("·")}`}
+                  {minReady ? `COMPUTE FINAL · ${aggregateFinal.toFixed(3)}` : `WAITING ${missing.join("·")}`}
                 </button>
               )}
 
@@ -966,6 +1028,8 @@ function ChiefRefereeDashboardInner() {
             setScoreRevealed(false);
             setTaDeduction(0);
             setTaOobCount(0);
+            setChiefDeduction(0);
+            setChiefDeductionDraft("0.000");
           }}
         />
       </footer>
@@ -1010,6 +1074,7 @@ function ChiefRefereeDashboardInner() {
           matchMode={matchMode}
           taOobCount={taOobCount}
           taDeduction={taDeduction}
+          chiefDeduction={chiefDeduction}
           groupAScore={groupATotal}
           groupAMax={effMaxA}
           bIndividualScores={bIndividualScores}
@@ -1124,7 +1189,7 @@ function GroupColumn({
         }}
         dir="ltr"
       >
-        {revealed ? summary.toFixed(2) : "—.——"}
+        {revealed ? summary.toFixed(3) : "—.———"}
       </p>
       <p className="text-[9px] text-white/40 font-body mt-0.5 whitespace-nowrap" dir="ltr">{summaryLabel}</p>
 
@@ -1198,7 +1263,7 @@ function JudgeChip({ slot, revealed }: { slot: JudgeSlot; revealed: boolean }) {
         style={{ borderColor: ring, background: "rgba(255,255,255,0.03)" }}>
         <span className="text-[7px] font-heading font-black text-white/70 leading-none" dir="ltr">{slot.label}</span>
         <span className="text-[10px] font-heading font-black tabular-nums leading-none mt-0.5" style={{ color: valueColor }} dir="ltr">
-          {hasScore ? slot.score!.toFixed(2) : "—"}
+          {hasScore ? slot.score!.toFixed(3) : "—"}
         </span>
         {hasScore && isDropped && (
           <span className="absolute left-0.5 right-0.5 top-1/2 h-[2px] bg-red-500 -translate-y-1/2 rotate-[-15deg] rounded-full" />
@@ -1267,7 +1332,7 @@ function GroupDetailModal({
                 </div>
                 <div className="flex items-center gap-3">
                   <p className="text-2xl font-heading font-black tabular-nums" style={{ color: valueColor }} dir="ltr">
-                    {j.score !== null ? (revealed ? j.score.toFixed(2) : "•••") : "—"}
+                    {j.score !== null ? (revealed ? j.score.toFixed(3) : "•••") : "—"}
                   </p>
                   <button
                     onClick={() => j.online && onEdit(j)}
@@ -1603,7 +1668,7 @@ function EditScoreModal({
   onClear: () => void;
   onClose: () => void;
 }) {
-  const [val, setVal] = useState<string>((currentOverride ?? baseScore ?? 0).toFixed(2));
+  const [val, setVal] = useState<string>((currentOverride ?? baseScore ?? 0).toFixed(3));
   const numeric = parseFloat(val);
   const valid = !Number.isNaN(numeric) && numeric >= 0 && numeric <= 10;
 
@@ -1622,7 +1687,7 @@ function EditScoreModal({
           </button>
         </div>
         <p className="text-[11px] text-white/50 font-body mb-3">
-          القيمة الأصلية: <span className="text-white font-bold tabular-nums" dir="ltr">{(baseScore ?? 0).toFixed(2)}</span>
+          القيمة الأصلية: <span className="text-white font-bold tabular-nums" dir="ltr">{(baseScore ?? 0).toFixed(3)}</span>
         </p>
         <input
           type="number" step="0.01" min="0" max="10"
@@ -1682,11 +1747,11 @@ function AiInsightsSidebar({
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         <div className="grid grid-cols-2 gap-2">
           <Stat label="Judges Online" value={`${approvedCount}/${totalSlots}`} accent="emerald" />
-          <Stat label="Final Score"  value={finalScore.toFixed(2)} accent="orange" />
-          <Stat label="Net B"        value={judgeBAverage.toFixed(2)} accent="orange" />
-          <Stat label="Group A"      value={judgeAScore.toFixed(2)} accent="red" />
-          <Stat label="Group C"      value={judgeCScore.toFixed(2)} accent="orange" />
-          <Stat label="B Gap"        value={maxGap.toFixed(2)} accent={maxGap > 0.5 ? "red" : "emerald"} />
+          <Stat label="Final Score"  value={finalScore.toFixed(3)} accent="orange" />
+          <Stat label="Net B"        value={judgeBAverage.toFixed(3)} accent="orange" />
+          <Stat label="Group A"      value={judgeAScore.toFixed(3)} accent="red" />
+          <Stat label="Group C"      value={judgeCScore.toFixed(3)} accent="orange" />
+          <Stat label="B Gap"        value={maxGap.toFixed(3)} accent={maxGap > 0.5 ? "red" : "emerald"} />
         </div>
 
         <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-3">
@@ -1704,7 +1769,7 @@ function AiInsightsSidebar({
             )}
             {maxGap > 0.5 && (
               <Alert tone="red" icon={<AlertTriangle className="h-3.5 w-3.5" />}>
-                {"Gap of " + maxGap.toFixed(2) + " between Judge B scores — review recommended"}
+                {"Gap of " + maxGap.toFixed(3) + " between Judge B scores — review recommended"}
               </Alert>
             )}
             {approvedCount === totalSlots && biasJudges.length === 0 && maxGap <= 0.5 && (
@@ -1821,7 +1886,7 @@ function ContentSheetModal({
                     </div>
                   </div>
                   <p className="text-sm font-heading font-black tabular-nums" style={{ color: GOLD }} dir="ltr">
-                    +{m.value.toFixed(2)}
+                    +{m.value.toFixed(3)}
                   </p>
                 </div>
               ))}
@@ -1831,7 +1896,7 @@ function ContentSheetModal({
                 Total Difficulty Value
               </span>
               <span className="text-2xl font-heading font-black tabular-nums" style={{ color: GOLD }} dir="ltr">
-                {total.toFixed(2)}
+                {total.toFixed(3)}
               </span>
             </div>
           </>
@@ -1990,7 +2055,7 @@ function RawJudgesBreakdown({
                       </div>
                     </div>
                     <span className="text-sm font-heading font-black tabular-nums text-emerald-300 shrink-0" dir="ltr">
-                      {r.score !== null ? r.score.toFixed(2) : "—"}
+                      {r.score !== null ? r.score.toFixed(3) : "—"}
                     </span>
                   </div>
                 );
@@ -2021,7 +2086,7 @@ function RawJudgesBreakdown({
                       </p>
                     </div>
                     <span className="text-base font-heading font-black tabular-nums" style={{ color }} dir="ltr">
-                      {r.score !== null ? r.score.toFixed(2) : "—"}
+                      {r.score !== null ? r.score.toFixed(3) : "—"}
                     </span>
                   </div>
                 );
@@ -2049,7 +2114,7 @@ function RawJudgesBreakdown({
                       </p>
                     </div>
                     <span className="text-base font-heading font-black tabular-nums text-cyan-300" dir="ltr">
-                      {r.score !== null ? r.score.toFixed(2) : "—"}
+                      {r.score !== null ? r.score.toFixed(3) : "—"}
                     </span>
                   </div>
                 );

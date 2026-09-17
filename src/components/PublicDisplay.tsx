@@ -654,7 +654,7 @@ function VarBroadcastView({
           {!showingLive && activeClip && (
             <div className="absolute top-3 right-3 z-10 flex flex-col items-end gap-1">
               <span className="px-3 py-1 rounded-full bg-orange-500/90 text-black text-[11px] font-heading font-black tracking-wider">
-                {activeClip.code || "خطأ"} · −{activeClip.value.toFixed(2)}
+                {activeClip.code || "خطأ"} · −{activeClip.value.toFixed(3)}
               </span>
               <span className="px-3 py-1 rounded bg-black/70 text-white text-[11px] font-body">
                 {activeClip.label}
@@ -708,7 +708,7 @@ function VarBroadcastView({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10px] font-heading font-black text-orange-300" dir="ltr">
-                      #{i + 1} · −{c.value.toFixed(2)}
+                      #{i + 1} · −{c.value.toFixed(3)}
                     </span>
                     <span className="text-[10px] font-heading font-black text-white/80" dir="ltr">{c.code}</span>
                   </div>
@@ -790,7 +790,7 @@ export function PublicDisplay() {
   const handleShare = async () => {
     if (!athlete?.id) return;
     const url = reportUrl || `/public-report/${athlete.id}`;
-    const text = `🥋 ${athlete?.full_name ?? ""} — Score: ${finalScore.toFixed(2)}\n${url}`;
+    const text = `🥋 ${athlete?.full_name ?? ""} — Score: ${finalScore.toFixed(3)}\n${url}`;
     try {
       if ((navigator as any).share) {
         await (navigator as any).share({ title: "Wushu Report", text, url });
@@ -866,9 +866,11 @@ export function PublicDisplay() {
   const groupAScore = result?.score_a ?? 0;
   const groupBAvg = result?.score_b ?? 0;
   const groupCScore = result?.score_c ?? 0;
+  const chiefDeduction = Number(result?.payload?.chief_deduction ?? 0);
   // Prefer the live TA deduction broadcast (current_match.ta_deductions) so the
   // public TV reflects every +/- the TA presses without waiting for publish.
-  const taDed = liveTaDeduction > 0 ? liveTaDeduction : (result?.deductions ?? 0);
+  const publishedTaDeduction = Number(result?.payload?.ta_deduction ?? result?.deductions ?? 0);
+  const taDed = liveTaDeduction > 0 ? liveTaDeduction : publishedTaDeduction;
   void liveTaPulse; // referenced to silence lint; pulse used in JSX via key
   const taOob = result?.payload?.ta_oob_count ?? 0;
   const payloadBIndividual = Array.isArray(result?.payload?.b_individual) ? result.payload.b_individual : [];
@@ -1014,13 +1016,13 @@ export function PublicDisplay() {
                   key={`live-total-${liveTaPulse}`}
                   className="text-7xl md:text-8xl lg:text-9xl font-heading font-black tabular-nums leading-none mt-2"
                   style={{ color: "#FACC15", textShadow: "none" }} dir="ltr">
-                  {Math.max(0, liveTotal - taDed).toFixed(2)}
+                  {Math.max(0, liveTotal).toFixed(3)}
                 </p>
                 {taDed > 0 && (
                   <p className="text-base md:text-lg font-heading font-black tabular-nums mt-1 ta-pulse"
                      style={{ color: RED, textShadow: `0 0 18px ${RED}99` }} dir="ltr"
                      key={`live-ta-${liveTaPulse}`}>
-                    − TA {taDed.toFixed(2)}
+                    − TA {taDed.toFixed(3)}
                   </p>
                 )}
                 <p className="text-[10px] text-white/40 mt-1">In progress · Awaiting Chief publish</p>
@@ -1033,7 +1035,7 @@ export function PublicDisplay() {
             <div className="flex items-center justify-between mb-3">
               <p className="text-[11px] font-heading font-black tracking-[0.4em] text-emerald-400">GROUP A · QUALITY (LIVE)</p>
               <p className="text-2xl font-heading font-black tabular-nums" style={{ color: "#22c55e" }} dir="ltr">
-                {liveAAvg.toFixed(2)} <span className="text-sm text-white/40">/ 5.00</span>
+                {liveAAvg.toFixed(3)} <span className="text-sm text-white/40">/ 5.000</span>
               </p>
             </div>
             {liveAs.length === 0 ? (
@@ -1043,7 +1045,7 @@ export function PublicDisplay() {
                 {liveAs.map(a => (
                   <div key={a.slot} className="rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-3 py-2 flex items-center justify-between">
                     <p className="text-[11px] font-heading font-black text-white/85" dir="ltr">{a.slot}</p>
-                    <p className="text-lg font-heading font-black tabular-nums text-emerald-300" dir="ltr">{a.score.toFixed(2)}</p>
+                    <p className="text-lg font-heading font-black tabular-nums text-emerald-300" dir="ltr">{a.score.toFixed(3)}</p>
                   </div>
                 ))}
               </div>
@@ -1055,7 +1057,7 @@ export function PublicDisplay() {
             <div className="flex items-center justify-between mb-3">
               <p className="text-[11px] font-heading font-black tracking-[0.4em]" style={{ color: GOLD }}>GROUP B · PERFORMANCE (LIVE)</p>
               <p className="text-2xl font-heading font-black tabular-nums" style={{ color: GOLD }} dir="ltr">
-                {liveBAvg.toFixed(2)} <span className="text-sm text-white/40">/ 3.00</span>
+                {liveBAvg.toFixed(3)} <span className="text-sm text-white/40">/ 3.000</span>
               </p>
             </div>
             {liveBs.length === 0 ? (
@@ -1074,7 +1076,7 @@ export function PublicDisplay() {
                           {dropped ? `Drop (${b.role})` : b.role === "kept" ? "Counted" : "Single"}
                         </p>
                       </div>
-                      <p className="text-lg font-heading font-black tabular-nums" style={{ color }} dir="ltr">{b.score.toFixed(2)}</p>
+                      <p className="text-lg font-heading font-black tabular-nums" style={{ color }} dir="ltr">{b.score.toFixed(3)}</p>
                     </div>
                   );
                 })}
@@ -1088,7 +1090,7 @@ export function PublicDisplay() {
               <div className="flex items-center justify-between mb-3">
                 <p className="text-[11px] font-heading font-black tracking-[0.4em]" style={{ color: CYAN }}>GROUP C · DIFFICULTY (LIVE)</p>
                 <p className="text-2xl font-heading font-black tabular-nums" style={{ color: CYAN }} dir="ltr">
-                  {liveCAvg.toFixed(2)} <span className="text-sm text-white/40">/ 2.00</span>
+                  {liveCAvg.toFixed(3)} <span className="text-sm text-white/40">/ 2.000</span>
                 </p>
               </div>
               {liveCs.length === 0 ? (
@@ -1098,7 +1100,7 @@ export function PublicDisplay() {
                   {liveCs.map(c => (
                     <div key={c.slot} className="rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 flex items-center justify-between">
                       <p className="text-[11px] font-heading font-black text-white/85" dir="ltr">{c.slot}</p>
-                      <p className="text-lg font-heading font-black tabular-nums text-cyan-300" dir="ltr">{c.score.toFixed(2)}</p>
+                      <p className="text-lg font-heading font-black tabular-nums text-cyan-300" dir="ltr">{c.score.toFixed(3)}</p>
                     </div>
                   ))}
                 </div>
@@ -1175,7 +1177,7 @@ export function PublicDisplay() {
               <p className="text-[10px] uppercase tracking-[0.4em] text-white/50 font-body">Final Score</p>
               <p className="text-7xl md:text-8xl font-heading font-black tabular-nums leading-none text-yellow-400"
                 style={{ color: "#FACC15", textShadow: "none" }} dir="ltr">
-                {animated.toFixed(2)}
+                {animated.toFixed(3)}
               </p>
             </div>
             {/* Official IWUF-style placing block: always visible for a published result. */}
@@ -1208,20 +1210,21 @@ export function PublicDisplay() {
               </div>
               <div className="flex items-center justify-between py-1">
                 <span className="text-[11px] uppercase tracking-wider text-white/50 font-body">Total deduction</span>
-                <span className="text-base font-heading font-black tabular-nums" style={{ color: RED }} dir="ltr">− {taDed.toFixed(2)}</span>
+                <span className="text-base font-heading font-black tabular-nums" style={{ color: RED }} dir="ltr">− {taDed.toFixed(3)}</span>
               </div>
             </div>
 
             <div className="rounded-2xl border border-white/15 bg-white/[0.03] p-4">
               <p className="text-[11px] font-heading font-black tracking-[0.4em] text-white/70 mb-2">FINAL CALCULATION</p>
-              <Row label="Group A" value={groupAScore.toFixed(2)} color="#22c55e" />
-              <Row label="Group B (avg)" value={groupBAvg.toFixed(2)} color={GOLD} />
-              {matchMode === "optional" && <Row label="Group C" value={groupCScore.toFixed(2)} color={CYAN} />}
-              <Row label="TA deduction" value={`− ${taDed.toFixed(2)}`} color={RED} />
+              <Row label="Group A" value={groupAScore.toFixed(3)} color="#22c55e" />
+              <Row label="Group B (avg)" value={groupBAvg.toFixed(3)} color={GOLD} />
+              {matchMode === "optional" && <Row label="Group C" value={groupCScore.toFixed(3)} color={CYAN} />}
+              <Row label="TA deduction" value={`− ${taDed.toFixed(3)}`} color={RED} />
+              <Row label="Chief Judge deduction · HD" value={`− ${chiefDeduction.toFixed(3)}`} color={RED} />
               <div className="mt-2 pt-2 border-t border-white/15 flex items-center justify-between">
                 <span className="text-xs font-heading font-black tracking-wider text-white">FINAL</span>
                 <span className="text-3xl font-heading font-black tabular-nums" style={{ color: ORANGE, textShadow: `0 0 16px ${ORANGE}80` }} dir="ltr">
-                  {finalScore.toFixed(2)}
+                  {finalScore.toFixed(3)}
                 </span>
               </div>
             </div>
@@ -1288,7 +1291,7 @@ export function PublicDisplay() {
                         <span className="text-xs font-heading font-bold text-white truncate">{r.athlete_name ?? "—"}</span>
                       </div>
                       <span className="text-sm font-heading font-black tabular-nums" style={{ color: isCurrent ? ORANGE : "#fff" }} dir="ltr">
-                        {r.final_score.toFixed(2)}
+                        {r.final_score.toFixed(3)}
                       </span>
                     </div>
                   );
@@ -1306,7 +1309,7 @@ export function PublicDisplay() {
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-heading font-black tracking-[0.3em] text-emerald-300">GROUP A · QM</p>
               <p className="text-2xl font-heading font-black tabular-nums leading-none" style={{ color: "#22c55e", textShadow: "0 0 12px rgba(34,197,94,0.6)" }} dir="ltr">
-                {groupAScore.toFixed(2)}
+                {groupAScore.toFixed(3)}
               </p>
             </div>
             {displayConfirmedCodes.length === 0 ? (
@@ -1354,7 +1357,7 @@ export function PublicDisplay() {
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-heading font-black tracking-[0.3em]" style={{ color: GOLD }}>GROUP B · OB</p>
               <p className="text-2xl font-heading font-black tabular-nums leading-none" style={{ color: GOLD, textShadow: `0 0 12px ${GOLD}99` }} dir="ltr">
-                {groupBAvg.toFixed(2)}
+                {groupBAvg.toFixed(3)}
               </p>
             </div>
             {displayBIndividual.length === 0 ? (
@@ -1371,7 +1374,7 @@ export function PublicDisplay() {
                       style={{ background: `${color}1A`, border: `1px solid ${color}66` }}>
                       <p className="text-[8px] uppercase tracking-wider opacity-70 leading-none" style={{ color }} dir="ltr">{b.slot}</p>
                       <p className="text-base font-heading font-black tabular-nums leading-tight mt-0.5" style={{ color }} dir="ltr">
-                        {b.score.toFixed(2)}
+                        {b.score.toFixed(3)}
                       </p>
                     </div>
                   );
@@ -1387,7 +1390,7 @@ export function PublicDisplay() {
               <div className="flex items-center justify-between mb-2">
                 <p className="text-[10px] font-heading font-black tracking-[0.3em]" style={{ color: CYAN }}>GROUP C · DD</p>
                 <p className="text-2xl font-heading font-black tabular-nums leading-none" style={{ color: CYAN, textShadow: `0 0 12px ${CYAN}99` }} dir="ltr">
-                  {groupCScore.toFixed(2)}
+                  {groupCScore.toFixed(3)}
                 </p>
               </div>
               {displayCMovements.length === 0 ? (

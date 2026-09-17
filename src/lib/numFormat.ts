@@ -16,14 +16,19 @@ export function toWesternDigits(input: string | number | null | undefined): stri
   });
 }
 
-/** Fixed-decimal number in en-US (e.g. 9.75). */
-export function fmtNum(value: number | null | undefined, digits = 2): string {
+/** Fixed-decimal number in en-US (e.g. 9.850 for official scores). */
+export function fmtNum(value: number | null | undefined, digits = 3): string {
   if (value === null || value === undefined || !isFinite(Number(value))) return "—";
   return Number(value).toLocaleString("en-US", {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
     useGrouping: false,
   });
+}
+
+/** Round a score numerically to IWUF's displayed three-decimal precision. */
+export function roundScore(value: number): number {
+  return Math.round((value + Number.EPSILON) * 1000) / 1000;
 }
 
 /** ISO date string YYYY-MM-DD, always Western digits. */

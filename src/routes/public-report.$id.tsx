@@ -46,6 +46,8 @@ type Result = {
   final_score: number;
   payload: {
     ta_oob_count?: number;
+    ta_deduction?: number;
+    chief_deduction?: number;
     match_mode?: string;
     confirmed_codes?: { code: string; count?: number; slots?: string[] }[];
     flagged_codes?: { code: string; slot?: string }[];
@@ -174,7 +176,7 @@ function PublicReportPage() {
   const handleShare = async () => {
     const title = `Wushu Smart Report — ${athlete?.full_name ?? result?.athlete_name ?? "Athlete"}`;
     const url = window.location.href;
-    const text = `${title}\nScore: ${Number(result?.final_score ?? 0).toFixed(2)}\n${url}`;
+    const text = `${title}\nScore: ${Number(result?.final_score ?? 0).toFixed(3)}\n${url}`;
     try {
       if ((navigator as any).share) {
         await (navigator as any).share({ title, text, url });
@@ -210,6 +212,8 @@ function PublicReportPage() {
 
   const matchMode = (result.payload?.match_mode ?? "compulsory") as "compulsory" | "optional";
   const oob = result.payload?.ta_oob_count ?? 0;
+  const chiefDeduction = Number(result.payload?.chief_deduction ?? 0);
+  const taDeduction = Number(result.payload?.ta_deduction ?? result.deductions ?? 0);
   const confirmedForReport = breakdown.confirmedCodes.length > 0
     ? breakdown.confirmedCodes
     : (result.payload?.confirmed_codes ?? []).map(c => ({ code: c.code, count: Number(c.count ?? 1), slots: c.slots ?? [] }));
@@ -296,7 +300,7 @@ function PublicReportPage() {
             </div>
             <p className="text-6xl md:text-7xl font-heading font-black tabular-nums leading-none"
               style={{ color: "#FACC15", textShadow: "none" }} dir="ltr">
-              {Number(result.final_score).toFixed(2)}
+              {Number(result.final_score).toFixed(3)}
             </p>
           </div>
         </section>
@@ -306,7 +310,7 @@ function PublicReportPage() {
           <div className="flex items-center justify-between mb-2">
             <p className="text-[10px] font-heading font-black tracking-[0.3em] text-emerald-400">GROUP A · QUALITY</p>
             <p className="text-xl font-heading font-black tabular-nums" style={{ color: GREEN }} dir="ltr">
-              {Number(result.score_a ?? 0).toFixed(2)} <span className="text-xs text-white/40">/ 5.00</span>
+              {Number(result.score_a ?? 0).toFixed(3)} <span className="text-xs text-white/40">/ 5.000</span>
             </p>
           </div>
           <p className="text-[9px] uppercase tracking-wider text-emerald-300/80 font-body mb-1.5">
@@ -344,7 +348,7 @@ function PublicReportPage() {
           <div className="flex items-center justify-between mb-2">
             <p className="text-[10px] font-heading font-black tracking-[0.3em]" style={{ color: GOLD }}>GROUP B · PERFORMANCE</p>
             <p className="text-xl font-heading font-black tabular-nums" style={{ color: GOLD }} dir="ltr">
-              {Number(result.score_b ?? 0).toFixed(2)} <span className="text-xs text-white/40">/ 3.00</span>
+              {Number(result.score_b ?? 0).toFixed(3)} <span className="text-xs text-white/40">/ 3.000</span>
             </p>
           </div>
           {bIndividualForReport.length === 0 ? (
@@ -364,7 +368,7 @@ function PublicReportPage() {
                       </p>
                     </div>
                     <p className="text-base font-heading font-black tabular-nums" style={{ color }} dir="ltr">
-                      {b.score.toFixed(2)}
+                      {b.score.toFixed(3)}
                     </p>
                   </div>
                 );
@@ -379,7 +383,7 @@ function PublicReportPage() {
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-heading font-black tracking-[0.3em]" style={{ color: CYAN }}>GROUP C · DIFFICULTY</p>
               <p className="text-xl font-heading font-black tabular-nums" style={{ color: CYAN }} dir="ltr">
-                {Number(result.score_c ?? 0).toFixed(2)} <span className="text-xs text-white/40">/ 2.00</span>
+                {Number(result.score_c ?? 0).toFixed(3)} <span className="text-xs text-white/40">/ 2.000</span>
               </p>
             </div>
             {cMovementsForReport.length === 0 ? (
@@ -403,13 +407,19 @@ function PublicReportPage() {
         )}
 
         {/* TA */}
-        {(Number(result.deductions ?? 0) > 0 || oob > 0) && (
+        {(taDeduction > 0 || chiefDeduction > 0 || oob > 0) && (
           <section className="rounded-2xl border border-red-500/30 bg-red-500/[0.05] p-4">
             <p className="text-[10px] font-heading font-black tracking-[0.3em] text-red-400 mb-1.5">TA · DEDUCTIONS</p>
             <div className="flex items-center justify-between text-sm">
               <span className="text-[11px] uppercase tracking-wider text-white/60">OOB ×{oob}</span>
               <span className="font-heading font-black tabular-nums" style={{ color: RED }} dir="ltr">
-                − {Number(result.deductions ?? 0).toFixed(2)}
+                − {taDeduction.toFixed(3)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between border-t border-white/5 pt-1 text-sm">
+              <span className="text-[11px] uppercase tracking-wider text-white/60">Chief Judge · HD</span>
+              <span className="font-heading font-black tabular-nums" style={{ color: RED }} dir="ltr">
+                − {chiefDeduction.toFixed(3)}
               </span>
             </div>
           </section>

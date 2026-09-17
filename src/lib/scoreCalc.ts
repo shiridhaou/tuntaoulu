@@ -29,10 +29,10 @@ export function computeFinalScore(input: FinalScoreInput): FinalScoreResult {
     bs = bs.slice(1, -1);
   }
   const bAvg = bs.length === 0 ? 0 : bs.reduce((s, v) => s + v, 0) / bs.length;
-  // Group A already arrives net of its deductions (5.00 − total deductions),
-  // so the final total is a pure sum — never subtract deductions twice.
+  // Group A already arrives net of Group A deductions. `extraDeductions` is
+  // reserved for a separate Chief Judge penalty and is subtracted once here.
   const ded = input.extraDeductions ?? 0;
-  const final = Math.max(0, a + bAvg + c);
+  const final = Math.max(0, a + bAvg + c - ded);
   return {
     scoreA: round3(a),
     scoreBAvg: round3(bAvg),

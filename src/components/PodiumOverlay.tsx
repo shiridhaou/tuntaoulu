@@ -148,7 +148,7 @@ export function PodiumOverlay({
                   style={{ color: MEDAL[i] }}
                   dir="ltr"
                 >
-                  {r.finalScore.toFixed(2)}
+                  {r.finalScore.toFixed(3)}
                 </span>
               </div>
             ))}

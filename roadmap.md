@@ -5,6 +5,6 @@
 - [x] Infer optional/compulsory routine mode and auto-select OPT for optional athletes.
 - [x] Persist structured difficulty sheets and correct import movement totals.
 - [x] Verify parser examples, type safety, and preview build health.
-- [ ] Standardize official score displays to three decimals.
-- [ ] Add and publish the Chief Judge deduction.
-- [ ] Verify Chief and public score flows.
+- [x] Standardize official score displays to three decimals.
+- [x] Add and publish the Chief Judge deduction.
+- [x] Verify Chief and public score flows.

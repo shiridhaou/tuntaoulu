@@ -150,6 +150,9 @@ type PublishedScoreboardResult = {
     b_individual?: { slot: string; score: number | null; role?: "high" | "low" | "kept" | "single" }[];
     c_movements?: { code: string; successful?: boolean | null; success?: boolean | null }[];
     ta_oob_count?: number;
+    ta_deduction?: number;
+    chief_deduction?: number;
+    total_external_deduction?: number;
   } | null;
   style: string | null;
   updated_at: string;
@@ -230,7 +233,11 @@ function usePublishedResult(sessionCode: string | null) {
         score_c: pr.score_c === null || pr.score_c === undefined ? null : Number(pr.score_c),
         deductions: pr.deductions === null || pr.deductions === undefined ? (prev?.deductions ?? null) : Number(pr.deductions),
         published: true,
-        payload: prev?.payload ?? null,
+        payload: {
+          ...(prev?.payload ?? {}),
+          ta_deduction: pr.ta_deduction === undefined ? prev?.payload?.ta_deduction : Number(pr.ta_deduction),
+          chief_deduction: pr.chief_deduction === undefined ? prev?.payload?.chief_deduction : Number(pr.chief_deduction),
+        },
         style: prev?.style ?? null,
         updated_at: new Date().toISOString(),
       }));
@@ -331,6 +338,8 @@ function LiveScoreboard() {
   const athleteNumber = displayAthlete?.bib_number ?? (athlete ? String(athlete.order).padStart(3, "0") : "—");
   const athleteCategory = displayAthlete?.age_category ?? athlete?.category ?? (displayStyle ? STYLE_LABELS[displayStyle] : "—");
   const totalDeduction = Number(publishedResult?.deductions ?? judgeADeductions.reduce((sum, d) => sum + d.value, 0));
+  const chiefDeduction = Number(publishedPayload?.chief_deduction ?? 0);
+  const taDeduction = Number(publishedPayload?.ta_deduction ?? Math.max(0, totalDeduction - chiefDeduction));
   const displayAScore = Number(publishedResult?.score_a ?? judgeAScore);
   const displayBScore = Number(publishedResult?.score_b ?? judgeBAverage);
   const displayCScore = Number(publishedResult?.score_c ?? judgeCScore);
@@ -553,7 +562,7 @@ function LiveScoreboard() {
               }}
               dir="ltr"
             >
-              {showFinal ? animatedScore.toFixed(2) : "—.——"}
+              {showFinal ? animatedScore.toFixed(3) : "—.———"}
             </p>
             <p className="text-base font-heading font-black mt-2 tracking-widest" style={{ color: WHITE }} dir="rtl">
               {showFinal ? "النتيجة النهائية" : "في انتظار اعتماد الحكم الرئيسي…"}
@@ -623,7 +632,7 @@ function LiveScoreboard() {
             </div>
             <p className="font-heading font-black tabular-nums leading-none text-white text-center"
                style={{ fontSize: "3.6rem", textShadow: `0 0 24px ${CRIMSON}aa, 0 2px 6px rgba(0,0,0,0.9)` }} dir="ltr">
-              {showA ? displayAScore.toFixed(2) : "—.——"}
+              {showA ? displayAScore.toFixed(3) : "—.———"}
             </p>
             {/* Deduction codes shown as colored CIRCLES */}
             <div className="flex flex-wrap gap-1.5 justify-center mt-2 min-h-[36px]" dir="ltr">
@@ -650,11 +659,16 @@ function LiveScoreboard() {
               ))}
             </div>
             <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/10">
-              <span className="text-[11px] font-heading font-bold text-white/55" dir="ltr">/ {config.maxA.toFixed(2)}</span>
+              <span className="text-[11px] font-heading font-bold text-white/55" dir="ltr">/ {config.maxA.toFixed(3)}</span>
               <span className="text-xs font-heading font-black px-2 py-0.5 rounded-md tabular-nums"
                     style={{ background: `${CRIMSON}33`, color: "#ff8a92", border: `1px solid ${CRIMSON}66` }} dir="ltr">
-                −{totalDeduction.toFixed(2)}
+                TA: −{taDeduction.toFixed(3)}
               </span>
+              {chiefDeduction > 0 && (
+                <span className="text-[10px] font-heading font-black text-red-300 tabular-nums" dir="ltr">
+                  HD: −{chiefDeduction.toFixed(3)}
+                </span>
+              )}
             </div>
           </div>
 
@@ -680,7 +694,7 @@ function LiveScoreboard() {
             </div>
             <p className="font-heading font-black tabular-nums leading-none text-white text-center"
                style={{ fontSize: "3.6rem", textShadow: `0 0 24px ${SKY_BLUE}aa, 0 2px 6px rgba(0,0,0,0.9)` }} dir="ltr">
-              {showB ? displayBScore.toFixed(2) : "—.——"}
+              {showB ? displayBScore.toFixed(3) : "—.———"}
             </p>
             {/* 5 individual judge scores — BIG, readable from 20m */}
             <div className="grid grid-cols-5 gap-1.5 mt-2" dir="ltr">
@@ -696,14 +710,14 @@ function LiveScoreboard() {
                        }}>
                     <p className="text-[9px] font-heading font-black tabular-nums leading-none" style={{ color: accent }} dir="ltr">{b.slot}</p>
                     <p className="font-heading font-black tabular-nums leading-tight text-white" style={{ fontSize: "1.15rem", textShadow: `0 0 8px ${accent}aa` }}>
-                      {showB ? b.score.toFixed(2) : "—"}
+                      {showB ? b.score.toFixed(3) : "—"}
                     </p>
                   </div>
                 );
               })}
             </div>
             <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/10">
-              <span className="text-[11px] font-heading font-bold text-white/55" dir="ltr">avg / {config.maxB.toFixed(2)}</span>
+              <span className="text-[11px] font-heading font-bold text-white/55" dir="ltr">avg / {config.maxB.toFixed(3)}</span>
               <span className="text-[10px] font-heading font-bold tracking-widest" style={{ color: SKY_BLUE }} dir="ltr">drop high+low</span>
             </div>
           </div>
@@ -730,7 +744,7 @@ function LiveScoreboard() {
             </div>
             <p className="font-heading font-black tabular-nums leading-none text-white text-center"
                style={{ fontSize: "3.6rem", textShadow: `0 0 24px ${GREEN}aa, 0 2px 6px rgba(0,0,0,0.9)` }} dir="ltr">
-              {showC ? displayCScore.toFixed(2) : "—.——"}
+              {showC ? displayCScore.toFixed(3) : "—.———"}
             </p>
             {/* Difficulty codes as CIRCLES — green for success, red for fail */}
             <div className="flex flex-wrap gap-1.5 justify-center mt-2 min-h-[36px]" dir="ltr">
@@ -756,7 +770,7 @@ function LiveScoreboard() {
               )}
             </div>
             <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/10">
-              <span className="text-[11px] font-heading font-bold text-white/55" dir="ltr">/ {config.maxC.toFixed(2)}</span>
+              <span className="text-[11px] font-heading font-bold text-white/55" dir="ltr">/ {config.maxC.toFixed(3)}</span>
               <span className="text-[11px] font-heading font-black tabular-nums" dir="ltr">
                 <span style={{ color: GREEN }}>{displayCMovements.filter(a => a.success === true).length}✓</span>
                 <span className="text-white/30 mx-1">·</span>
@@ -941,7 +955,7 @@ function LeaderboardView() {
                       }}
                       dir="ltr"
                     >
-                      {e.score.toFixed(2)}
+                      {e.score.toFixed(3)}
                     </p>
                   </div>
                 </div>
