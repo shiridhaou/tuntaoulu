@@ -339,6 +339,7 @@ function LiveScoreboard() {
   const athleteCategory = displayAthlete?.age_category ?? athlete?.category ?? (displayStyle ? STYLE_LABELS[displayStyle] : "—");
   const totalDeduction = Number(publishedResult?.deductions ?? judgeADeductions.reduce((sum, d) => sum + d.value, 0));
   const chiefDeduction = Number(publishedPayload?.chief_deduction ?? 0);
+  const taDeduction = Number(publishedPayload?.ta_deduction ?? Math.max(0, totalDeduction - chiefDeduction));
   const displayAScore = Number(publishedResult?.score_a ?? judgeAScore);
   const displayBScore = Number(publishedResult?.score_b ?? judgeBAverage);
   const displayCScore = Number(publishedResult?.score_c ?? judgeCScore);
@@ -661,7 +662,7 @@ function LiveScoreboard() {
               <span className="text-[11px] font-heading font-bold text-white/55" dir="ltr">/ {config.maxA.toFixed(3)}</span>
               <span className="text-xs font-heading font-black px-2 py-0.5 rounded-md tabular-nums"
                     style={{ background: `${CRIMSON}33`, color: "#ff8a92", border: `1px solid ${CRIMSON}66` }} dir="ltr">
-                −{totalDeduction.toFixed(3)}
+                TA: −{taDeduction.toFixed(3)}
               </span>
               {chiefDeduction > 0 && (
                 <span className="text-[10px] font-heading font-black text-red-300 tabular-nums" dir="ltr">
