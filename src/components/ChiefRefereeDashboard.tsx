@@ -313,23 +313,10 @@ function ChiefRefereeDashboardInner() {
         .eq("session_code", sessionCode)
         .eq("athlete_id", currentAthlete.id);
       const rows = (scoreRows ?? []) as { judge_slot: string; judge_role: string; score: number | null; payload: any }[];
-      const aRows = rows.filter(r => r.judge_role === "A" || r.judge_slot.startsWith("A"));
-      const threshold = new Set(aRows.map(r => r.judge_slot)).size >= 3 ? 2 : 1;
-      const codeSlots = new Map<string, Set<string>>();
-      aRows.forEach(r => {
-        const codes: string[] = Array.isArray(r.payload?.codes) ? r.payload.codes : [];
-        codes.forEach(code => {
-          if (!codeSlots.has(code)) codeSlots.set(code, new Set());
-          codeSlots.get(code)!.add(r.judge_slot);
-        });
-      });
-      const confirmed_codes: { code: string; count: number; slots: string[] }[] = [];
-      const flagged_codes: { code: string; slot: string }[] = [];
-      codeSlots.forEach((slots, code) => {
-        const list = Array.from(slots);
-        if (list.length >= threshold) confirmed_codes.push({ code, count: list.length, slots: list });
-        else flagged_codes.push({ code, slot: list[0] });
-      });
+      const consensus = computeGroupAConsensus(rows as never, effMaxA, { athleteId: currentAthlete.id });
+      const confirmed_codes = consensus.confirmed.map(c => ({ code: c.code, count: c.count, slots: c.slots }));
+      const flagged_codes = consensus.flagged.map(f => ({ code: f.code, slot: f.slot }));
+
       const liveBRows = rows.filter(r => (r.judge_role === "B" || r.judge_slot.startsWith("B")) && r.score !== null);
       const b_individual = liveBRows.length > 0
         ? liveBRows.sort((a, b) => a.judge_slot.localeCompare(b.judge_slot)).map(r => ({
