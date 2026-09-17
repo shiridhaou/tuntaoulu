@@ -46,7 +46,7 @@ export function QrCommitModal({ athleteId, athleteName, finalScore, onClose }: Q
           </div>
           <h2 className="font-heading font-black text-xl text-white">{athleteName}</h2>
           <p className="font-heading font-black text-5xl tabular-nums mt-1" style={{ color: ORANGE, textShadow: `0 0 20px ${ORANGE}80` }} dir="ltr">
-            {finalScore.toFixed(2)}
+            {finalScore.toFixed(3)}
           </p>
         </div>
 

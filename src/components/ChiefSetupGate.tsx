@@ -131,8 +131,8 @@ export function ChiefSetupGate({ onComplete }: { onComplete: () => void }) {
           </p>
 
           <div className="space-y-2">
-            <Row label="مجموعة A — الجودة التقنية" en={`Group A · Technical Quality (Ceiling: ${caps.maxA.toFixed(2)})`} k="numA" />
-            <Row label="مجموعة B — الأداء العام" en={`Group B · Overall Performance (Ceiling: ${caps.maxB.toFixed(2)})`} k="numB" />
+            <Row label="مجموعة A — الجودة التقنية" en={`Group A · Technical Quality (Ceiling: ${caps.maxA.toFixed(3)})`} k="numA" />
+            <Row label="مجموعة B — الأداء العام" en={`Group B · Overall Performance (Ceiling: ${caps.maxB.toFixed(3)})`} k="numB" />
             <Row
               label="مجموعة C — الصعوبة"
               en={mode === "compulsory"

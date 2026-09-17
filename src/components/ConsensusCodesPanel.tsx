@@ -26,7 +26,7 @@ export function ConsensusCodesPanel({
         <Filter className="h-3.5 w-3.5 text-emerald-300" />
         <p className="text-[10px] font-black tracking-[0.25em] text-white/70" dir="ltr">CONSENSUS · GROUP A</p>
         <span className="ml-auto text-[9px] text-white/40 font-body" dir="ltr">
-          ≥ {threshold} judge{threshold > 1 ? "s" : ""} · −{deduction.toFixed(2)}
+          ≥ {threshold} judge{threshold > 1 ? "s" : ""} · −{deduction.toFixed(3)}
         </span>
       </div>
 
@@ -51,7 +51,7 @@ export function ConsensusCodesPanel({
                 >
                   <CheckCircle2 className="h-2.5 w-2.5" />
                   {c.code} <span className="opacity-60">×{c.count}</span>
-                  {c.value > 0 && <span className="opacity-80">−{c.value.toFixed(2)}</span>}
+                  {c.value > 0 && <span className="opacity-80">−{c.value.toFixed(3)}</span>}
                 </span>
               ))}
             </div>

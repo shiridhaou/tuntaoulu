@@ -221,7 +221,7 @@ export function VarReviewDashboard() {
                       <td className="px-4 py-2 font-heading font-black text-white" dir="ltr">{s.judge_slot}</td>
                       <td className="px-4 py-2 text-white/60" dir="ltr">{s.judge_role}</td>
                       <td className="px-4 py-2 text-right font-mono tabular-nums text-white" dir="ltr">
-                        {typeof s.score === "number" ? s.score.toFixed(2) : "—"}
+                        {typeof s.score === "number" ? s.score.toFixed(3) : "—"}
                       </td>
                       <td className="px-4 py-2 text-[10px] text-white/40" dir="ltr">
                         {s.submitted ? "✓" : "draft"}
