@@ -761,7 +761,7 @@ function ChiefRefereeDashboardInner() {
         </div>
 
         {/* Consensus codes (Group A — codes confirmed by ≥2 judges) */}
-        <ConsensusCodesPanel sessionCode={sessionCode} athleteId={currentAthlete?.id ?? null} />
+        <ConsensusCodesPanel sessionCode={sessionCode} athleteId={currentAthlete?.id ?? null} maxA={effMaxA} />
 
         {/* RAW judge submissions — full transparency for chief */}
         <RawJudgesBreakdown
