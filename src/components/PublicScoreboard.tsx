@@ -150,6 +150,9 @@ type PublishedScoreboardResult = {
     b_individual?: { slot: string; score: number | null; role?: "high" | "low" | "kept" | "single" }[];
     c_movements?: { code: string; successful?: boolean | null; success?: boolean | null }[];
     ta_oob_count?: number;
+    ta_deduction?: number;
+    chief_deduction?: number;
+    total_external_deduction?: number;
   } | null;
   style: string | null;
   updated_at: string;
@@ -331,6 +334,7 @@ function LiveScoreboard() {
   const athleteNumber = displayAthlete?.bib_number ?? (athlete ? String(athlete.order).padStart(3, "0") : "—");
   const athleteCategory = displayAthlete?.age_category ?? athlete?.category ?? (displayStyle ? STYLE_LABELS[displayStyle] : "—");
   const totalDeduction = Number(publishedResult?.deductions ?? judgeADeductions.reduce((sum, d) => sum + d.value, 0));
+  const chiefDeduction = Number(publishedPayload?.chief_deduction ?? 0);
   const displayAScore = Number(publishedResult?.score_a ?? judgeAScore);
   const displayBScore = Number(publishedResult?.score_b ?? judgeBAverage);
   const displayCScore = Number(publishedResult?.score_c ?? judgeCScore);

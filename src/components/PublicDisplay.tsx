@@ -866,9 +866,11 @@ export function PublicDisplay() {
   const groupAScore = result?.score_a ?? 0;
   const groupBAvg = result?.score_b ?? 0;
   const groupCScore = result?.score_c ?? 0;
+  const chiefDeduction = Number(result?.payload?.chief_deduction ?? 0);
   // Prefer the live TA deduction broadcast (current_match.ta_deductions) so the
   // public TV reflects every +/- the TA presses without waiting for publish.
-  const taDed = liveTaDeduction > 0 ? liveTaDeduction : (result?.deductions ?? 0);
+  const publishedTaDeduction = Number(result?.payload?.ta_deduction ?? result?.deductions ?? 0);
+  const taDed = liveTaDeduction > 0 ? liveTaDeduction : publishedTaDeduction;
   void liveTaPulse; // referenced to silence lint; pulse used in JSX via key
   const taOob = result?.payload?.ta_oob_count ?? 0;
   const payloadBIndividual = Array.isArray(result?.payload?.b_individual) ? result.payload.b_individual : [];
@@ -1218,6 +1220,7 @@ export function PublicDisplay() {
               <Row label="Group B (avg)" value={groupBAvg.toFixed(2)} color={GOLD} />
               {matchMode === "optional" && <Row label="Group C" value={groupCScore.toFixed(2)} color={CYAN} />}
               <Row label="TA deduction" value={`− ${taDed.toFixed(2)}`} color={RED} />
+              <Row label="Chief Judge deduction · HD" value={`− ${chiefDeduction.toFixed(3)}`} color={RED} />
               <div className="mt-2 pt-2 border-t border-white/15 flex items-center justify-between">
                 <span className="text-xs font-heading font-black tracking-wider text-white">FINAL</span>
                 <span className="text-3xl font-heading font-black tabular-nums" style={{ color: ORANGE, textShadow: `0 0 16px ${ORANGE}80` }} dir="ltr">
