@@ -152,7 +152,7 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
     const file = new File([blob], filename, { type: "application/pdf" });
     const summary =
       `Final Score Sheet — ${sheetData.athleteName}\n` +
-      `Score: ${sheetData.finalScore.toFixed(2)} (${sheetData.matchMode.toUpperCase()})\n` +
+      `Score: ${sheetData.finalScore.toFixed(3)} (${sheetData.matchMode.toUpperCase()})\n` +
       `Style: ${sheetData.style ?? "—"}`;
 
     try {
@@ -312,7 +312,7 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
                       style={{ color: ORANGE, textShadow: `0 0 20px ${ORANGE}80` }}
                       dir="ltr"
                     >
-                      {finalScore.toFixed(2)}
+                      {finalScore.toFixed(3)}
                     </p>
                   </div>
                 </div>
@@ -323,7 +323,7 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
                 <p className="text-[10px] font-heading font-black tracking-[0.3em] mb-2" style={{ color: "#22c55e" }}>
                   GROUP A · QUALITY
                 </p>
-                <Row label="Group A score" value={`${groupAScore.toFixed(2)} / ${groupAMax.toFixed(2)}`} color="#22c55e" />
+                <Row label="Group A score" value={`${groupAScore.toFixed(3)} / ${groupAMax.toFixed(3)}`} color="#22c55e" />
                 <div className="mt-2">
                   <p className="text-[9px] uppercase tracking-wider text-emerald-400/80 font-body mb-1">
                     Confirmed (≥2 judges)
@@ -376,7 +376,7 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
                 <p className="text-[10px] font-heading font-black tracking-[0.3em] mb-2" style={{ color: GOLD }}>
                   GROUP B · PERFORMANCE
                 </p>
-                <Row label="Group B average (trimmed)" value={`${groupBAverage.toFixed(2)} / ${groupBMax.toFixed(2)}`} color={GOLD} />
+                <Row label="Group B average (trimmed)" value={`${groupBAverage.toFixed(3)} / ${groupBMax.toFixed(3)}`} color={GOLD} />
                 <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {bIndividualScores.length === 0 && (
                     <p className="col-span-full text-[11px] text-white/30 italic">— لا توجد إرسالات —</p>
@@ -397,7 +397,7 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
                           </p>
                         </div>
                         <p className="text-base font-heading font-black tabular-nums" style={{ color }} dir="ltr">
-                          {b.score === null ? "—" : b.score.toFixed(2)}
+                          {b.score === null ? "—" : b.score.toFixed(3)}
                         </p>
                       </div>
                     );
@@ -411,7 +411,7 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
                   <p className="text-[10px] font-heading font-black tracking-[0.3em] mb-2" style={{ color: "#22d3ee" }}>
                     GROUP C · DIFFICULTY
                   </p>
-                  <Row label="Group C score" value={`${groupCScore.toFixed(2)} / ${groupCMax.toFixed(2)}`} color="#22d3ee" />
+                  <Row label="Group C score" value={`${groupCScore.toFixed(3)} / ${groupCMax.toFixed(3)}`} color="#22d3ee" />
                   <div className="mt-2 space-y-1">
                     {(athlete?.difficultySheet ?? []).length === 0 ? (
                       <p className="text-[11px] text-white/30 italic">— لا توجد حركات مسجلة —</p>
@@ -433,7 +433,7 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
                             <span className="text-[9px] text-white/40 font-body" dir="ltr">{m.connection}</span>
                           </div>
                           <span className="text-[11px] font-heading font-black tabular-nums" style={{ color: "#22d3ee" }} dir="ltr">
-                            +{m.value.toFixed(2)}
+                            +{m.value.toFixed(3)}
                           </span>
                         </div>
                       ))
@@ -448,7 +448,7 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
                   TECHNICAL ASSISTANT · DEDUCTIONS
                 </p>
                 <Row label="Out of Bounds (OOB) events" value={String(taOobCount)} />
-                <Row label="TA total deduction" value={`− ${taDeduction.toFixed(2)}`} color={RED} />
+                <Row label="TA total deduction" value={`− ${taDeduction.toFixed(3)}`} color={RED} />
                 <Row label="Chief Judge deduction · HD" value={`− ${chiefDeduction.toFixed(3)}`} color={RED} />
               </section>
 
@@ -457,10 +457,10 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
                 <p className="text-[10px] font-heading font-black tracking-[0.3em] text-white/70 mb-2">
                   FINAL CALCULATION
                 </p>
-                <Row label="Group A" value={groupAScore.toFixed(2)} />
-                <Row label="Group B (avg)" value={groupBAverage.toFixed(2)} />
-                {matchMode === "optional" && <Row label="Group C" value={groupCScore.toFixed(2)} />}
-                <Row label="TA deduction" value={`− ${taDeduction.toFixed(2)}`} color={RED} />
+                <Row label="Group A" value={groupAScore.toFixed(3)} />
+                <Row label="Group B (avg)" value={groupBAverage.toFixed(3)} />
+                {matchMode === "optional" && <Row label="Group C" value={groupCScore.toFixed(3)} />}
+                <Row label="TA deduction" value={`− ${taDeduction.toFixed(3)}`} color={RED} />
                 <Row label="Chief Judge deduction · HD" value={`− ${chiefDeduction.toFixed(3)}`} color={RED} />
                 <div className="mt-2 pt-2 border-t border-white/15 flex items-center justify-between">
                   <span className="text-xs font-heading font-black tracking-wider text-white">FINAL SCORE</span>
@@ -469,7 +469,7 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
                     style={{ color: ORANGE, textShadow: `0 0 16px ${ORANGE}80` }}
                     dir="ltr"
                   >
-                    {finalScore.toFixed(2)}
+                    {finalScore.toFixed(3)}
                   </span>
                 </div>
               </section>

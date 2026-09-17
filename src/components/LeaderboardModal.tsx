@@ -176,12 +176,12 @@ export function LeaderboardModal({
                     <td className="p-2 text-[11px] text-white/60 truncate max-w-[220px]">
                       {affiliationLabel(r.club, r.country) || "—"}
                     </td>
-                    <td className="p-2 text-right text-[12px] tabular-nums text-white/70" dir="ltr">{r.scoreA.toFixed(2)}</td>
-                    <td className="p-2 text-right text-[12px] tabular-nums text-white/70" dir="ltr">{r.scoreB.toFixed(2)}</td>
-                    <td className="p-2 text-right text-[12px] tabular-nums text-white/70" dir="ltr">{r.scoreC.toFixed(2)}</td>
-                    <td className="p-2 text-right text-[12px] tabular-nums text-red-300/80" dir="ltr">−{r.deductions.toFixed(2)}</td>
+                    <td className="p-2 text-right text-[12px] tabular-nums text-white/70" dir="ltr">{r.scoreA.toFixed(3)}</td>
+                    <td className="p-2 text-right text-[12px] tabular-nums text-white/70" dir="ltr">{r.scoreB.toFixed(3)}</td>
+                    <td className="p-2 text-right text-[12px] tabular-nums text-white/70" dir="ltr">{r.scoreC.toFixed(3)}</td>
+                    <td className="p-2 text-right text-[12px] tabular-nums text-red-300/80" dir="ltr">−{r.deductions.toFixed(3)}</td>
                     <td className="p-2 text-right text-[15px] font-black tabular-nums" style={{ color: "#FACC15" }} dir="ltr">
-                      {r.finalScore.toFixed(2)}
+                      {r.finalScore.toFixed(3)}
                     </td>
                   </tr>
                 ))}

@@ -174,7 +174,7 @@ function PublicReportPage() {
   const handleShare = async () => {
     const title = `Wushu Smart Report — ${athlete?.full_name ?? result?.athlete_name ?? "Athlete"}`;
     const url = window.location.href;
-    const text = `${title}\nScore: ${Number(result?.final_score ?? 0).toFixed(2)}\n${url}`;
+    const text = `${title}\nScore: ${Number(result?.final_score ?? 0).toFixed(3)}\n${url}`;
     try {
       if ((navigator as any).share) {
         await (navigator as any).share({ title, text, url });
@@ -296,7 +296,7 @@ function PublicReportPage() {
             </div>
             <p className="text-6xl md:text-7xl font-heading font-black tabular-nums leading-none"
               style={{ color: "#FACC15", textShadow: "none" }} dir="ltr">
-              {Number(result.final_score).toFixed(2)}
+              {Number(result.final_score).toFixed(3)}
             </p>
           </div>
         </section>
@@ -306,7 +306,7 @@ function PublicReportPage() {
           <div className="flex items-center justify-between mb-2">
             <p className="text-[10px] font-heading font-black tracking-[0.3em] text-emerald-400">GROUP A · QUALITY</p>
             <p className="text-xl font-heading font-black tabular-nums" style={{ color: GREEN }} dir="ltr">
-              {Number(result.score_a ?? 0).toFixed(2)} <span className="text-xs text-white/40">/ 5.00</span>
+              {Number(result.score_a ?? 0).toFixed(3)} <span className="text-xs text-white/40">/ 5.00</span>
             </p>
           </div>
           <p className="text-[9px] uppercase tracking-wider text-emerald-300/80 font-body mb-1.5">
@@ -344,7 +344,7 @@ function PublicReportPage() {
           <div className="flex items-center justify-between mb-2">
             <p className="text-[10px] font-heading font-black tracking-[0.3em]" style={{ color: GOLD }}>GROUP B · PERFORMANCE</p>
             <p className="text-xl font-heading font-black tabular-nums" style={{ color: GOLD }} dir="ltr">
-              {Number(result.score_b ?? 0).toFixed(2)} <span className="text-xs text-white/40">/ 3.00</span>
+              {Number(result.score_b ?? 0).toFixed(3)} <span className="text-xs text-white/40">/ 3.00</span>
             </p>
           </div>
           {bIndividualForReport.length === 0 ? (
@@ -364,7 +364,7 @@ function PublicReportPage() {
                       </p>
                     </div>
                     <p className="text-base font-heading font-black tabular-nums" style={{ color }} dir="ltr">
-                      {b.score.toFixed(2)}
+                      {b.score.toFixed(3)}
                     </p>
                   </div>
                 );
@@ -379,7 +379,7 @@ function PublicReportPage() {
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-heading font-black tracking-[0.3em]" style={{ color: CYAN }}>GROUP C · DIFFICULTY</p>
               <p className="text-xl font-heading font-black tabular-nums" style={{ color: CYAN }} dir="ltr">
-                {Number(result.score_c ?? 0).toFixed(2)} <span className="text-xs text-white/40">/ 2.00</span>
+                {Number(result.score_c ?? 0).toFixed(3)} <span className="text-xs text-white/40">/ 2.00</span>
               </p>
             </div>
             {cMovementsForReport.length === 0 ? (
@@ -409,7 +409,7 @@ function PublicReportPage() {
             <div className="flex items-center justify-between text-sm">
               <span className="text-[11px] uppercase tracking-wider text-white/60">OOB ×{oob}</span>
               <span className="font-heading font-black tabular-nums" style={{ color: RED }} dir="ltr">
-                − {Number(result.deductions ?? 0).toFixed(2)}
+                − {Number(result.deductions ?? 0).toFixed(3)}
               </span>
             </div>
           </section>

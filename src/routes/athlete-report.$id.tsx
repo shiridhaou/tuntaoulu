@@ -159,7 +159,7 @@ function AthleteReportPage() {
             </div>
             <div className="font-heading font-black text-7xl tabular-nums tracking-tight"
               style={{ color: ORANGE, textShadow: `0 0 40px ${ORANGE}80` }}>
-              {report.finalScore.toFixed(2)}
+              {report.finalScore.toFixed(3)}
             </div>
             <div className="grid grid-cols-3 gap-2 mt-5 pt-5 border-t" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
               <Stat label="Quality A" value={report.judgeAScore} />
@@ -327,7 +327,7 @@ function Stat({ label, value }: { label: string; value: number }) {
     <div>
       <p className="text-[9px] font-heading tracking-[0.2em] text-white/40">{label}</p>
       <p className="font-heading font-black text-lg tabular-nums" style={{ color: GOLD }}>
-        {value.toFixed(2)}
+        {value.toFixed(3)}
       </p>
     </div>
   );
