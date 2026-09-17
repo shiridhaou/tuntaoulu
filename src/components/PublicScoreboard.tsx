@@ -233,7 +233,11 @@ function usePublishedResult(sessionCode: string | null) {
         score_c: pr.score_c === null || pr.score_c === undefined ? null : Number(pr.score_c),
         deductions: pr.deductions === null || pr.deductions === undefined ? (prev?.deductions ?? null) : Number(pr.deductions),
         published: true,
-        payload: prev?.payload ?? null,
+        payload: {
+          ...(prev?.payload ?? {}),
+          ta_deduction: pr.ta_deduction === undefined ? prev?.payload?.ta_deduction : Number(pr.ta_deduction),
+          chief_deduction: pr.chief_deduction === undefined ? prev?.payload?.chief_deduction : Number(pr.chief_deduction),
+        },
         style: prev?.style ?? null,
         updated_at: new Date().toISOString(),
       }));
@@ -659,6 +663,11 @@ function LiveScoreboard() {
                     style={{ background: `${CRIMSON}33`, color: "#ff8a92", border: `1px solid ${CRIMSON}66` }} dir="ltr">
                 −{totalDeduction.toFixed(3)}
               </span>
+              {chiefDeduction > 0 && (
+                <span className="text-[10px] font-heading font-black text-red-300 tabular-nums" dir="ltr">
+                  HD: −{chiefDeduction.toFixed(3)}
+                </span>
+              )}
             </div>
           </div>
 

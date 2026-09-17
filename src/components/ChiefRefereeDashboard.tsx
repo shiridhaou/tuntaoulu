@@ -286,7 +286,7 @@ function ChiefRefereeDashboardInner() {
     setTaOobCount(0);
     setChiefDeduction(0);
     setChiefDeductionDraft("0.000");
-  }, [currentAthleteIndex]);
+  }, [currentAthlete?.id]);
 
   const applyChiefDeduction = (value: number) => {
     const next = roundScore(Math.max(0, Number.isFinite(value) ? value : 0));
@@ -523,15 +523,15 @@ function ChiefRefereeDashboardInner() {
   // code payloads are available.
   const aSubmitted = groupA.filter(j => typeof j.score === "number").map(j => j.score as number);
   const aAverage = aSubmitted.length
-    ? Math.round((aSubmitted.reduce((s, v) => s + v, 0) / aSubmitted.length) * 100) / 100
+    ? roundScore(aSubmitted.reduce((s, v) => s + v, 0) / aSubmitted.length)
     : 0;
   const groupATotal = groupAConsensus.score ?? aAverage;
 
   const bKept = groupB.filter(j => j.bRole === "kept" && j.score !== null).map(j => j.score as number);
-  const groupBNet = bKept.length ? Math.round((bKept.reduce((s, v) => s + v, 0) / bKept.length) * 100) / 100 : 0;
+  const groupBNet = bKept.length ? roundScore(bKept.reduce((s, v) => s + v, 0) / bKept.length) : 0;
   const cSubmitted = groupC.filter(j => typeof j.score === "number").map(j => j.score as number);
   const groupCTotal = cSubmitted.length
-    ? Math.round((cSubmitted.reduce((s, v) => s + v, 0) / cSubmitted.length) * 100) / 100
+    ? roundScore(cSubmitted.reduce((s, v) => s + v, 0) / cSubmitted.length)
     : 0;
 
   // Group A already arrives net of its own deductions. The only deduction

@@ -46,6 +46,8 @@ type Result = {
   final_score: number;
   payload: {
     ta_oob_count?: number;
+    ta_deduction?: number;
+    chief_deduction?: number;
     match_mode?: string;
     confirmed_codes?: { code: string; count?: number; slots?: string[] }[];
     flagged_codes?: { code: string; slot?: string }[];
@@ -210,6 +212,8 @@ function PublicReportPage() {
 
   const matchMode = (result.payload?.match_mode ?? "compulsory") as "compulsory" | "optional";
   const oob = result.payload?.ta_oob_count ?? 0;
+  const chiefDeduction = Number(result.payload?.chief_deduction ?? 0);
+  const taDeduction = Number(result.payload?.ta_deduction ?? result.deductions ?? 0);
   const confirmedForReport = breakdown.confirmedCodes.length > 0
     ? breakdown.confirmedCodes
     : (result.payload?.confirmed_codes ?? []).map(c => ({ code: c.code, count: Number(c.count ?? 1), slots: c.slots ?? [] }));
@@ -403,13 +407,19 @@ function PublicReportPage() {
         )}
 
         {/* TA */}
-        {(Number(result.deductions ?? 0) > 0 || oob > 0) && (
+        {(taDeduction > 0 || chiefDeduction > 0 || oob > 0) && (
           <section className="rounded-2xl border border-red-500/30 bg-red-500/[0.05] p-4">
             <p className="text-[10px] font-heading font-black tracking-[0.3em] text-red-400 mb-1.5">TA · DEDUCTIONS</p>
             <div className="flex items-center justify-between text-sm">
               <span className="text-[11px] uppercase tracking-wider text-white/60">OOB ×{oob}</span>
               <span className="font-heading font-black tabular-nums" style={{ color: RED }} dir="ltr">
-                − {Number(result.deductions ?? 0).toFixed(3)}
+                − {taDeduction.toFixed(3)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between border-t border-white/5 pt-1 text-sm">
+              <span className="text-[11px] uppercase tracking-wider text-white/60">Chief Judge · HD</span>
+              <span className="font-heading font-black tabular-nums" style={{ color: RED }} dir="ltr">
+                − {chiefDeduction.toFixed(3)}
               </span>
             </div>
           </section>

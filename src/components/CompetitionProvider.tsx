@@ -243,7 +243,7 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
       scores = scores.slice(1, -1);
     }
     const sum = scores.reduce((s, v) => s + v, 0);
-    return Math.round((sum / scores.length) * 100) / 100;
+    return Math.round((sum / scores.length) * 1000) / 1000;
   }, [activeBScores]);
 
   const biasAlerts = useMemo(() => {
@@ -259,7 +259,7 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
     const mov = ok.filter(a => a.kind !== "connection").reduce((s, a) => s + a.value, 0);
     const con = ok.filter(a => a.kind === "connection").reduce((s, a) => s + a.value, 0);
     const total = Math.min(caps.maxCMovement, mov) + Math.min(caps.maxCConnection, con);
-    return Math.round(Math.min(caps.maxC, total) * 100) / 100;
+    return Math.round(Math.min(caps.maxC, total) * 1000) / 1000;
   }, [judgeCAttempts, caps.maxC, caps.maxCMovement, caps.maxCConnection]);
 // 1. دالة حساب خصم الوقت آلياً بحسب لائحة الاتحاد الدولي 2024
   const computeTimeDeduction = (elapsed: number, target: number, isTaiji: boolean) => {
@@ -273,11 +273,11 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
     const cContrib = includeC ? (judgeCScore || 0) : 0;
     const baseScore = (judgeAScore || 0) + (judgeBAverage || 0) + cContrib;
     
-    return Math.round(baseScore * 100) / 100;
+    return Math.round(baseScore * 1000) / 1000;
   }, [judgeAScore, judgeBAverage, judgeCScore, includeC]);
 
   const setJudgeBScore = (index: number, score: number) => {
-    setJudgeBScores(prev => prev.map((v, i) => i === index ? Math.round(Math.max(0, Math.min(effMaxB, score)) * 100) / 100 : v));
+    setJudgeBScores(prev => prev.map((v, i) => i === index ? Math.round(Math.max(0, Math.min(effMaxB, score)) * 1000) / 1000 : v));
   };
 
   const resetJudgeBScores = () => setJudgeBScores(Array(MAX_B).fill(effMaxB));

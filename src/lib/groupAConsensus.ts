@@ -52,7 +52,7 @@ export interface GroupAConsensus {
   threshold: number;
 }
 
-const round2 = (n: number) => Math.round(n * 100) / 100;
+const round3 = (n: number) => Math.round((n + Number.EPSILON) * 1000) / 1000;
 
 export function isGroupARow(r: { judge_role: string; judge_slot: string }): boolean {
   return r.judge_role === "A" || r.judge_slot.startsWith("A");
@@ -112,19 +112,19 @@ export function computeGroupAConsensus(
   confirmed.sort((a, b) => b.count - a.count || a.code.localeCompare(b.code));
   flagged.sort((a, b) => a.code.localeCompare(b.code));
 
-  const deduction = round2(confirmed.reduce((s, c) => s + (c.value || 0), 0));
+  const deduction = round3(confirmed.reduce((s, c) => s + (c.value || 0), 0));
   const hasPayload = slots.size > 0;
 
   // No payload at all → fall back to the average of the submitted slot scores
   // so nothing regresses for judges on an older client.
   let score: number | null = null;
   if (hasPayload) {
-    score = round2(Math.max(0, maxA - deduction));
+    score = round3(Math.max(0, maxA - deduction));
   } else if (judgeCount > 0) {
     const nums = Array.from(bySlot.values())
       .map(r => (typeof r.score === "number" ? r.score : null))
       .filter((v): v is number => v !== null);
-    score = nums.length ? round2(nums.reduce((s, v) => s + v, 0) / nums.length) : null;
+    score = nums.length ? round3(nums.reduce((s, v) => s + v, 0) / nums.length) : null;
   }
 
   return { confirmed, flagged, deduction, score, judgeCount, threshold };
