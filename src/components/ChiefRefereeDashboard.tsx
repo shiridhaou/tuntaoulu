@@ -24,6 +24,9 @@ import { toast } from "sonner";
 import { styleLabelAr, styleLabelEn, normalizeStyle } from "@/lib/styleNames";
 import { TIME_WINDOWS, fmtWindow, type TimeWindow } from "@/lib/timeRules";
 import { modeCaps } from "@/lib/matchMode";
+import { computeGroupAConsensus } from "@/lib/groupAConsensus";
+import { useGroupAConsensus } from "@/hooks/useGroupAConsensus";
+
 import { pushDisplaySettings, uploadSponsorLogo } from "@/hooks/useDisplaySettings";
 import { ErrorBoundary } from "./ErrorBoundary";
 import {
