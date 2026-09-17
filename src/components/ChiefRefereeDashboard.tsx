@@ -505,11 +505,15 @@ function ChiefRefereeDashboardInner() {
   const groupB = judges.filter(j => j.group === "B");
   const groupC = judges.filter(j => j.group === "C");
 
-  // Group summaries — average across submitted slots (real consensus).
+  // Group summaries — Group A applies the consensus rule (a code counts only
+  // when ≥2 A judges recorded it); the per-slot average is the fallback when no
+  // code payloads are available.
   const aSubmitted = groupA.filter(j => typeof j.score === "number").map(j => j.score as number);
-  const groupATotal = aSubmitted.length
+  const aAverage = aSubmitted.length
     ? Math.round((aSubmitted.reduce((s, v) => s + v, 0) / aSubmitted.length) * 100) / 100
     : 0;
+  const groupATotal = groupAConsensus.score ?? aAverage;
+
   const bKept = groupB.filter(j => j.bRole === "kept" && j.score !== null).map(j => j.score as number);
   const groupBNet = bKept.length ? Math.round((bKept.reduce((s, v) => s + v, 0) / bKept.length) * 100) / 100 : 0;
   const cSubmitted = groupC.filter(j => typeof j.score === "number").map(j => j.score as number);
