@@ -310,7 +310,7 @@ function PublicReportPage() {
           <div className="flex items-center justify-between mb-2">
             <p className="text-[10px] font-heading font-black tracking-[0.3em] text-emerald-400">GROUP A · QUALITY</p>
             <p className="text-xl font-heading font-black tabular-nums" style={{ color: GREEN }} dir="ltr">
-              {Number(result.score_a ?? 0).toFixed(3)} <span className="text-xs text-white/40">/ 5.00</span>
+              {Number(result.score_a ?? 0).toFixed(3)} <span className="text-xs text-white/40">/ 5.000</span>
             </p>
           </div>
           <p className="text-[9px] uppercase tracking-wider text-emerald-300/80 font-body mb-1.5">
@@ -348,7 +348,7 @@ function PublicReportPage() {
           <div className="flex items-center justify-between mb-2">
             <p className="text-[10px] font-heading font-black tracking-[0.3em]" style={{ color: GOLD }}>GROUP B · PERFORMANCE</p>
             <p className="text-xl font-heading font-black tabular-nums" style={{ color: GOLD }} dir="ltr">
-              {Number(result.score_b ?? 0).toFixed(3)} <span className="text-xs text-white/40">/ 3.00</span>
+              {Number(result.score_b ?? 0).toFixed(3)} <span className="text-xs text-white/40">/ 3.000</span>
             </p>
           </div>
           {bIndividualForReport.length === 0 ? (
@@ -383,7 +383,7 @@ function PublicReportPage() {
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-heading font-black tracking-[0.3em]" style={{ color: CYAN }}>GROUP C · DIFFICULTY</p>
               <p className="text-xl font-heading font-black tabular-nums" style={{ color: CYAN }} dir="ltr">
-                {Number(result.score_c ?? 0).toFixed(3)} <span className="text-xs text-white/40">/ 2.00</span>
+                {Number(result.score_c ?? 0).toFixed(3)} <span className="text-xs text-white/40">/ 2.000</span>
               </p>
             </div>
             {cMovementsForReport.length === 0 ? (

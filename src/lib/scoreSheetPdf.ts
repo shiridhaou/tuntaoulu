@@ -29,6 +29,8 @@ export interface ScoreSheetData {
   taOobCount: number;
   taDeduction: number;
   chiefDeduction: number;
+  // Chief Judge
+  chiefDeduction: number;
   // Final
   finalScore: number;
   committedAt: number;

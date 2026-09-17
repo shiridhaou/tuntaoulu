@@ -1016,7 +1016,7 @@ export function PublicDisplay() {
                   key={`live-total-${liveTaPulse}`}
                   className="text-7xl md:text-8xl lg:text-9xl font-heading font-black tabular-nums leading-none mt-2"
                   style={{ color: "#FACC15", textShadow: "none" }} dir="ltr">
-                  {Math.max(0, liveTotal - taDed).toFixed(3)}
+                  {Math.max(0, liveTotal).toFixed(3)}
                 </p>
                 {taDed > 0 && (
                   <p className="text-base md:text-lg font-heading font-black tabular-nums mt-1 ta-pulse"
@@ -1035,7 +1035,7 @@ export function PublicDisplay() {
             <div className="flex items-center justify-between mb-3">
               <p className="text-[11px] font-heading font-black tracking-[0.4em] text-emerald-400">GROUP A · QUALITY (LIVE)</p>
               <p className="text-2xl font-heading font-black tabular-nums" style={{ color: "#22c55e" }} dir="ltr">
-                {liveAAvg.toFixed(3)} <span className="text-sm text-white/40">/ 5.00</span>
+                {liveAAvg.toFixed(3)} <span className="text-sm text-white/40">/ 5.000</span>
               </p>
             </div>
             {liveAs.length === 0 ? (
@@ -1057,7 +1057,7 @@ export function PublicDisplay() {
             <div className="flex items-center justify-between mb-3">
               <p className="text-[11px] font-heading font-black tracking-[0.4em]" style={{ color: GOLD }}>GROUP B · PERFORMANCE (LIVE)</p>
               <p className="text-2xl font-heading font-black tabular-nums" style={{ color: GOLD }} dir="ltr">
-                {liveBAvg.toFixed(3)} <span className="text-sm text-white/40">/ 3.00</span>
+                {liveBAvg.toFixed(3)} <span className="text-sm text-white/40">/ 3.000</span>
               </p>
             </div>
             {liveBs.length === 0 ? (
@@ -1090,7 +1090,7 @@ export function PublicDisplay() {
               <div className="flex items-center justify-between mb-3">
                 <p className="text-[11px] font-heading font-black tracking-[0.4em]" style={{ color: CYAN }}>GROUP C · DIFFICULTY (LIVE)</p>
                 <p className="text-2xl font-heading font-black tabular-nums" style={{ color: CYAN }} dir="ltr">
-                  {liveCAvg.toFixed(3)} <span className="text-sm text-white/40">/ 2.00</span>
+                  {liveCAvg.toFixed(3)} <span className="text-sm text-white/40">/ 2.000</span>
                 </p>
               </div>
               {liveCs.length === 0 ? (
