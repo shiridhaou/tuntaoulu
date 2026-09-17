@@ -157,6 +157,10 @@ function ChiefRefereeDashboardInner() {
     : null;
   const hasActiveAthlete = Boolean(timerSync.athleteId);
 
+  // Group A consensus (IWUF): only codes recorded by ≥2 Group A judges count.
+  const groupAConsensus = useGroupAConsensus(sessionCode, currentAthlete?.id ?? null, effMaxA);
+
+
   const waitingCount = joinRequests.filter(r => r.status === "waiting").length;
 
   // [CHIEF SYNC] Log every payload received from current_match — also logs the
