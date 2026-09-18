@@ -1224,6 +1224,13 @@ export function PublicDisplay() {
               {matchMode === "optional" && <Row label="Group C" value={groupCScore.toFixed(3)} color={CYAN} />}
               <Row label="TA deduction" value={`− ${taDed.toFixed(3)}`} color={RED} />
               <Row label="Chief Judge deduction · HD" value={`− ${chiefDeduction.toFixed(3)}`} color={RED} />
+              {choreoDeduction > 0 && (
+                <Row
+                  label={`Choreography · CD${choreoCodes.length ? ` (${choreoCodes.map((d) => d.code).join(", ")})` : ""}`}
+                  value={`− ${choreoDeduction.toFixed(3)}`}
+                  color={RED}
+                />
+              )}
               <div className="mt-2 pt-2 border-t border-white/15 flex items-center justify-between">
                 <span className="text-xs font-heading font-black tracking-wider text-white">FINAL</span>
                 <span className="text-3xl font-heading font-black tabular-nums" style={{ color: ORANGE, textShadow: `0 0 16px ${ORANGE}80` }} dir="ltr">
