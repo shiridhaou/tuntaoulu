@@ -152,6 +152,8 @@ type PublishedScoreboardResult = {
     ta_oob_count?: number;
     ta_deduction?: number;
     chief_deduction?: number;
+    choreo_deduction?: number;
+    choreo_codes?: { code: string; value: number }[];
     total_external_deduction?: number;
   } | null;
   style: string | null;
