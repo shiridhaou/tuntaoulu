@@ -409,7 +409,7 @@ function ChiefRefereeDashboardInner() {
         score_a: groupATotal,
         score_b: groupBNet,
         score_c: matchMode === "optional" ? groupCTotal : null,
-        deductions: roundScore(taDeduction + chiefDeduction),
+        deductions: roundScore(taDeduction + chiefDeduction + choreoTotal),
         final_score: aggregateFinal,
         published: true,
         payload: {
@@ -421,7 +421,9 @@ function ChiefRefereeDashboardInner() {
           ta_oob_count: taOobCount,
           ta_deduction: roundScore(taDeduction),
           chief_deduction: chiefDeduction,
-          total_external_deduction: roundScore(taDeduction + chiefDeduction),
+          choreo_deduction: choreoTotal,
+          choreo_codes: choreoApplied,
+          total_external_deduction: roundScore(taDeduction + chiefDeduction + choreoTotal),
           committed_at: Date.now(),
         } as never,
       });
