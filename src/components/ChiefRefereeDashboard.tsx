@@ -924,6 +924,73 @@ function ChiefRefereeDashboardInner() {
                     </button>
                   </div>
 
+                  {/* CHOREOGRAPHY DEDUCTIONS — codes 80–86 (Chief Judge only) */}
+                  <div className="mt-2 rounded-xl border border-orange-400/25 bg-orange-500/[0.06] px-2.5 py-2">
+                    <div className="flex flex-wrap items-center gap-1.5" dir="ltr">
+                      <span className="mr-1 text-[9px] font-heading font-black tracking-wider text-orange-200/80" dir="rtl">
+                        خصومات التصميم الحركي (80–86)
+                      </span>
+                      {CHOREO_CODES.map((entry) => {
+                        const active = choreoApplied.some((d) => d.code === entry.code);
+                        return (
+                          <button
+                            key={entry.code}
+                            type="button"
+                            disabled={active}
+                            title={`${entry.code} — ${entry.labelAr} (−${entry.value.toFixed(3)})`}
+                            onClick={() => applyChoreoCode(entry.code)}
+                            className={`h-7 min-w-9 rounded-md border px-2 text-[10px] font-heading font-black tabular-nums transition-colors ${
+                              active
+                                ? "border-orange-300/60 bg-orange-400/25 text-orange-100 cursor-not-allowed opacity-70"
+                                : "border-orange-400/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/20"
+                            }`}
+                          >
+                            {entry.code}
+                          </button>
+                        );
+                      })}
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="CODE"
+                        aria-label="رمز خصم التصميم الحركي"
+                        value={choreoDraft}
+                        onChange={(event) => setChoreoDraft(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" && choreoDraft.trim()) applyChoreoCode(choreoDraft);
+                        }}
+                        className="h-7 w-16 rounded-md border border-white/20 bg-black/40 px-2 text-center text-[10px] font-heading font-black tabular-nums text-white outline-none placeholder:text-white/25 focus:border-orange-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => choreoDraft.trim() && applyChoreoCode(choreoDraft)}
+                        className="h-7 rounded-md border border-orange-400/30 bg-orange-500/10 px-2 text-[9px] font-bold text-orange-200 hover:bg-orange-500/20"
+                      >
+                        ADD
+                      </button>
+                    </div>
+
+                    {choreoApplied.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5" dir="ltr">
+                        {choreoApplied.map((d) => (
+                          <button
+                            key={d.code}
+                            type="button"
+                            onClick={() => removeChoreoCode(d.code)}
+                            title={`${d.label} — إزالة`}
+                            className="group flex h-6 items-center gap-1 rounded-full border border-red-400/40 bg-red-500/15 px-2 text-[10px] font-heading font-black tabular-nums text-red-200 hover:bg-red-500/30"
+                          >
+                            <span>{d.code}: −{d.value.toFixed(3)}</span>
+                            <X className="h-3 w-3 opacity-70 group-hover:opacity-100" />
+                          </button>
+                        ))}
+                        <span className="text-[10px] font-heading font-black tabular-nums text-orange-300">
+                          CD TOTAL −{choreoTotal.toFixed(3)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="mt-1.5">
                     <VideoEvidenceIndicator sessionCode={sessionCode} athleteId={currentAthlete?.id ?? null} />
                   </div>
