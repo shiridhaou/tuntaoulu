@@ -27,6 +27,7 @@ import { modeCaps } from "@/lib/matchMode";
 import { computeGroupAConsensus } from "@/lib/groupAConsensus";
 import { useGroupAConsensus } from "@/hooks/useGroupAConsensus";
 import { roundScore } from "@/lib/numFormat";
+import { CHOREO_CODES, lookupChoreoCode } from "@/lib/choreographyCodes";
 
 import { pushDisplaySettings, uploadSponsorLogo } from "@/hooks/useDisplaySettings";
 import { ErrorBoundary } from "./ErrorBoundary";
