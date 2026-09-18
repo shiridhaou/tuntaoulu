@@ -152,6 +152,8 @@ type PublishedScoreboardResult = {
     ta_oob_count?: number;
     ta_deduction?: number;
     chief_deduction?: number;
+    choreo_deduction?: number;
+    choreo_codes?: { code: string; value: number }[];
     total_external_deduction?: number;
   } | null;
   style: string | null;
@@ -237,6 +239,10 @@ function usePublishedResult(sessionCode: string | null) {
           ...(prev?.payload ?? {}),
           ta_deduction: pr.ta_deduction === undefined ? prev?.payload?.ta_deduction : Number(pr.ta_deduction),
           chief_deduction: pr.chief_deduction === undefined ? prev?.payload?.chief_deduction : Number(pr.chief_deduction),
+          choreo_deduction: pr.choreo_deduction === undefined ? prev?.payload?.choreo_deduction : Number(pr.choreo_deduction),
+          choreo_codes: (pr.choreo_codes === undefined
+            ? prev?.payload?.choreo_codes
+            : pr.choreo_codes) as { code: string; value: number }[] | undefined,
         },
         style: prev?.style ?? null,
         updated_at: new Date().toISOString(),
@@ -339,7 +345,10 @@ function LiveScoreboard() {
   const athleteCategory = displayAthlete?.age_category ?? athlete?.category ?? (displayStyle ? STYLE_LABELS[displayStyle] : "—");
   const totalDeduction = Number(publishedResult?.deductions ?? judgeADeductions.reduce((sum, d) => sum + d.value, 0));
   const chiefDeduction = Number(publishedPayload?.chief_deduction ?? 0);
-  const taDeduction = Number(publishedPayload?.ta_deduction ?? Math.max(0, totalDeduction - chiefDeduction));
+  const choreoDeduction = Number(publishedPayload?.choreo_deduction ?? 0);
+  const taDeduction = Number(
+    publishedPayload?.ta_deduction ?? Math.max(0, totalDeduction - chiefDeduction - choreoDeduction),
+  );
   const displayAScore = Number(publishedResult?.score_a ?? judgeAScore);
   const displayBScore = Number(publishedResult?.score_b ?? judgeBAverage);
   const displayCScore = Number(publishedResult?.score_c ?? judgeCScore);
@@ -667,6 +676,11 @@ function LiveScoreboard() {
               {chiefDeduction > 0 && (
                 <span className="text-[10px] font-heading font-black text-red-300 tabular-nums" dir="ltr">
                   HD: −{chiefDeduction.toFixed(3)}
+                </span>
+              )}
+              {choreoDeduction > 0 && (
+                <span className="text-[10px] font-heading font-black text-orange-300 tabular-nums" dir="ltr">
+                  CD: −{choreoDeduction.toFixed(3)}
                 </span>
               )}
             </div>

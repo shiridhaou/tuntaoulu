@@ -27,6 +27,7 @@ import { modeCaps } from "@/lib/matchMode";
 import { computeGroupAConsensus } from "@/lib/groupAConsensus";
 import { useGroupAConsensus } from "@/hooks/useGroupAConsensus";
 import { roundScore } from "@/lib/numFormat";
+import { CHOREO_CODES, lookupChoreoCode } from "@/lib/choreographyCodes";
 
 import { pushDisplaySettings, uploadSponsorLogo } from "@/hooks/useDisplaySettings";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -131,6 +132,9 @@ function ChiefRefereeDashboardInner() {
   const [taPulse, setTaPulse] = useState<number>(0); // increments on every TA deduction change for visual pulse
   const [chiefDeduction, setChiefDeduction] = useState<number>(0);
   const [chiefDeductionDraft, setChiefDeductionDraft] = useState("0.000");
+  // Choreography / content deductions (codes 80–86) applied by the Chief Judge.
+  const [choreoApplied, setChoreoApplied] = useState<{ code: string; value: number; label: string }[]>([]);
+  const [choreoDraft, setChoreoDraft] = useState("");
   // Dynamic style: the TA's broadcast style (timerSync.style) is authoritative —
   // the local competitionStyle is only a fallback. This drives BOTH the score
   // caps and the performance-time window so Taiji athletes are never compared
@@ -286,12 +290,35 @@ function ChiefRefereeDashboardInner() {
     setTaOobCount(0);
     setChiefDeduction(0);
     setChiefDeductionDraft("0.000");
+    setChoreoApplied([]);
+    setChoreoDraft("");
   }, [currentAthlete?.id]);
 
   const applyChiefDeduction = (value: number) => {
     const next = roundScore(Math.max(0, Number.isFinite(value) ? value : 0));
     setChiefDeduction(next);
     setChiefDeductionDraft(next.toFixed(3));
+  };
+
+  /** Apply a choreography code (80–86). Duplicates are rejected. */
+  const applyChoreoCode = (raw: string) => {
+    const entry = lookupChoreoCode(raw);
+    if (!entry) {
+      toast.error(`رمز غير معروف: ${raw} — الرموز المتاحة 80 إلى 86`);
+      return;
+    }
+    let duplicate = false;
+    setChoreoApplied((prev) => {
+      if (prev.some((d) => d.code === entry.code)) { duplicate = true; return prev; }
+      return [...prev, { code: entry.code, value: entry.value, label: entry.labelAr }];
+    });
+    setChoreoDraft("");
+    if (duplicate) toast.info(`الرمز ${entry.code} مطبّق مسبقًا`);
+    else toast.success(`${entry.code} · −${entry.value.toFixed(3)} — ${entry.labelAr}`);
+  };
+
+  const removeChoreoCode = (code: string) => {
+    setChoreoApplied((prev) => prev.filter((d) => d.code !== code));
   };
 
   // Setup gate handled by parent ChiefRefereeDashboard wrapper.
@@ -382,7 +409,7 @@ function ChiefRefereeDashboardInner() {
         score_a: groupATotal,
         score_b: groupBNet,
         score_c: matchMode === "optional" ? groupCTotal : null,
-        deductions: roundScore(taDeduction + chiefDeduction),
+        deductions: roundScore(taDeduction + chiefDeduction + choreoTotal),
         final_score: aggregateFinal,
         published: true,
         payload: {
@@ -394,7 +421,9 @@ function ChiefRefereeDashboardInner() {
           ta_oob_count: taOobCount,
           ta_deduction: roundScore(taDeduction),
           chief_deduction: chiefDeduction,
-          total_external_deduction: roundScore(taDeduction + chiefDeduction),
+          choreo_deduction: choreoTotal,
+          choreo_codes: choreoApplied,
+          total_external_deduction: roundScore(taDeduction + chiefDeduction + choreoTotal),
           committed_at: Date.now(),
         } as never,
       });
@@ -412,9 +441,11 @@ function ChiefRefereeDashboardInner() {
             score_a: groupATotal,
             score_b: groupBNet,
             score_c: matchMode === "optional" ? groupCTotal : null,
-            deductions: roundScore(taDeduction + chiefDeduction),
+            deductions: roundScore(taDeduction + chiefDeduction + choreoTotal),
             ta_deduction: roundScore(taDeduction),
             chief_deduction: chiefDeduction,
+            choreo_deduction: choreoTotal,
+            choreo_codes: choreoApplied,
             final_score: aggregateFinal,
             status: "PUBLISHED",
             published_at: Date.now(),
@@ -428,6 +459,8 @@ function ChiefRefereeDashboardInner() {
           athlete_id: currentAthlete.id,
           final_score: aggregateFinal,
           chief_deduction: chiefDeduction,
+          choreo_deduction: choreoTotal,
+          choreo_codes: choreoApplied,
         } as never,
       });
       setScoreRevealed(true);
@@ -440,7 +473,7 @@ function ChiefRefereeDashboardInner() {
         team: currentAthlete.country ?? null,
         style: competitionStyle,
         difficultyScore: matchMode === "optional" ? groupCTotal : null,
-        deductionScore: roundScore(taDeduction + chiefDeduction),
+        deductionScore: roundScore(taDeduction + chiefDeduction + choreoTotal),
         finalScore: aggregateFinal,
         timestamp: new Date().toISOString(),
       });
@@ -547,7 +580,10 @@ function ChiefRefereeDashboardInner() {
   // Group A already arrives net of its own deductions. The only deduction
   // applied after A+B+C here is the explicit Chief Judge deduction.
   const cContrib = matchMode === "optional" ? groupCTotal : 0;
-  const aggregateFinal = roundScore(Math.max(0, groupATotal + groupBNet + cContrib - chiefDeduction));
+  const choreoTotal = roundScore(choreoApplied.reduce((s, d) => s + d.value, 0));
+  const aggregateFinal = roundScore(
+    Math.max(0, groupATotal + groupBNet + cContrib - chiefDeduction - choreoTotal),
+  );
   // Show real aggregates whenever ANY judge has submitted — even if TA hasn't
   // formally "called" the athlete via current_match.athlete_id yet. This fixes
   // the case where group totals + final stay at 0.00 despite scores arriving.
@@ -807,11 +843,11 @@ function ChiefRefereeDashboardInner() {
         {(() => {
           const cContrib = matchMode === "optional" ? displayGroupCTotal : 0;
           const subtotal = displayGroupATotal + displayGroupBNet + cContrib;
-          const aggregateFinal = roundScore(Math.max(0, subtotal - chiefDeduction));
+          const aggregateFinal = roundScore(Math.max(0, subtotal - chiefDeduction - choreoTotal));
           const maxTotal = effMaxA + effMaxB + (matchMode === "optional" ? effMaxC : 0);
           const formula = matchMode === "optional"
-            ? "A + B(avg) + C − HD"
-            : "A + B(avg) − HD";
+            ? "A + B(avg) + C − HD − CD"
+            : "A + B(avg) − HD − CD";
           return (
             <div className="rounded-3xl border backdrop-blur-xl px-6 py-3 shrink-0"
               style={{
@@ -852,7 +888,10 @@ function ChiefRefereeDashboardInner() {
                     </span>
                     <span className="text-white/30">−</span>
                     <span className="font-black text-red-300">HD {chiefDeduction.toFixed(3)}</span>
+                    <span className="text-white/30">−</span>
+                    <span className="font-black text-orange-300">CD {choreoTotal.toFixed(3)}</span>
                   </div>
+
 
                   <div className="mt-2 flex flex-wrap items-center gap-1.5" dir="ltr">
                     <span className="mr-1 text-[9px] font-heading font-black tracking-wider text-white/50" dir="rtl">
@@ -889,6 +928,73 @@ function ChiefRefereeDashboardInner() {
                     >
                       CLEAR
                     </button>
+                  </div>
+
+                  {/* CHOREOGRAPHY DEDUCTIONS — codes 80–86 (Chief Judge only) */}
+                  <div className="mt-2 rounded-xl border border-orange-400/25 bg-orange-500/[0.06] px-2.5 py-2">
+                    <div className="flex flex-wrap items-center gap-1.5" dir="ltr">
+                      <span className="mr-1 text-[9px] font-heading font-black tracking-wider text-orange-200/80" dir="rtl">
+                        خصومات التصميم الحركي (80–86)
+                      </span>
+                      {CHOREO_CODES.map((entry) => {
+                        const active = choreoApplied.some((d) => d.code === entry.code);
+                        return (
+                          <button
+                            key={entry.code}
+                            type="button"
+                            disabled={active}
+                            title={`${entry.code} — ${entry.labelAr} (−${entry.value.toFixed(3)})`}
+                            onClick={() => applyChoreoCode(entry.code)}
+                            className={`h-7 min-w-9 rounded-md border px-2 text-[10px] font-heading font-black tabular-nums transition-colors ${
+                              active
+                                ? "border-orange-300/60 bg-orange-400/25 text-orange-100 cursor-not-allowed opacity-70"
+                                : "border-orange-400/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/20"
+                            }`}
+                          >
+                            {entry.code}
+                          </button>
+                        );
+                      })}
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="CODE"
+                        aria-label="رمز خصم التصميم الحركي"
+                        value={choreoDraft}
+                        onChange={(event) => setChoreoDraft(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" && choreoDraft.trim()) applyChoreoCode(choreoDraft);
+                        }}
+                        className="h-7 w-16 rounded-md border border-white/20 bg-black/40 px-2 text-center text-[10px] font-heading font-black tabular-nums text-white outline-none placeholder:text-white/25 focus:border-orange-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => choreoDraft.trim() && applyChoreoCode(choreoDraft)}
+                        className="h-7 rounded-md border border-orange-400/30 bg-orange-500/10 px-2 text-[9px] font-bold text-orange-200 hover:bg-orange-500/20"
+                      >
+                        ADD
+                      </button>
+                    </div>
+
+                    {choreoApplied.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5" dir="ltr">
+                        {choreoApplied.map((d) => (
+                          <button
+                            key={d.code}
+                            type="button"
+                            onClick={() => removeChoreoCode(d.code)}
+                            title={`${d.label} — إزالة`}
+                            className="group flex h-6 items-center gap-1 rounded-full border border-red-400/40 bg-red-500/15 px-2 text-[10px] font-heading font-black tabular-nums text-red-200 hover:bg-red-500/30"
+                          >
+                            <span>{d.code}: −{d.value.toFixed(3)}</span>
+                            <X className="h-3 w-3 opacity-70 group-hover:opacity-100" />
+                          </button>
+                        ))}
+                        <span className="text-[10px] font-heading font-black tabular-nums text-orange-300">
+                          CD TOTAL −{choreoTotal.toFixed(3)}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="mt-1.5">
@@ -1040,6 +1146,8 @@ function ChiefRefereeDashboardInner() {
             setTaOobCount(0);
             setChiefDeduction(0);
             setChiefDeductionDraft("0.000");
+            setChoreoApplied([]);
+            setChoreoDraft("");
           }}
         />
       </footer>
