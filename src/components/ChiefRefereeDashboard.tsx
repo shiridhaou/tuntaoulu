@@ -1146,6 +1146,8 @@ function ChiefRefereeDashboardInner() {
             setTaOobCount(0);
             setChiefDeduction(0);
             setChiefDeductionDraft("0.000");
+            setChoreoApplied([]);
+            setChoreoDraft("");
           }}
         />
       </footer>
