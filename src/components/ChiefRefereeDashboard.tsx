@@ -459,6 +459,8 @@ function ChiefRefereeDashboardInner() {
           athlete_id: currentAthlete.id,
           final_score: aggregateFinal,
           chief_deduction: chiefDeduction,
+          choreo_deduction: choreoTotal,
+          choreo_codes: choreoApplied,
         } as never,
       });
       setScoreRevealed(true);
