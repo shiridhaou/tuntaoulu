@@ -290,12 +290,35 @@ function ChiefRefereeDashboardInner() {
     setTaOobCount(0);
     setChiefDeduction(0);
     setChiefDeductionDraft("0.000");
+    setChoreoApplied([]);
+    setChoreoDraft("");
   }, [currentAthlete?.id]);
 
   const applyChiefDeduction = (value: number) => {
     const next = roundScore(Math.max(0, Number.isFinite(value) ? value : 0));
     setChiefDeduction(next);
     setChiefDeductionDraft(next.toFixed(3));
+  };
+
+  /** Apply a choreography code (80–86). Duplicates are rejected. */
+  const applyChoreoCode = (raw: string) => {
+    const entry = lookupChoreoCode(raw);
+    if (!entry) {
+      toast.error(`رمز غير معروف: ${raw} — الرموز المتاحة 80 إلى 86`);
+      return;
+    }
+    let duplicate = false;
+    setChoreoApplied((prev) => {
+      if (prev.some((d) => d.code === entry.code)) { duplicate = true; return prev; }
+      return [...prev, { code: entry.code, value: entry.value, label: entry.labelAr }];
+    });
+    setChoreoDraft("");
+    if (duplicate) toast.info(`الرمز ${entry.code} مطبّق مسبقًا`);
+    else toast.success(`${entry.code} · −${entry.value.toFixed(3)} — ${entry.labelAr}`);
+  };
+
+  const removeChoreoCode = (code: string) => {
+    setChoreoApplied((prev) => prev.filter((d) => d.code !== code));
   };
 
   // Setup gate handled by parent ChiefRefereeDashboard wrapper.
