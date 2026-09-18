@@ -345,7 +345,10 @@ function LiveScoreboard() {
   const athleteCategory = displayAthlete?.age_category ?? athlete?.category ?? (displayStyle ? STYLE_LABELS[displayStyle] : "—");
   const totalDeduction = Number(publishedResult?.deductions ?? judgeADeductions.reduce((sum, d) => sum + d.value, 0));
   const chiefDeduction = Number(publishedPayload?.chief_deduction ?? 0);
-  const taDeduction = Number(publishedPayload?.ta_deduction ?? Math.max(0, totalDeduction - chiefDeduction));
+  const choreoDeduction = Number(publishedPayload?.choreo_deduction ?? 0);
+  const taDeduction = Number(
+    publishedPayload?.ta_deduction ?? Math.max(0, totalDeduction - chiefDeduction - choreoDeduction),
+  );
   const displayAScore = Number(publishedResult?.score_a ?? judgeAScore);
   const displayBScore = Number(publishedResult?.score_b ?? judgeBAverage);
   const displayCScore = Number(publishedResult?.score_c ?? judgeCScore);
