@@ -259,11 +259,14 @@ function useLiveRanking(sessionCode: string | null) {
 // ── B trim ────────────────────────────────────────────────────────────
 function bTrimRoles(scores: { slot: string; score: number }[]): Record<string, "high" | "low" | "kept" | "single"> {
   if (scores.length === 0) return {};
-  if (scores.length < 3) {
+  // Trim high+low only with 5 or more B judges (matches the Chief dashboard);
+  // with 1–4 judges every score is kept and simply averaged.
+  if (scores.length < 5) {
     const out: Record<string, "single"> = {};
     scores.forEach(s => (out[s.slot] = "single"));
     return out;
   }
+
   const out: Record<string, "high" | "low" | "kept"> = {};
   let maxV = -Infinity, minV = Infinity;
   scores.forEach(s => { if (s.score > maxV) maxV = s.score; if (s.score < minV) minV = s.score; });
