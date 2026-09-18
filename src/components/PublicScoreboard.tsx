@@ -678,6 +678,11 @@ function LiveScoreboard() {
                   HD: −{chiefDeduction.toFixed(3)}
                 </span>
               )}
+              {choreoDeduction > 0 && (
+                <span className="text-[10px] font-heading font-black text-orange-300 tabular-nums" dir="ltr">
+                  CD: −{choreoDeduction.toFixed(3)}
+                </span>
+              )}
             </div>
           </div>
 
