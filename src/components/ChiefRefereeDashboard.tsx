@@ -837,11 +837,11 @@ function ChiefRefereeDashboardInner() {
         {(() => {
           const cContrib = matchMode === "optional" ? displayGroupCTotal : 0;
           const subtotal = displayGroupATotal + displayGroupBNet + cContrib;
-          const aggregateFinal = roundScore(Math.max(0, subtotal - chiefDeduction));
+          const aggregateFinal = roundScore(Math.max(0, subtotal - chiefDeduction - choreoTotal));
           const maxTotal = effMaxA + effMaxB + (matchMode === "optional" ? effMaxC : 0);
           const formula = matchMode === "optional"
-            ? "A + B(avg) + C − HD"
-            : "A + B(avg) − HD";
+            ? "A + B(avg) + C − HD − CD"
+            : "A + B(avg) − HD − CD";
           return (
             <div className="rounded-3xl border backdrop-blur-xl px-6 py-3 shrink-0"
               style={{
