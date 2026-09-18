@@ -870,6 +870,10 @@ export function PublicDisplay() {
   const groupBAvg = result?.score_b ?? 0;
   const groupCScore = result?.score_c ?? 0;
   const chiefDeduction = Number(result?.payload?.chief_deduction ?? 0);
+  const choreoDeduction = Number(result?.payload?.choreo_deduction ?? 0);
+  const choreoCodes = (Array.isArray(result?.payload?.choreo_codes)
+    ? result?.payload?.choreo_codes
+    : []) as { code: string; value: number }[];
   // Prefer the live TA deduction broadcast (current_match.ta_deductions) so the
   // public TV reflects every +/- the TA presses without waiting for publish.
   const publishedTaDeduction = Number(result?.payload?.ta_deduction ?? result?.deductions ?? 0);
