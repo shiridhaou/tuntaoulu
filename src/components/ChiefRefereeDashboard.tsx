@@ -473,7 +473,7 @@ function ChiefRefereeDashboardInner() {
         team: currentAthlete.country ?? null,
         style: competitionStyle,
         difficultyScore: matchMode === "optional" ? groupCTotal : null,
-        deductionScore: roundScore(taDeduction + chiefDeduction),
+        deductionScore: roundScore(taDeduction + chiefDeduction + choreoTotal),
         finalScore: aggregateFinal,
         timestamp: new Date().toISOString(),
       });
