@@ -240,7 +240,9 @@ function usePublishedResult(sessionCode: string | null) {
           ta_deduction: pr.ta_deduction === undefined ? prev?.payload?.ta_deduction : Number(pr.ta_deduction),
           chief_deduction: pr.chief_deduction === undefined ? prev?.payload?.chief_deduction : Number(pr.chief_deduction),
           choreo_deduction: pr.choreo_deduction === undefined ? prev?.payload?.choreo_deduction : Number(pr.choreo_deduction),
-          choreo_codes: pr.choreo_codes === undefined ? prev?.payload?.choreo_codes : pr.choreo_codes,
+          choreo_codes: (pr.choreo_codes === undefined
+            ? prev?.payload?.choreo_codes
+            : pr.choreo_codes) as { code: string; value: number }[] | undefined,
         },
         style: prev?.style ?? null,
         updated_at: new Date().toISOString(),
