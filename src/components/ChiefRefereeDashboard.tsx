@@ -574,7 +574,10 @@ function ChiefRefereeDashboardInner() {
   // Group A already arrives net of its own deductions. The only deduction
   // applied after A+B+C here is the explicit Chief Judge deduction.
   const cContrib = matchMode === "optional" ? groupCTotal : 0;
-  const aggregateFinal = roundScore(Math.max(0, groupATotal + groupBNet + cContrib - chiefDeduction));
+  const choreoTotal = roundScore(choreoApplied.reduce((s, d) => s + d.value, 0));
+  const aggregateFinal = roundScore(
+    Math.max(0, groupATotal + groupBNet + cContrib - chiefDeduction - choreoTotal),
+  );
   // Show real aggregates whenever ANY judge has submitted — even if TA hasn't
   // formally "called" the athlete via current_match.athlete_id yet. This fixes
   // the case where group totals + final stay at 0.00 despite scores arriving.
