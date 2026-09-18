@@ -882,7 +882,10 @@ function ChiefRefereeDashboardInner() {
                     </span>
                     <span className="text-white/30">−</span>
                     <span className="font-black text-red-300">HD {chiefDeduction.toFixed(3)}</span>
+                    <span className="text-white/30">−</span>
+                    <span className="font-black text-orange-300">CD {choreoTotal.toFixed(3)}</span>
                   </div>
+
 
                   <div className="mt-2 flex flex-wrap items-center gap-1.5" dir="ltr">
                     <span className="mr-1 text-[9px] font-heading font-black tracking-wider text-white/50" dir="rtl">
