@@ -468,12 +468,21 @@ function ChiefRefereeDashboardInner() {
     return o !== undefined && o !== null ? o : baseScore;
   };
 
-  // B trim roles — only over the first numB B-judges that are online
+  // A B slot counts as active when it is assigned OR it has actually produced a
+  // score (formal submission / live push / chief override). Requiring only the
+  // assignment made B_avg collapse to 0.000 whenever a judge scored from an
+  // unassigned seat.
+  const isBActive = (key: string) => {
+    const o = judgeOverrides[key];
+    return approvedJudges.includes(key) || submittedSlots.includes(key) || typeof o === "number";
+  };
+
+  // B trim roles — over the first numB B-judges that are active
   const bRoles: Record<string, BTrimRole> = useMemo(() => {
     const bs: { key: string; v: number }[] = [];
     for (let i = 0; i < team.numB; i++) {
       const k = `B${i + 1}`;
-      if (!approvedJudges.includes(k)) continue;
+      if (!isBActive(k)) continue;
       const v = scoreFor(k, judgeBScores[i] ?? null);
       if (v !== null) bs.push({ key: k, v });
     }
@@ -489,7 +498,8 @@ function ChiefRefereeDashboardInner() {
     });
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [judgeBScores, judgeOverrides, approvedJudges, team.numB]);
+  }, [judgeBScores, judgeOverrides, approvedJudges, submittedSlots, team.numB]);
+
 
   // Per-slot live scores: A & C judges submit their own final score per slot.
   // The provider stores each submission in `judgeOverrides[slotKey]` from
