@@ -131,6 +131,9 @@ function ChiefRefereeDashboardInner() {
   const [taPulse, setTaPulse] = useState<number>(0); // increments on every TA deduction change for visual pulse
   const [chiefDeduction, setChiefDeduction] = useState<number>(0);
   const [chiefDeductionDraft, setChiefDeductionDraft] = useState("0.000");
+  // Choreography / content deductions (codes 80–86) applied by the Chief Judge.
+  const [choreoApplied, setChoreoApplied] = useState<{ code: string; value: number; label: string }[]>([]);
+  const [choreoDraft, setChoreoDraft] = useState("");
   // Dynamic style: the TA's broadcast style (timerSync.style) is authoritative —
   // the local competitionStyle is only a fallback. This drives BOTH the score
   // caps and the performance-time window so Taiji athletes are never compared
