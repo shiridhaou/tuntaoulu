@@ -1489,6 +1489,9 @@ function ChiefDrawer({
   athletes, currentAthleteIndex, setCurrentAthleteIndex,
   marqueeText, setMarqueeText, sponsorLogos, addSponsorLogo, removeSponsorLogo,
   leaderboardMode, setLeaderboardMode, leaderboardCount, clearResults,
+  publishingLive, onCast, isVarLiveOnPublic, setIsVarLiveOnPublic,
+  onManualSync, manualSyncing, groupCompleted, onToggleGroupCompleted,
+  onOpenInsights, timerRunning,
 }: {
   onClose: () => void;
   sessionCode: string | null;
@@ -1508,6 +1511,16 @@ function ChiefDrawer({
   setLeaderboardMode: (v: boolean) => void;
   leaderboardCount: number;
   clearResults: () => void;
+  publishingLive: boolean;
+  onCast: () => void;
+  isVarLiveOnPublic: boolean;
+  setIsVarLiveOnPublic: (v: boolean) => void;
+  onManualSync: () => void;
+  manualSyncing: boolean;
+  groupCompleted: boolean;
+  onToggleGroupCompleted: () => void;
+  onOpenInsights: () => void;
+  timerRunning: boolean;
 }) {
   const [marqueeDraft, setMarqueeDraft] = useState(marqueeText);
   const [marqueeApplied, setMarqueeApplied] = useState(false);
