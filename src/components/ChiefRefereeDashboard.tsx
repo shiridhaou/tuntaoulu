@@ -342,6 +342,33 @@ function ChiefRefereeDashboardInner() {
     window.open(url, "wushu_smart_report", "width=480,height=900,noopener");
   };
 
+  /* HARD RESET — NEXT ATHLETE must leave nothing behind: Chief-local deductions,
+     every group's local state, and the per-session caches in localStorage.
+     Prevents Group C (or A/B) from pre-filling with a previous athlete's draft. */
+  const hardResetForNextAthlete = () => {
+    setScoreRevealed(false);
+    setTaDeduction(0);
+    setTaOobCount(0);
+    setChiefDeduction(0);
+    setChiefDeductionDraft("0.000");
+    setChoreoApplied([]);
+    setChoreoDraft("");
+    setForceUnlock(false);
+    resetJudgeADeductions();
+    resetJudgeBScores();
+    resetJudgeCAttempts();
+    resetMovementSequence();
+    clearSuggestedDeductions();
+    if (typeof window !== "undefined") {
+      try {
+        const kill = ["judge", "score", "difficulty", "attempt", "deduction", "movement"];
+        Object.keys(window.localStorage)
+          .filter(k => kill.some(t => k.toLowerCase().includes(t)))
+          .forEach(k => window.localStorage.removeItem(k));
+      } catch (e) { console.warn("[CHIEF] local cache wipe failed", e); }
+    }
+  };
+
   // ── Publish current scores to the Public Display in real time ─────────────
   // Used by the green CAST button (header) and the "SEND TO PUBLIC" button (footer).
   // Inserts/updates a `match_results` row with `published=true` so PublicDisplay
