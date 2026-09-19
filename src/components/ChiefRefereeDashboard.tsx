@@ -5,7 +5,6 @@ import { useCompetition, STYLE_CONFIGS, type CompetitionStyle } from "@/store/co
 import { useLogout } from "@/hooks/useLogout";
 
 import { FederationLogo } from "./FederationLogo";
-import { SessionBadge } from "@/components/SessionBadge";
 import { RoomReadyWidget } from "@/components/RoomReadyWidget";
 import { AiAssistantSidebar } from "./AiAssistantSidebar";
 // QrCommitModal replaced by FinalScoreSheetModal
@@ -84,6 +83,8 @@ function ChiefRefereeDashboardInner() {
     marqueeText, setMarqueeText, sponsorLogos, addSponsorLogo, removeSponsorLogo,
     leaderboardMode, setLeaderboardMode, commitCurrentResult, getLeaderboard, clearResults,
     isVarLiveOnPublic, setIsVarLiveOnPublic,
+    resetJudgeADeductions, resetJudgeBScores, resetJudgeCAttempts,
+    resetMovementSequence, clearSuggestedDeductions,
   } = useCompetition();
   const logout = useLogout();
 
@@ -135,6 +136,8 @@ function ChiefRefereeDashboardInner() {
   // Choreography / content deductions (codes 80–86) applied by the Chief Judge.
   const [choreoApplied, setChoreoApplied] = useState<{ code: string; value: number; label: string }[]>([]);
   const [choreoDraft, setChoreoDraft] = useState("");
+  // Chief manual override — unlocks COMPUTE FINAL / PUBLISH when a group cannot submit.
+  const [forceUnlock, setForceUnlock] = useState(false);
   // Dynamic style: the TA's broadcast style (timerSync.style) is authoritative —
   // the local competitionStyle is only a fallback. This drives BOTH the score
   // caps and the performance-time window so Taiji athletes are never compared
@@ -337,6 +340,33 @@ function ChiefRefereeDashboardInner() {
     const aid = currentAthlete?.id;
     const url = aid ? `/public-report/${aid}` : "/public-display";
     window.open(url, "wushu_smart_report", "width=480,height=900,noopener");
+  };
+
+  /* HARD RESET — NEXT ATHLETE must leave nothing behind: Chief-local deductions,
+     every group's local state, and the per-session caches in localStorage.
+     Prevents Group C (or A/B) from pre-filling with a previous athlete's draft. */
+  const hardResetForNextAthlete = () => {
+    setScoreRevealed(false);
+    setTaDeduction(0);
+    setTaOobCount(0);
+    setChiefDeduction(0);
+    setChiefDeductionDraft("0.000");
+    setChoreoApplied([]);
+    setChoreoDraft("");
+    setForceUnlock(false);
+    resetJudgeADeductions();
+    resetJudgeBScores();
+    resetJudgeCAttempts();
+    resetMovementSequence();
+    clearSuggestedDeductions();
+    if (typeof window !== "undefined") {
+      try {
+        const kill = ["judge", "score", "difficulty", "attempt", "deduction", "movement"];
+        Object.keys(window.localStorage)
+          .filter(k => kill.some(t => k.toLowerCase().includes(t)))
+          .forEach(k => window.localStorage.removeItem(k));
+      } catch (e) { console.warn("[CHIEF] local cache wipe failed", e); }
+    }
   };
 
   // ── Publish current scores to the Public Display in real time ─────────────
@@ -629,7 +659,6 @@ function ChiefRefereeDashboardInner() {
               <Trophy className="h-3 w-3" style={{ color: ORANGE }} />
               <span className="text-[9px] font-heading font-bold tracking-wider" style={{ color: ORANGE }}>CHIEF</span>
             </div>
-            <SessionBadge code={sessionCode} />
           </div>
 
           <div className="text-center">
@@ -669,8 +698,9 @@ function ChiefRefereeDashboardInner() {
             </p>
           </div>
 
+          {/* RIGHT — only live-critical actions. Session code, CAST, VAR broadcast
+              and system status now live in the slide-over control panel. */}
           <div className="flex items-center justify-end gap-1.5">
-            {/* STANDINGS — read-only ranked leaderboard overlay */}
             <button
               onClick={() => setStandingsOpen(true)}
               title="الترتيب العام · Standings"
@@ -679,58 +709,6 @@ function ChiefRefereeDashboardInner() {
             >
               <Trophy className="h-3.5 w-3.5" />
               <span>STANDINGS</span>
-            </button>
-            {/* GROUP COMPLETED — flips the public TV to the TOP 4 podium view */}
-            <button
-              onClick={() => void toggleGroupCompleted()}
-              title={groupCompleted ? "إعادة فتح المجموعة" : "إنهاء المجموعة · عرض المراكز الأربعة"}
-              className="h-8 px-3 rounded-full border flex items-center gap-1.5 font-heading font-black text-[10px] tracking-[0.2em] transition-all"
-              style={groupCompleted
-                ? { background: `${GOLD}30`, borderColor: GOLD, color: GOLD }
-                : { background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.7)" }}
-            >
-              <Trophy className="h-3.5 w-3.5" />
-              <span>{groupCompleted ? "REOPEN GROUP" : "COMPLETE GROUP"}</span>
-            </button>
-            {/* VAR BROADCAST — promoted to header for high visibility (v1.1.5) */}
-
-            <button
-              onClick={() => setIsVarLiveOnPublic(!isVarLiveOnPublic)}
-              title={isVarLiveOnPublic ? "إيقاف بث VAR للجمهور" : "بث VAR للجمهور"}
-              className={`relative h-8 px-3 rounded-full border-2 flex items-center gap-1.5 transition-all font-heading font-black text-[10px] tracking-[0.2em] ${
-                isVarLiveOnPublic ? "text-black animate-pulse" : "text-orange-300 hover:text-white"
-              }`}
-              style={{
-                background: isVarLiveOnPublic ? ORANGE : `${ORANGE}15`,
-                borderColor: isVarLiveOnPublic ? "#fff" : `${ORANGE}88`,
-                boxShadow: isVarLiveOnPublic
-                  ? `0 0 24px ${ORANGE}, 0 0 48px ${ORANGE}88`
-                  : `0 0 12px ${ORANGE}33`,
-                zIndex: 50,
-              }}
-            >
-              <Tv className="h-3.5 w-3.5" />
-              <span>{isVarLiveOnPublic ? "VAR LIVE ●" : "BROADCAST VAR"}</span>
-            </button>
-            {/* SESSION CODE — always visible, with copy. Critical for Chief to share with judges. */}
-            <button onClick={handleCopySession} title="Copy session code"
-              className="flex items-center gap-1.5 h-8 px-2.5 rounded-full border bg-white/5 hover:bg-white/10 transition-all"
-              style={{ borderColor: `${GOLD}55`, color: GOLD }}>
-              <span className="text-[9px] font-body uppercase tracking-[0.2em] text-white/50">Session</span>
-              <span className="text-xs font-heading font-black tabular-nums tracking-wider" dir="ltr">{sessionCode || "------"}</span>
-              {copied ? <CheckCircle className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-            </button>
-            <button onClick={() => publishToPublic({ openWindow: true })} disabled={publishingLive}
-              title="Publish current scores AND open the Public Display"
-              className="flex items-center gap-1 h-8 px-2.5 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 hover:bg-emerald-500/25 transition-all disabled:opacity-50">
-              {publishingLive ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Tv className="h-3.5 w-3.5" />}
-              <span className="text-[9px] font-heading font-black tracking-[0.2em]">{publishingLive ? "..." : "CAST"}</span>
-            </button>
-            <button onClick={() => setInsightsOpen(true)} title="AI Insights"
-              className="h-8 w-8 rounded-full border flex items-center justify-center transition-all relative"
-              style={{ background: `${ORANGE}1A`, borderColor: `${ORANGE}66`, color: ORANGE }}>
-              <Bot className="h-4 w-4" />
-              <span className="absolute top-0 right-0 h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: ORANGE }} />
             </button>
             <button onClick={() => setTeamPanelOpen(true)} title="إدارة الفريق · Team Management"
               className="relative h-8 w-8 rounded-full border flex items-center justify-center transition-all"
@@ -742,13 +720,9 @@ function ChiefRefereeDashboardInner() {
                 </span>
               )}
             </button>
-            <button onClick={handleManualSync} disabled={manualSyncing} title="Manual Sync — pull fresh state from server"
-              className="h-8 w-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50">
-              <RefreshCw className={`h-4 w-4 ${manualSyncing ? "animate-spin" : ""}`} />
-            </button>
-            <button onClick={() => setDrawerOpen(true)} title="Open settings"
+            <button onClick={() => setDrawerOpen(true)} title="لوحة التحكم · Control panel"
               className="h-8 w-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-all">
-              <Menu className="h-4 w-4" />
+              <Settings className="h-4 w-4" />
             </button>
             <button onClick={logout} className="text-[10px] text-white/40 hover:text-white/80 font-body transition-colors px-1">
               خروج
@@ -797,7 +771,7 @@ function ChiefRefereeDashboardInner() {
             subtitle="Quality"
             color="#22c55e"
             summary={displayGroupATotal}
-            summaryLabel={`/ ${effMaxA.toFixed(3)}`}
+            summaryLabel={`/ ${effMaxA.toFixed(2)}`}
             revealed={showLive}
             judges={groupA}
             timerRunning={timerRunning}
@@ -808,7 +782,7 @@ function ChiefRefereeDashboardInner() {
             subtitle="Performance · (B1+B2+B3)/3"
             color={GOLD}
             summary={displayGroupBNet}
-            summaryLabel={`/ ${effMaxB.toFixed(3)}`}
+            summaryLabel={`/ ${effMaxB.toFixed(2)}`}
             revealed={showLive}
             judges={groupB}
             timerRunning={timerRunning}
@@ -820,7 +794,7 @@ function ChiefRefereeDashboardInner() {
               subtitle="Difficulty"
               color="#22d3ee"
               summary={displayGroupCTotal}
-              summaryLabel={`/ ${effMaxC.toFixed(3)}`}
+              summaryLabel={`/ ${effMaxC.toFixed(2)}`}
               revealed={showLive}
               judges={groupC}
               timerRunning={timerRunning}
@@ -869,13 +843,13 @@ function ChiefRefereeDashboardInner() {
 
                   {/* breakdown grid */}
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] font-heading tabular-nums" dir="ltr">
-                    <span className="text-emerald-400">A {displayGroupATotal.toFixed(3)}</span>
+                    <span className="text-emerald-400">A {displayGroupATotal.toFixed(2)}</span>
                     <span className="text-white/30">+</span>
-                    <span style={{ color: GOLD }}>B {displayGroupBNet.toFixed(3)}</span>
+                    <span style={{ color: GOLD }}>B {displayGroupBNet.toFixed(2)}</span>
                     {matchMode === "optional" && (
                       <>
                         <span className="text-white/30">+</span>
-                        <span className="text-cyan-300">C {displayGroupCTotal.toFixed(3)}</span>
+                        <span className="text-cyan-300">C {displayGroupCTotal.toFixed(2)}</span>
                       </>
                     )}
                     <span className="text-white/30">·</span>
@@ -1056,11 +1030,14 @@ function ChiefRefereeDashboardInner() {
             3. تقرير AI       → opens detailed AI report
         */}
         {(() => {
-          const hasAny = (arr: JudgeSlot[]) => arr.some(j => j.submitted);
+          // A group counts as ready when ANY of its judges has submitted a score,
+          // or when the Chief has an override in place for one of its slots.
+          const hasAny = (arr: JudgeSlot[]) =>
+            arr.some(j => j.submitted || typeof j.score === "number" || typeof judgeOverrides[j.key] === "number");
           const aReady = hasAny(groupA);
           const bReady = hasAny(groupB);
           const cReady = matchMode === "compulsory" ? true : hasAny(groupC);
-          const minReady = aReady && bReady && cReady;
+          const minReady = (aReady && bReady && cReady) || forceUnlock;
           const missing: string[] = [];
           if (!aReady) missing.push("A");
           if (!bReady) missing.push("B");
@@ -1134,21 +1111,25 @@ function ChiefRefereeDashboardInner() {
                   تقرير AI
                 </Link>
               )}
+
+              {/* Manual override — Chief unlocks calculation when a group cannot submit */}
+              <button
+                onClick={() => setForceUnlock(v => !v)}
+                title="تجاوز يدوي · unlock calculation without all groups"
+                className="h-9 px-3 rounded-xl border font-heading font-black text-[10px] tracking-[0.2em] transition-all"
+                style={forceUnlock
+                  ? { background: `${ORANGE}25`, borderColor: ORANGE, color: ORANGE }
+                  : { background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.6)" }}
+              >
+                {forceUnlock ? "OVERRIDE ON" : "OVERRIDE"}
+              </button>
             </>
           );
         })()}
         {/* ATOMIC RESET — archives, clears current_match, judge_scores, returns to waiting */}
         <NextAthleteButton
           sessionCode={sessionCode}
-          onReset={() => {
-            setScoreRevealed(false);
-            setTaDeduction(0);
-            setTaOobCount(0);
-            setChiefDeduction(0);
-            setChiefDeductionDraft("0.000");
-            setChoreoApplied([]);
-            setChoreoDraft("");
-          }}
+          onReset={hardResetForNextAthlete}
         />
       </footer>
 
@@ -1173,6 +1154,16 @@ function ChiefRefereeDashboardInner() {
           setLeaderboardMode={setLeaderboardMode}
           leaderboardCount={getLeaderboard().length}
           clearResults={clearResults}
+          publishingLive={publishingLive}
+          onCast={() => publishToPublic({ openWindow: true })}
+          isVarLiveOnPublic={isVarLiveOnPublic}
+          setIsVarLiveOnPublic={setIsVarLiveOnPublic}
+          onManualSync={handleManualSync}
+          manualSyncing={manualSyncing}
+          groupCompleted={groupCompleted}
+          onToggleGroupCompleted={() => void toggleGroupCompleted()}
+          onOpenInsights={() => { setInsightsOpen(true); setDrawerOpen(false); }}
+          timerRunning={timerRunning}
         />
       )}
 
@@ -1307,7 +1298,7 @@ function GroupColumn({
         }}
         dir="ltr"
       >
-        {revealed ? summary.toFixed(3) : "—.———"}
+        {revealed ? summary.toFixed(2) : "—.——"}
       </p>
       <p className="text-[9px] text-white/40 font-body mt-0.5 whitespace-nowrap" dir="ltr">{summaryLabel}</p>
 
@@ -1381,7 +1372,7 @@ function JudgeChip({ slot, revealed }: { slot: JudgeSlot; revealed: boolean }) {
         style={{ borderColor: ring, background: "rgba(255,255,255,0.03)" }}>
         <span className="text-[7px] font-heading font-black text-white/70 leading-none" dir="ltr">{slot.label}</span>
         <span className="text-[10px] font-heading font-black tabular-nums leading-none mt-0.5" style={{ color: valueColor }} dir="ltr">
-          {hasScore ? slot.score!.toFixed(3) : "—"}
+          {hasScore ? slot.score!.toFixed(2) : "—"}
         </span>
         {hasScore && isDropped && (
           <span className="absolute left-0.5 right-0.5 top-1/2 h-[2px] bg-red-500 -translate-y-1/2 rotate-[-15deg] rounded-full" />
@@ -1450,7 +1441,7 @@ function GroupDetailModal({
                 </div>
                 <div className="flex items-center gap-3">
                   <p className="text-2xl font-heading font-black tabular-nums" style={{ color: valueColor }} dir="ltr">
-                    {j.score !== null ? (revealed ? j.score.toFixed(3) : "•••") : "—"}
+                    {j.score !== null ? (revealed ? j.score.toFixed(2) : "•••") : "—"}
                   </p>
                   <button
                     onClick={() => j.online && onEdit(j)}
@@ -1498,6 +1489,9 @@ function ChiefDrawer({
   athletes, currentAthleteIndex, setCurrentAthleteIndex,
   marqueeText, setMarqueeText, sponsorLogos, addSponsorLogo, removeSponsorLogo,
   leaderboardMode, setLeaderboardMode, leaderboardCount, clearResults,
+  publishingLive, onCast, isVarLiveOnPublic, setIsVarLiveOnPublic,
+  onManualSync, manualSyncing, groupCompleted, onToggleGroupCompleted,
+  onOpenInsights, timerRunning,
 }: {
   onClose: () => void;
   sessionCode: string | null;
@@ -1517,6 +1511,16 @@ function ChiefDrawer({
   setLeaderboardMode: (v: boolean) => void;
   leaderboardCount: number;
   clearResults: () => void;
+  publishingLive: boolean;
+  onCast: () => void;
+  isVarLiveOnPublic: boolean;
+  setIsVarLiveOnPublic: (v: boolean) => void;
+  onManualSync: () => void;
+  manualSyncing: boolean;
+  groupCompleted: boolean;
+  onToggleGroupCompleted: () => void;
+  onOpenInsights: () => void;
+  timerRunning: boolean;
 }) {
   const [marqueeDraft, setMarqueeDraft] = useState(marqueeText);
   const [marqueeApplied, setMarqueeApplied] = useState(false);
@@ -1614,6 +1618,48 @@ function ChiefDrawer({
             </div>
           )}
         </div>
+
+        {/* OPERATIONS — moved out of the header to keep it clean (v1.2.3) */}
+        <div className="p-4 border-b border-white/5 space-y-2">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-white/50 font-body mb-1">Operations</p>
+          <div className="flex items-center justify-between rounded-xl bg-white/[0.03] border border-white/10 px-3 py-2">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-white/50 font-body">System status</span>
+            <span className="text-[10px] font-heading font-black tracking-wider" style={{ color: timerRunning ? "#34d399" : ORANGE }} dir="ltr">
+              {timerRunning ? "LIVE" : "READY"}
+            </span>
+          </div>
+          <button onClick={onCast} disabled={publishingLive}
+            className="w-full h-10 rounded-xl font-heading font-black text-[11px] tracking-[0.25em] flex items-center justify-center gap-2 disabled:opacity-40"
+            style={{ background: "linear-gradient(135deg, #10B981, #059669)", color: "#fff" }}>
+            <Tv className="h-3.5 w-3.5" /> {publishingLive ? "..." : "CAST · تقرير"}
+          </button>
+          <button onClick={() => setIsVarLiveOnPublic(!isVarLiveOnPublic)}
+            className="w-full h-10 rounded-xl border font-heading font-black text-[11px] tracking-[0.2em] flex items-center justify-center gap-2"
+            style={isVarLiveOnPublic
+              ? { background: "rgba(239,68,68,0.18)", borderColor: "rgba(239,68,68,0.6)", color: "#fca5a5" }
+              : { background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.6)" }}>
+            <Radio className="h-3.5 w-3.5" /> {isVarLiveOnPublic ? "BROADCAST VAR · ON" : "BROADCAST VAR"}
+          </button>
+          <button onClick={onToggleGroupCompleted}
+            className="w-full h-10 rounded-xl border font-heading font-black text-[11px] tracking-[0.2em] flex items-center justify-center gap-2"
+            style={groupCompleted
+              ? { background: `${GOLD}1A`, borderColor: `${GOLD}66`, color: GOLD }
+              : { background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.6)" }}>
+            <Trophy className="h-3.5 w-3.5" /> {groupCompleted ? "REOPEN GROUP" : "COMPLETE GROUP"}
+          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={onManualSync} disabled={manualSyncing}
+              className="h-10 rounded-xl bg-white/[0.04] border border-white/10 text-white/70 font-heading font-black text-[10px] tracking-[0.2em] flex items-center justify-center gap-2 disabled:opacity-40">
+              <RefreshCw className={`h-3.5 w-3.5 ${manualSyncing ? "animate-spin" : ""}`} /> SYNC
+            </button>
+            <button onClick={onOpenInsights}
+              className="h-10 rounded-xl font-heading font-black text-[10px] tracking-[0.2em] flex items-center justify-center gap-2"
+              style={{ background: `linear-gradient(135deg, ${GOLD}, ${ORANGE})`, color: "#000" }}>
+              <Sparkles className="h-3.5 w-3.5" /> AI
+            </button>
+          </div>
+        </div>
+
 
         <div className="p-4 border-b border-white/5">
           <div className="flex items-center justify-between mb-2">
@@ -1866,9 +1912,9 @@ function AiInsightsSidebar({
         <div className="grid grid-cols-2 gap-2">
           <Stat label="Judges Online" value={`${approvedCount}/${totalSlots}`} accent="emerald" />
           <Stat label="Final Score"  value={finalScore.toFixed(3)} accent="orange" />
-          <Stat label="Net B"        value={judgeBAverage.toFixed(3)} accent="orange" />
-          <Stat label="Group A"      value={judgeAScore.toFixed(3)} accent="red" />
-          <Stat label="Group C"      value={judgeCScore.toFixed(3)} accent="orange" />
+          <Stat label="Net B"        value={judgeBAverage.toFixed(2)} accent="orange" />
+          <Stat label="Group A"      value={judgeAScore.toFixed(2)} accent="red" />
+          <Stat label="Group C"      value={judgeCScore.toFixed(2)} accent="orange" />
           <Stat label="B Gap"        value={maxGap.toFixed(3)} accent={maxGap > 0.5 ? "red" : "emerald"} />
         </div>
 
