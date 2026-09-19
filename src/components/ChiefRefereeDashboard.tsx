@@ -5,7 +5,6 @@ import { useCompetition, STYLE_CONFIGS, type CompetitionStyle } from "@/store/co
 import { useLogout } from "@/hooks/useLogout";
 
 import { FederationLogo } from "./FederationLogo";
-import { SessionBadge } from "@/components/SessionBadge";
 import { RoomReadyWidget } from "@/components/RoomReadyWidget";
 import { AiAssistantSidebar } from "./AiAssistantSidebar";
 // QrCommitModal replaced by FinalScoreSheetModal
@@ -745,7 +744,7 @@ function ChiefRefereeDashboardInner() {
             subtitle="Quality"
             color="#22c55e"
             summary={displayGroupATotal}
-            summaryLabel={`/ ${effMaxA.toFixed(3)}`}
+            summaryLabel={`/ ${effMaxA.toFixed(2)}`}
             revealed={showLive}
             judges={groupA}
             timerRunning={timerRunning}
@@ -756,7 +755,7 @@ function ChiefRefereeDashboardInner() {
             subtitle="Performance · (B1+B2+B3)/3"
             color={GOLD}
             summary={displayGroupBNet}
-            summaryLabel={`/ ${effMaxB.toFixed(3)}`}
+            summaryLabel={`/ ${effMaxB.toFixed(2)}`}
             revealed={showLive}
             judges={groupB}
             timerRunning={timerRunning}
@@ -768,7 +767,7 @@ function ChiefRefereeDashboardInner() {
               subtitle="Difficulty"
               color="#22d3ee"
               summary={displayGroupCTotal}
-              summaryLabel={`/ ${effMaxC.toFixed(3)}`}
+              summaryLabel={`/ ${effMaxC.toFixed(2)}`}
               revealed={showLive}
               judges={groupC}
               timerRunning={timerRunning}
@@ -817,13 +816,13 @@ function ChiefRefereeDashboardInner() {
 
                   {/* breakdown grid */}
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] font-heading tabular-nums" dir="ltr">
-                    <span className="text-emerald-400">A {displayGroupATotal.toFixed(3)}</span>
+                    <span className="text-emerald-400">A {displayGroupATotal.toFixed(2)}</span>
                     <span className="text-white/30">+</span>
-                    <span style={{ color: GOLD }}>B {displayGroupBNet.toFixed(3)}</span>
+                    <span style={{ color: GOLD }}>B {displayGroupBNet.toFixed(2)}</span>
                     {matchMode === "optional" && (
                       <>
                         <span className="text-white/30">+</span>
-                        <span className="text-cyan-300">C {displayGroupCTotal.toFixed(3)}</span>
+                        <span className="text-cyan-300">C {displayGroupCTotal.toFixed(2)}</span>
                       </>
                     )}
                     <span className="text-white/30">·</span>
@@ -1255,7 +1254,7 @@ function GroupColumn({
         }}
         dir="ltr"
       >
-        {revealed ? summary.toFixed(3) : "—.———"}
+        {revealed ? summary.toFixed(2) : "—.——"}
       </p>
       <p className="text-[9px] text-white/40 font-body mt-0.5 whitespace-nowrap" dir="ltr">{summaryLabel}</p>
 
@@ -1329,7 +1328,7 @@ function JudgeChip({ slot, revealed }: { slot: JudgeSlot; revealed: boolean }) {
         style={{ borderColor: ring, background: "rgba(255,255,255,0.03)" }}>
         <span className="text-[7px] font-heading font-black text-white/70 leading-none" dir="ltr">{slot.label}</span>
         <span className="text-[10px] font-heading font-black tabular-nums leading-none mt-0.5" style={{ color: valueColor }} dir="ltr">
-          {hasScore ? slot.score!.toFixed(3) : "—"}
+          {hasScore ? slot.score!.toFixed(2) : "—"}
         </span>
         {hasScore && isDropped && (
           <span className="absolute left-0.5 right-0.5 top-1/2 h-[2px] bg-red-500 -translate-y-1/2 rotate-[-15deg] rounded-full" />
@@ -1398,7 +1397,7 @@ function GroupDetailModal({
                 </div>
                 <div className="flex items-center gap-3">
                   <p className="text-2xl font-heading font-black tabular-nums" style={{ color: valueColor }} dir="ltr">
-                    {j.score !== null ? (revealed ? j.score.toFixed(3) : "•••") : "—"}
+                    {j.score !== null ? (revealed ? j.score.toFixed(2) : "•••") : "—"}
                   </p>
                   <button
                     onClick={() => j.online && onEdit(j)}
@@ -1814,9 +1813,9 @@ function AiInsightsSidebar({
         <div className="grid grid-cols-2 gap-2">
           <Stat label="Judges Online" value={`${approvedCount}/${totalSlots}`} accent="emerald" />
           <Stat label="Final Score"  value={finalScore.toFixed(3)} accent="orange" />
-          <Stat label="Net B"        value={judgeBAverage.toFixed(3)} accent="orange" />
-          <Stat label="Group A"      value={judgeAScore.toFixed(3)} accent="red" />
-          <Stat label="Group C"      value={judgeCScore.toFixed(3)} accent="orange" />
+          <Stat label="Net B"        value={judgeBAverage.toFixed(2)} accent="orange" />
+          <Stat label="Group A"      value={judgeAScore.toFixed(2)} accent="red" />
+          <Stat label="Group C"      value={judgeCScore.toFixed(2)} accent="orange" />
           <Stat label="B Gap"        value={maxGap.toFixed(3)} accent={maxGap > 0.5 ? "red" : "emerald"} />
         </div>
 
