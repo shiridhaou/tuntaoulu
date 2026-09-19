@@ -1619,6 +1619,48 @@ function ChiefDrawer({
           )}
         </div>
 
+        {/* OPERATIONS — moved out of the header to keep it clean (v1.2.3) */}
+        <div className="p-4 border-b border-white/5 space-y-2">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-white/50 font-body mb-1">Operations</p>
+          <div className="flex items-center justify-between rounded-xl bg-white/[0.03] border border-white/10 px-3 py-2">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-white/50 font-body">System status</span>
+            <span className="text-[10px] font-heading font-black tracking-wider" style={{ color: timerRunning ? "#34d399" : ORANGE }} dir="ltr">
+              {timerRunning ? "LIVE" : "READY"}
+            </span>
+          </div>
+          <button onClick={onCast} disabled={publishingLive}
+            className="w-full h-10 rounded-xl font-heading font-black text-[11px] tracking-[0.25em] flex items-center justify-center gap-2 disabled:opacity-40"
+            style={{ background: "linear-gradient(135deg, #10B981, #059669)", color: "#fff" }}>
+            <Tv className="h-3.5 w-3.5" /> {publishingLive ? "..." : "CAST · تقرير"}
+          </button>
+          <button onClick={() => setIsVarLiveOnPublic(!isVarLiveOnPublic)}
+            className="w-full h-10 rounded-xl border font-heading font-black text-[11px] tracking-[0.2em] flex items-center justify-center gap-2"
+            style={isVarLiveOnPublic
+              ? { background: "rgba(239,68,68,0.18)", borderColor: "rgba(239,68,68,0.6)", color: "#fca5a5" }
+              : { background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.6)" }}>
+            <Radio className="h-3.5 w-3.5" /> {isVarLiveOnPublic ? "BROADCAST VAR · ON" : "BROADCAST VAR"}
+          </button>
+          <button onClick={onToggleGroupCompleted}
+            className="w-full h-10 rounded-xl border font-heading font-black text-[11px] tracking-[0.2em] flex items-center justify-center gap-2"
+            style={groupCompleted
+              ? { background: `${GOLD}1A`, borderColor: `${GOLD}66`, color: GOLD }
+              : { background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.6)" }}>
+            <Trophy className="h-3.5 w-3.5" /> {groupCompleted ? "REOPEN GROUP" : "COMPLETE GROUP"}
+          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={onManualSync} disabled={manualSyncing}
+              className="h-10 rounded-xl bg-white/[0.04] border border-white/10 text-white/70 font-heading font-black text-[10px] tracking-[0.2em] flex items-center justify-center gap-2 disabled:opacity-40">
+              <RefreshCw className={`h-3.5 w-3.5 ${manualSyncing ? "animate-spin" : ""}`} /> SYNC
+            </button>
+            <button onClick={onOpenInsights}
+              className="h-10 rounded-xl font-heading font-black text-[10px] tracking-[0.2em] flex items-center justify-center gap-2"
+              style={{ background: `linear-gradient(135deg, ${GOLD}, ${ORANGE})`, color: "#000" }}>
+              <Sparkles className="h-3.5 w-3.5" /> AI
+            </button>
+          </div>
+        </div>
+
+
         <div className="p-4 border-b border-white/5">
           <div className="flex items-center justify-between mb-2">
             <p className="text-[10px] uppercase tracking-[0.3em] text-white/50 font-body">Competition Style</p>
