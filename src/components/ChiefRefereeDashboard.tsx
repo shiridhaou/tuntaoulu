@@ -1003,11 +1003,14 @@ function ChiefRefereeDashboardInner() {
             3. تقرير AI       → opens detailed AI report
         */}
         {(() => {
-          const hasAny = (arr: JudgeSlot[]) => arr.some(j => j.submitted);
+          // A group counts as ready when ANY of its judges has submitted a score,
+          // or when the Chief has an override in place for one of its slots.
+          const hasAny = (arr: JudgeSlot[]) =>
+            arr.some(j => j.submitted || typeof j.score === "number" || typeof judgeOverrides[j.key] === "number");
           const aReady = hasAny(groupA);
           const bReady = hasAny(groupB);
           const cReady = matchMode === "compulsory" ? true : hasAny(groupC);
-          const minReady = aReady && bReady && cReady;
+          const minReady = (aReady && bReady && cReady) || forceUnlock;
           const missing: string[] = [];
           if (!aReady) missing.push("A");
           if (!bReady) missing.push("B");
@@ -1081,21 +1084,25 @@ function ChiefRefereeDashboardInner() {
                   تقرير AI
                 </Link>
               )}
+
+              {/* Manual override — Chief unlocks calculation when a group cannot submit */}
+              <button
+                onClick={() => setForceUnlock(v => !v)}
+                title="تجاوز يدوي · unlock calculation without all groups"
+                className="h-9 px-3 rounded-xl border font-heading font-black text-[10px] tracking-[0.2em] transition-all"
+                style={forceUnlock
+                  ? { background: `${ORANGE}25`, borderColor: ORANGE, color: ORANGE }
+                  : { background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.6)" }}
+              >
+                {forceUnlock ? "OVERRIDE ON" : "OVERRIDE"}
+              </button>
             </>
           );
         })()}
         {/* ATOMIC RESET — archives, clears current_match, judge_scores, returns to waiting */}
         <NextAthleteButton
           sessionCode={sessionCode}
-          onReset={() => {
-            setScoreRevealed(false);
-            setTaDeduction(0);
-            setTaOobCount(0);
-            setChiefDeduction(0);
-            setChiefDeductionDraft("0.000");
-            setChoreoApplied([]);
-            setChoreoDraft("");
-          }}
+          onReset={hardResetForNextAthlete}
         />
       </footer>
 
@@ -1120,6 +1127,16 @@ function ChiefRefereeDashboardInner() {
           setLeaderboardMode={setLeaderboardMode}
           leaderboardCount={getLeaderboard().length}
           clearResults={clearResults}
+          publishingLive={publishingLive}
+          onCast={() => publishToPublic({ openWindow: true })}
+          isVarLiveOnPublic={isVarLiveOnPublic}
+          setIsVarLiveOnPublic={setIsVarLiveOnPublic}
+          onManualSync={handleManualSync}
+          manualSyncing={manualSyncing}
+          groupCompleted={groupCompleted}
+          onToggleGroupCompleted={() => void toggleGroupCompleted()}
+          onOpenInsights={() => { setInsightsOpen(true); setDrawerOpen(false); }}
+          timerRunning={timerRunning}
         />
       )}
 
