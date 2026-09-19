@@ -84,6 +84,8 @@ function ChiefRefereeDashboardInner() {
     marqueeText, setMarqueeText, sponsorLogos, addSponsorLogo, removeSponsorLogo,
     leaderboardMode, setLeaderboardMode, commitCurrentResult, getLeaderboard, clearResults,
     isVarLiveOnPublic, setIsVarLiveOnPublic,
+    resetJudgeADeductions, resetJudgeBScores, resetJudgeCAttempts,
+    resetMovementSequence, clearSuggestedDeductions,
   } = useCompetition();
   const logout = useLogout();
 
@@ -135,6 +137,8 @@ function ChiefRefereeDashboardInner() {
   // Choreography / content deductions (codes 80–86) applied by the Chief Judge.
   const [choreoApplied, setChoreoApplied] = useState<{ code: string; value: number; label: string }[]>([]);
   const [choreoDraft, setChoreoDraft] = useState("");
+  // Chief manual override — unlocks COMPUTE FINAL / PUBLISH when a group cannot submit.
+  const [forceUnlock, setForceUnlock] = useState(false);
   // Dynamic style: the TA's broadcast style (timerSync.style) is authoritative —
   // the local competitionStyle is only a fallback. This drives BOTH the score
   // caps and the performance-time window so Taiji athletes are never compared
@@ -629,7 +633,6 @@ function ChiefRefereeDashboardInner() {
               <Trophy className="h-3 w-3" style={{ color: ORANGE }} />
               <span className="text-[9px] font-heading font-bold tracking-wider" style={{ color: ORANGE }}>CHIEF</span>
             </div>
-            <SessionBadge code={sessionCode} />
           </div>
 
           <div className="text-center">
@@ -669,8 +672,9 @@ function ChiefRefereeDashboardInner() {
             </p>
           </div>
 
+          {/* RIGHT — only live-critical actions. Session code, CAST, VAR broadcast
+              and system status now live in the slide-over control panel. */}
           <div className="flex items-center justify-end gap-1.5">
-            {/* STANDINGS — read-only ranked leaderboard overlay */}
             <button
               onClick={() => setStandingsOpen(true)}
               title="الترتيب العام · Standings"
@@ -679,58 +683,6 @@ function ChiefRefereeDashboardInner() {
             >
               <Trophy className="h-3.5 w-3.5" />
               <span>STANDINGS</span>
-            </button>
-            {/* GROUP COMPLETED — flips the public TV to the TOP 4 podium view */}
-            <button
-              onClick={() => void toggleGroupCompleted()}
-              title={groupCompleted ? "إعادة فتح المجموعة" : "إنهاء المجموعة · عرض المراكز الأربعة"}
-              className="h-8 px-3 rounded-full border flex items-center gap-1.5 font-heading font-black text-[10px] tracking-[0.2em] transition-all"
-              style={groupCompleted
-                ? { background: `${GOLD}30`, borderColor: GOLD, color: GOLD }
-                : { background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.7)" }}
-            >
-              <Trophy className="h-3.5 w-3.5" />
-              <span>{groupCompleted ? "REOPEN GROUP" : "COMPLETE GROUP"}</span>
-            </button>
-            {/* VAR BROADCAST — promoted to header for high visibility (v1.1.5) */}
-
-            <button
-              onClick={() => setIsVarLiveOnPublic(!isVarLiveOnPublic)}
-              title={isVarLiveOnPublic ? "إيقاف بث VAR للجمهور" : "بث VAR للجمهور"}
-              className={`relative h-8 px-3 rounded-full border-2 flex items-center gap-1.5 transition-all font-heading font-black text-[10px] tracking-[0.2em] ${
-                isVarLiveOnPublic ? "text-black animate-pulse" : "text-orange-300 hover:text-white"
-              }`}
-              style={{
-                background: isVarLiveOnPublic ? ORANGE : `${ORANGE}15`,
-                borderColor: isVarLiveOnPublic ? "#fff" : `${ORANGE}88`,
-                boxShadow: isVarLiveOnPublic
-                  ? `0 0 24px ${ORANGE}, 0 0 48px ${ORANGE}88`
-                  : `0 0 12px ${ORANGE}33`,
-                zIndex: 50,
-              }}
-            >
-              <Tv className="h-3.5 w-3.5" />
-              <span>{isVarLiveOnPublic ? "VAR LIVE ●" : "BROADCAST VAR"}</span>
-            </button>
-            {/* SESSION CODE — always visible, with copy. Critical for Chief to share with judges. */}
-            <button onClick={handleCopySession} title="Copy session code"
-              className="flex items-center gap-1.5 h-8 px-2.5 rounded-full border bg-white/5 hover:bg-white/10 transition-all"
-              style={{ borderColor: `${GOLD}55`, color: GOLD }}>
-              <span className="text-[9px] font-body uppercase tracking-[0.2em] text-white/50">Session</span>
-              <span className="text-xs font-heading font-black tabular-nums tracking-wider" dir="ltr">{sessionCode || "------"}</span>
-              {copied ? <CheckCircle className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-            </button>
-            <button onClick={() => publishToPublic({ openWindow: true })} disabled={publishingLive}
-              title="Publish current scores AND open the Public Display"
-              className="flex items-center gap-1 h-8 px-2.5 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 hover:bg-emerald-500/25 transition-all disabled:opacity-50">
-              {publishingLive ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Tv className="h-3.5 w-3.5" />}
-              <span className="text-[9px] font-heading font-black tracking-[0.2em]">{publishingLive ? "..." : "CAST"}</span>
-            </button>
-            <button onClick={() => setInsightsOpen(true)} title="AI Insights"
-              className="h-8 w-8 rounded-full border flex items-center justify-center transition-all relative"
-              style={{ background: `${ORANGE}1A`, borderColor: `${ORANGE}66`, color: ORANGE }}>
-              <Bot className="h-4 w-4" />
-              <span className="absolute top-0 right-0 h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: ORANGE }} />
             </button>
             <button onClick={() => setTeamPanelOpen(true)} title="إدارة الفريق · Team Management"
               className="relative h-8 w-8 rounded-full border flex items-center justify-center transition-all"
@@ -742,13 +694,9 @@ function ChiefRefereeDashboardInner() {
                 </span>
               )}
             </button>
-            <button onClick={handleManualSync} disabled={manualSyncing} title="Manual Sync — pull fresh state from server"
-              className="h-8 w-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50">
-              <RefreshCw className={`h-4 w-4 ${manualSyncing ? "animate-spin" : ""}`} />
-            </button>
-            <button onClick={() => setDrawerOpen(true)} title="Open settings"
+            <button onClick={() => setDrawerOpen(true)} title="لوحة التحكم · Control panel"
               className="h-8 w-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-all">
-              <Menu className="h-4 w-4" />
+              <Settings className="h-4 w-4" />
             </button>
             <button onClick={logout} className="text-[10px] text-white/40 hover:text-white/80 font-body transition-colors px-1">
               خروج
