@@ -545,8 +545,10 @@ function ChiefRefereeDashboardInner() {
     const bs: { key: string; v: number }[] = [];
     for (let i = 0; i < team.numB; i++) {
       const k = `B${i + 1}`;
-      if (!isBActive(k)) continue;
       const v = scoreFor(k, judgeBScores[i] ?? null);
+      // A slot with an actual numeric score always participates in B_avg, even
+      // if the seat was never formally assigned (same rule as A/C slots).
+      if (v === null && !isBActive(k)) continue;
       if (v !== null) bs.push({ key: k, v });
     }
     const out: Record<string, BTrimRole> = {};
@@ -573,7 +575,7 @@ function ChiefRefereeDashboardInner() {
   // Extra slots that actually produced a submission but fall outside the
   // configured team size (e.g. a C4 judge while numC = 3). Without this the top
   // group card stayed at 0.00 while the raw submissions list showed the score.
-  const extraSlotsFor = (prefix: "A" | "C", count: number) => {
+  const extraSlotsFor = (prefix: "A" | "B" | "C", count: number) => {
     const seen = new Set<string>([...Object.keys(judgeOverrides), ...submittedSlots]);
     return Array.from(seen)
       .filter((k) => {
@@ -592,9 +594,13 @@ function ChiefRefereeDashboardInner() {
       const live = judgeOverrides[k];
       return { key: k, label: k, group: "A" as GroupKey, online: approvedJudges.includes(k), score: (live === undefined ? null : live), submitted: submittedSlots.includes(k) };
     }),
-    ...Array.from({ length: team.numB }, (_, i) => {
-      const k = `B${i + 1}`;
-      return { key: k, label: k, group: "B" as GroupKey, online: approvedJudges.includes(k), score: scoreFor(k, judgeBScores[i] ?? null), bRole: bRoles[k], submitted: submittedSlots.includes(k) };
+    ...[
+      ...Array.from({ length: team.numB }, (_, i) => `B${i + 1}`),
+      ...extraSlotsFor("B", team.numB),
+    ].map((k, i) => {
+      const live = judgeOverrides[k];
+      const base = i < team.numB ? (judgeBScores[i] ?? null) : (live === undefined ? null : live);
+      return { key: k, label: k, group: "B" as GroupKey, online: approvedJudges.includes(k), score: scoreFor(k, base), bRole: bRoles[k], submitted: submittedSlots.includes(k) };
     }),
     ...[
       ...Array.from({ length: team.numC }, (_, i) => `C${i + 1}`),
@@ -618,7 +624,11 @@ function ChiefRefereeDashboardInner() {
     : 0;
   const groupATotal = groupAConsensus.score ?? aAverage;
 
-  const bKept = groupB.filter(j => j.bRole === "kept" && j.score !== null).map(j => j.score as number);
+  // B_avg must include EVERY B slot that produced a numeric score; only slots
+  // explicitly trimmed as high/low (5+ judges) are excluded. A missing role
+  // (unassigned seat, extra slot) means "kept", never "dropped" — this is what
+  // previously let a single raw score (2.800) replace the true average (2.95).
+  const bKept = groupB.filter(j => j.bRole !== "high" && j.bRole !== "low" && j.score !== null).map(j => j.score as number);
   const groupBNet = bKept.length ? roundScore(bKept.reduce((s, v) => s + v, 0) / bKept.length) : 0;
   const cSubmitted = groupC.filter(j => typeof j.score === "number").map(j => j.score as number);
   const groupCTotal = cSubmitted.length
