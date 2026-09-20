@@ -624,7 +624,11 @@ function ChiefRefereeDashboardInner() {
     : 0;
   const groupATotal = groupAConsensus.score ?? aAverage;
 
-  const bKept = groupB.filter(j => j.bRole === "kept" && j.score !== null).map(j => j.score as number);
+  // B_avg must include EVERY B slot that produced a numeric score; only slots
+  // explicitly trimmed as high/low (5+ judges) are excluded. A missing role
+  // (unassigned seat, extra slot) means "kept", never "dropped" — this is what
+  // previously let a single raw score (2.800) replace the true average (2.95).
+  const bKept = groupB.filter(j => j.bRole !== "high" && j.bRole !== "low" && j.score !== null).map(j => j.score as number);
   const groupBNet = bKept.length ? roundScore(bKept.reduce((s, v) => s + v, 0) / bKept.length) : 0;
   const cSubmitted = groupC.filter(j => typeof j.score === "number").map(j => j.score as number);
   const groupCTotal = cSubmitted.length
