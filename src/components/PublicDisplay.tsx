@@ -206,6 +206,19 @@ function useLiveDisplay(sessionCode: string | null) {
       .on("postgres_changes",
         { event: "*", schema: "public", table: "match_results", filter: `session_code=eq.${sessionCode}` },
         () => { scheduleReload(); })
+      // TA "NEXT ATHLETE / GLOBAL RESET" — wipe the local snapshot at once.
+      .on("postgres_changes",
+        { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${sessionCode}` },
+        (payload) => {
+          const ev = (payload.new as { event_type?: string })?.event_type;
+          if (ev !== "global_reset" || cancelled) return;
+          currentAthleteId = null;
+          applyResult(null);
+          setAthlete(null);
+          setJudgeScores([]);
+          applyTaTotal(0);
+          scheduleReload();
+        })
       .subscribe();
 
     return () => {
