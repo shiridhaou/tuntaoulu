@@ -575,7 +575,7 @@ function ChiefRefereeDashboardInner() {
   // Extra slots that actually produced a submission but fall outside the
   // configured team size (e.g. a C4 judge while numC = 3). Without this the top
   // group card stayed at 0.00 while the raw submissions list showed the score.
-  const extraSlotsFor = (prefix: "A" | "C", count: number) => {
+  const extraSlotsFor = (prefix: "A" | "B" | "C", count: number) => {
     const seen = new Set<string>([...Object.keys(judgeOverrides), ...submittedSlots]);
     return Array.from(seen)
       .filter((k) => {
