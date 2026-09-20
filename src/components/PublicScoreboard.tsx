@@ -218,6 +218,16 @@ function usePublishedResult(sessionCode: string | null) {
       .on("postgres_changes",
         { event: "*", schema: "public", table: "current_match", filter: `session_code=eq.${sessionCode}` },
         () => { void loadLatest(); })
+      // TA "NEXT ATHLETE / GLOBAL RESET" — clear the revealed result immediately.
+      .on("postgres_changes",
+        { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${sessionCode}` },
+        (payload: any) => {
+          const ev = payload.new?.event_type;
+          if (ev !== "global_reset") return;
+          if (cancelled) return;
+          setResult(null);
+          setAthlete(null);
+        })
       .subscribe();
 
     // Instant path: the Chief broadcasts the published snapshot the moment the
