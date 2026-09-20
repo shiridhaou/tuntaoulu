@@ -226,6 +226,8 @@ function TADashboardInner() {
   // Match config (broadcast to judges via current_match.payload)
   const [matchMode, setMatchMode] = useState<"compulsory" | "optional">("optional");
   const [styleCategory, setStyleCategory] = useState<"changquan" | "nanquan" | "taijiquan" | "traditional">("changquan");
+  /** Specific event within the family (e.g. Northern - Daoshu). Display/rules only. */
+  const [subStyle, setSubStyle] = useState<string>("changquan");
   const [configLocked, setConfigLocked] = useState(false);
 
   // Results export webhook (UI-level; stored per session in localStorage)
@@ -1287,6 +1289,27 @@ function TADashboardInner() {
                 <SelectItem value="nanquan">Southern (NQ)</SelectItem>
                 <SelectItem value="taijiquan">Taiji (TJQ)</SelectItem>
                 <SelectItem value="traditional">Traditional</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={subStyle}
+              onValueChange={(v) => {
+                if (configLocked) return;
+                const sub = SUB_STYLES.find((s) => s.id === v);
+                setSubStyle(v);
+                if (sub) setStyleCategory(sub.styleKey);
+              }}
+            >
+              <SelectTrigger disabled={configLocked} className="h-7 w-[170px] text-xs bg-background/60 border-fed-blue/30"
+                title="الاختصاص الدقيق — يُستعمل في تحقق قواعد المجموعة ج">
+                <SelectValue placeholder="Event" />
+              </SelectTrigger>
+              <SelectContent>
+                {SUB_STYLES.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {FAMILY_LABEL[s.family].en} - {s.labelEn}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <span className="hidden xl:inline-flex items-center px-2 h-7 rounded-lg border border-fed-blue/30 bg-background/60 text-[11px] font-bold text-fed-blue">
