@@ -798,7 +798,7 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
       )
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(ch); };
-  }, [isChief, sessionCode, athletes, currentAthleteIndex]);
+  }, [isChief, sessionCode, athletes, currentAthleteIndex, sync.athleteId]);
 
 
 
