@@ -177,7 +177,7 @@ export function LeaderboardModal({
                           : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
                         dir="ltr"
                       >
-                        {i + 1}
+                        {r.dns ? "DNS" : i + 1}
                       </span>
                     </td>
                     <td className="p-2 text-[13px] font-heading font-bold truncate max-w-[220px]">{r.name}</td>
