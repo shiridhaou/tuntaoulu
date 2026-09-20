@@ -808,7 +808,7 @@ function ChiefRefereeDashboardInner() {
             timerRunning={timerRunning}
             onOpen={() => setGroupDetail("B")}
           />
-          {matchMode === "optional" && (
+          {(matchMode === "optional" || cSubmitted.length > 0) && (
             <GroupColumn
               name="GROUP C"
               subtitle="Difficulty"
