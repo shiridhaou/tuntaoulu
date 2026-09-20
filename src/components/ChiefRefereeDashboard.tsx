@@ -540,6 +540,20 @@ function ChiefRefereeDashboardInner() {
     return approvedJudges.includes(key) || submittedSlots.includes(key) || typeof o === "number";
   };
 
+  // Authoritative per-slot B value. NEVER fall back to the local default B
+  // baseline (3.000 / 5.000): that dummy value leaked into B_avg for seats that
+  // never submitted, producing totals like 8.713. Only a chief override or a
+  // real submission yields a number; anything else is null (not counted).
+  const bBaseFor = (key: string, idx: number): number | null => {
+    const o = judgeOverrides[key];
+    if (typeof o === "number") return o;
+    if (submittedSlots.includes(key)) {
+      const v = judgeBScores[idx];
+      return typeof v === "number" ? v : null;
+    }
+    return null;
+  };
+
   // B trim roles — over the first numB B-judges that are active
   const bRoles: Record<string, BTrimRole> = useMemo(() => {
     const bs: { key: string; v: number }[] = [];

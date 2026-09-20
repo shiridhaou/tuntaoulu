@@ -43,5 +43,6 @@ export function computeFinalScore(input: FinalScoreInput): FinalScoreResult {
 }
 
 function round3(n: number) {
-  return Math.round(n * 1000) / 1000;
+  if (!isFinite(Number(n))) return 0;
+  return Number(Number(n).toFixed(3));
 }
