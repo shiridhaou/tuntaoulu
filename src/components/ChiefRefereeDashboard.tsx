@@ -1056,7 +1056,7 @@ function ChiefRefereeDashboardInner() {
             arr.some(j => j.submitted || typeof j.score === "number" || typeof judgeOverrides[j.key] === "number");
           const aReady = hasAny(groupA);
           const bReady = hasAny(groupB);
-          const cReady = matchMode === "compulsory" ? true : hasAny(groupC);
+          const cReady = matchMode === "compulsory" || hasAny(groupC) || cSubmitted.length > 0;
           const minReady = (aReady && bReady && cReady) || forceUnlock;
           const missing: string[] = [];
           if (!aReady) missing.push("A");
