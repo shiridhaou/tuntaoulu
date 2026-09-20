@@ -539,6 +539,7 @@ function ChiefRefereeDashboardInner() {
     const o = judgeOverrides[key];
     return approvedJudges.includes(key) || submittedSlots.includes(key) || typeof o === "number";
   };
+  void isBActive;
 
   // Authoritative per-slot B value. NEVER fall back to the local default B
   // baseline (3.000 / 5.000): that dummy value leaked into B_avg for seats that

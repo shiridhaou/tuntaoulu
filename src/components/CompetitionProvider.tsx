@@ -243,7 +243,7 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
       scores = scores.slice(1, -1);
     }
     const sum = scores.reduce((s, v) => s + v, 0);
-    return Math.round((sum / scores.length) * 1000) / 1000;
+    return Number((sum / scores.length).toFixed(3));
   }, [activeBScores]);
 
   const biasAlerts = useMemo(() => {
@@ -272,8 +272,8 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
  const finalScore = useMemo(() => {
     const cContrib = includeC ? (judgeCScore || 0) : 0;
     const baseScore = (judgeAScore || 0) + (judgeBAverage || 0) + cContrib;
-    
-    return Math.round(baseScore * 1000) / 1000;
+
+    return Number(baseScore.toFixed(3));
   }, [judgeAScore, judgeBAverage, judgeCScore, includeC]);
 
   const setJudgeBScore = (index: number, score: number) => {
