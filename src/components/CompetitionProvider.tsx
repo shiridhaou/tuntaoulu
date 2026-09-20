@@ -730,7 +730,10 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
   const [submittedSlots, setSubmittedSlots] = useState<string[]>([]);
   useEffect(() => {
     if (!isChief || !sessionCode) return;
-    const currentAthleteId = athletes[currentAthleteIndex]?.id ?? null;
+    // Prefer the locally selected athlete, fall back to the athlete the TA
+    // broadcast via current_match so scores still bind while the roster/state
+    // is still catching up ("waiting for TA" / transition states).
+    const currentAthleteId = athletes[currentAthleteIndex]?.id ?? sync.athleteId ?? null;
 
     // GHOST GUARD: every athlete change (or global reset) starts from a clean
     // slate — stale raw judge scores from the previous attempt must never leak
@@ -739,8 +742,12 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
     setJudgeOverrides({});
     setJudgeBScores(Array(MAX_B).fill(3.0));
 
+    // When the chief has no athlete identity yet, accept whatever the judges
+    // send (they are all scoring the same routine); otherwise require a match,
+    // while still accepting rows sent without an athlete id.
     const belongsToCurrent = (athleteId: string | null | undefined) =>
-      currentAthleteId ? athleteId === currentAthleteId : !athleteId;
+      !currentAthleteId || !athleteId || athleteId === currentAthleteId;
+
 
     const clearSlot = (slot: string) => {
       setJudgeOverrides(prev => ({ ...prev, [slot]: null }));
@@ -791,7 +798,7 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
       )
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(ch); };
-  }, [isChief, sessionCode, athletes, currentAthleteIndex]);
+  }, [isChief, sessionCode, athletes, currentAthleteIndex, sync.athleteId]);
 
 
 
