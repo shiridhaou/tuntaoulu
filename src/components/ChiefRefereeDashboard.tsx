@@ -127,6 +127,21 @@ function ChiefRefereeDashboardInner() {
     });
   };
 
+  // Independent STANDINGS toggle — opens the local read-only modal AND
+  // broadcasts a lightweight event so the public screen mirrors the overlay.
+  const toggleStandingsOverlay = async () => {
+    const next = !standingsOpen;
+    setStandingsOpen(next);
+    if (!sessionCode) return;
+    try {
+      await supabase.from("match_events").insert({
+        session_code: sessionCode,
+        event_type: "toggle_standings_overlay",
+        payload: { open: next, at: Date.now() } as never,
+      });
+    } catch { /* non-fatal: local modal already opened */ }
+  };
+
   const [matchMode, setMatchMode] = useState<"compulsory" | "optional">("optional");
   const [taDeduction, setTaDeduction] = useState<number>(0);
   const [taOobCount, setTaOobCount] = useState<number>(0);
@@ -1155,6 +1170,19 @@ function ChiefRefereeDashboardInner() {
                   تقرير AI
                 </Link>
               )}
+
+              {/* Independent standings toggle — read-only modal + public overlay broadcast */}
+              <button
+                onClick={() => void toggleStandingsOverlay()}
+                title="عرض الترتيب · toggle standings overlay on the public screen"
+                className="h-9 px-4 rounded-xl font-heading font-black text-[11px] tracking-[0.2em] flex items-center gap-2 transition-all hover:brightness-110"
+                style={standingsOpen
+                  ? { background: `${GOLD}25`, border: `1px solid ${GOLD}`, color: GOLD }
+                  : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)" }}
+              >
+                <Trophy className="h-3.5 w-3.5" />
+                عرض الترتيب / Standings
+              </button>
 
               {/* Manual override — Chief unlocks calculation when a group cannot submit */}
               <button

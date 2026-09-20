@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { affiliationLabel } from "@/lib/affiliation";
 import { styleLabelAr } from "@/lib/styleNames";
-import { X, Trophy, RefreshCw } from "lucide-react";
+import { X, Trophy, RefreshCw, Printer } from "lucide-react";
 
 /**
  * READ-ONLY event standings overlay (Chief console + public screen).
@@ -21,12 +21,15 @@ export interface LeaderboardRow {
   scoreC: number;
   deductions: number;
   finalScore: number;
+  /** Athlete marked DNS / Absent — rendered with a "DNS" label, ranked last. */
+  dns?: boolean;
 }
 
-/** IWUF-style ordering: final score, then C, then B, then A, then name. */
+/** IWUF-style ordering: final score, then C, then B, then A, then name. DNS always last. */
 export function rankRows(rows: LeaderboardRow[]): LeaderboardRow[] {
   return [...rows].sort(
     (x, y) =>
+      Number(x.dns ?? false) - Number(y.dns ?? false) ||
       y.finalScore - x.finalScore ||
       y.scoreC - x.scoreC ||
       y.scoreB - x.scoreB ||
@@ -58,7 +61,7 @@ export function LeaderboardModal({
     try {
       const { data } = await supabase
         .from("match_results")
-        .select("athlete_id, athlete_name, style, score_a, score_b, score_c, deductions, final_score, updated_at")
+        .select("athlete_id, athlete_name, style, score_a, score_b, score_c, deductions, final_score, updated_at, payload")
         .eq("session_code", code)
         .eq("published", true)
         .order("updated_at", { ascending: false });
@@ -67,6 +70,7 @@ export function LeaderboardModal({
         athlete_id: string; athlete_name: string | null; style: string | null;
         score_a: number | null; score_b: number | null; score_c: number | null;
         deductions: number | null; final_score: number;
+        payload: { status?: string } | null;
       }>;
 
       // Keep only the latest published row per athlete.
@@ -96,6 +100,7 @@ export function LeaderboardModal({
         scoreC: Number(r.score_c ?? 0),
         deductions: Number(r.deductions ?? 0),
         finalScore: Number(r.final_score ?? 0),
+        dns: (r.payload?.status ?? "").toUpperCase() === "DNS",
       }));
 
       const filtered = styleFilter ? built.filter((b) => !b.style || b.style === styleFilter) : built;
@@ -130,6 +135,9 @@ export function LeaderboardModal({
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => window.print()} className="h-8 px-3 rounded-lg border border-white/10 bg-white/5 text-[11px] font-bold text-white/70 hover:text-white flex items-center gap-1">
+              <Printer className="h-3 w-3" /> طباعة / Print
+            </button>
             <button onClick={() => void load()} className="h-8 px-3 rounded-lg border border-white/10 bg-white/5 text-[11px] font-bold text-white/70 hover:text-white flex items-center gap-1">
               <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} /> تحديث
             </button>
@@ -169,7 +177,7 @@ export function LeaderboardModal({
                           : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
                         dir="ltr"
                       >
-                        {i + 1}
+                        {r.dns ? "DNS" : i + 1}
                       </span>
                     </td>
                     <td className="p-2 text-[13px] font-heading font-bold truncate max-w-[220px]">{r.name}</td>
@@ -180,8 +188,8 @@ export function LeaderboardModal({
                     <td className="p-2 text-right text-[12px] tabular-nums text-white/70" dir="ltr">{r.scoreB.toFixed(3)}</td>
                     <td className="p-2 text-right text-[12px] tabular-nums text-white/70" dir="ltr">{r.scoreC.toFixed(3)}</td>
                     <td className="p-2 text-right text-[12px] tabular-nums text-red-300/80" dir="ltr">−{r.deductions.toFixed(3)}</td>
-                    <td className="p-2 text-right text-[15px] font-black tabular-nums" style={{ color: "#FACC15" }} dir="ltr">
-                      {r.finalScore.toFixed(3)}
+                    <td className="p-2 text-right text-[15px] font-black tabular-nums" style={{ color: r.dns ? "rgba(255,255,255,0.45)" : "#FACC15" }} dir="ltr">
+                      {r.dns ? "DNS" : r.finalScore.toFixed(3)}
                     </td>
                   </tr>
                 ))}

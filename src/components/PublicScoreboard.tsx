@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDisplaySettings } from "@/hooks/useDisplaySettings";
 import { FullscreenToggle } from "./FullscreenToggle";
 import { useMatchSync, onSessionState } from "@/hooks/useMatchSync";
+import { LeaderboardModal } from "./LeaderboardModal";
 
 // Live data from TA's session (current_match + match_events)
 function useLiveSession() {
@@ -289,11 +290,41 @@ function useCountUp(target: number, duration = 1500) {
   return value;
 }
 
+/**
+ * Isolated STANDINGS overlay listener — reacts ONLY to the Chief's
+ * "toggle_standings_overlay" event and renders the read-only standings modal.
+ * It never touches the live score listeners below.
+ */
+function StandingsOverlayListener({ sessionCode }: { sessionCode: string | null }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const code = (sessionCode ?? "").trim().toUpperCase();
+    if (!code) { setOpen(false); return; }
+    let cancelled = false;
+    const ch = supabase
+      .channel(`sb-standings-${code}`)
+      .on("postgres_changes",
+        { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${code}` },
+        (payload: any) => {
+          if (payload.new?.event_type !== "toggle_standings_overlay") return;
+          if (cancelled) return;
+          setOpen(!!payload.new?.payload?.open);
+        })
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [sessionCode]);
+  return <LeaderboardModal sessionCode={sessionCode} open={open} onClose={() => setOpen(false)} />;
+}
+
 export function PublicScoreboard() {
   const { sessionCode } = useCompetition();
   const { leaderboardMode } = useDisplaySettings(sessionCode);
-  if (leaderboardMode) return <LeaderboardView />;
-  return <LiveScoreboard />;
+  return (
+    <>
+      <StandingsOverlayListener sessionCode={sessionCode} />
+      {leaderboardMode ? <LeaderboardView /> : <LiveScoreboard />}
+    </>
+  );
 }
 
 function LiveScoreboard() {
