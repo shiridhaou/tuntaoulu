@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { ListChecks, Send, CheckCircle2, Trash2, Plus, ShieldCheck, ShieldAlert } from "lucide-react";
 import { validateDifficultySheet } from "@/lib/groupCValidation";
+import { validateGroupC, FAMILY_LABEL } from "@/lib/iwufDifficultyRules";
 import { MAX_C_MOVEMENT, MAX_C_CONNECTION } from "@/lib/difficultyCodes";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -69,6 +70,13 @@ export function DifficultyManager({
     [sheet, targetAthlete?.style],
   );
   const errors = validation.issues.filter((x) => x.severity === "error");
+
+  // ── Advisory IWUF connection engine (never blocks the push) ───────────────
+  const ruleAdvice = useMemo(() => {
+    const movements = sheet.filter((d) => !isConnectionCode(d.code)).map((d) => d.code);
+    const connections = sheet.filter((d) => isConnectionCode(d.code)).map((d) => d.code);
+    return validateGroupC(targetAthlete?.style ?? null, movements, connections);
+  }, [sheet, targetAthlete?.style]);
   const compliant = validation.valid;
   const canPush = compliant || override;
 
@@ -215,6 +223,25 @@ export function DifficultyManager({
         </div>
       )}
 
+
+      {/* Advisory IWUF connection warnings — never block the push */}
+      {ruleAdvice.issues.length > 0 && (
+        <div className="mb-3 rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-2">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4 text-amber-300" />
+            <span className="text-[11px] font-bold text-amber-200" dir="ltr">
+              IWUF Advisory · {FAMILY_LABEL[ruleAdvice.family].en}
+            </span>
+          </div>
+          <ul className="mt-1.5 space-y-0.5">
+            {ruleAdvice.issues.map((iss, i) => (
+              <li key={`${iss.code}-${i}`} className="text-[10px] text-amber-200/90">
+                <span className="font-mono num-west" dir="ltr">{iss.code}</span> — {iss.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Valid IWUF codes offered as inline suggestions in every code input */}
       <datalist id="iwuf-code-options">
