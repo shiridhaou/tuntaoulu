@@ -223,7 +223,7 @@ function usePublishedResult(sessionCode: string | null) {
         { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${sessionCode}` },
         (payload: any) => {
           const ev = payload.new?.event_type;
-          if (ev !== "global_reset") return;
+          if (ev !== "global_reset" && ev !== "next_athlete" && ev !== "GLOBAL_RESET" && ev !== "NEXT_ATHLETE") return;
           if (cancelled) return;
           setResult(null);
           setAthlete(null);
