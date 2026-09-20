@@ -570,9 +570,25 @@ function ChiefRefereeDashboardInner() {
   // (NOT from the chief-local `judgeAScore`/`judgeCScore` which are derived
   // from chief's local deductions/attempts and would otherwise stay stuck
   // at the configured maxA / 0).
+  // Extra slots that actually produced a submission but fall outside the
+  // configured team size (e.g. a C4 judge while numC = 3). Without this the top
+  // group card stayed at 0.00 while the raw submissions list showed the score.
+  const extraSlotsFor = (prefix: "A" | "C", count: number) => {
+    const seen = new Set<string>([...Object.keys(judgeOverrides), ...submittedSlots]);
+    return Array.from(seen)
+      .filter((k) => {
+        const m = /^([ABC])(\d+)$/.exec(k);
+        if (!m || m[1] !== prefix) return false;
+        return Number(m[2]) > count;
+      })
+      .sort((a, b) => a.localeCompare(b));
+  };
+
   const judges: JudgeSlot[] = [
-    ...Array.from({ length: team.numA }, (_, i) => {
-      const k = `A${i + 1}`;
+    ...[
+      ...Array.from({ length: team.numA }, (_, i) => `A${i + 1}`),
+      ...extraSlotsFor("A", team.numA),
+    ].map((k) => {
       const live = judgeOverrides[k];
       return { key: k, label: k, group: "A" as GroupKey, online: approvedJudges.includes(k), score: (live === undefined ? null : live), submitted: submittedSlots.includes(k) };
     }),
@@ -580,8 +596,10 @@ function ChiefRefereeDashboardInner() {
       const k = `B${i + 1}`;
       return { key: k, label: k, group: "B" as GroupKey, online: approvedJudges.includes(k), score: scoreFor(k, judgeBScores[i] ?? null), bRole: bRoles[k], submitted: submittedSlots.includes(k) };
     }),
-    ...Array.from({ length: team.numC }, (_, i) => {
-      const k = `C${i + 1}`;
+    ...[
+      ...Array.from({ length: team.numC }, (_, i) => `C${i + 1}`),
+      ...extraSlotsFor("C", team.numC),
+    ].map((k) => {
       const live = judgeOverrides[k];
       return { key: k, label: k, group: "C" as GroupKey, online: approvedJudges.includes(k), score: (live === undefined ? null : live), submitted: submittedSlots.includes(k) };
     }),
@@ -609,7 +627,9 @@ function ChiefRefereeDashboardInner() {
 
   // Group A already arrives net of its own deductions. The only deduction
   // applied after A+B+C here is the explicit Chief Judge deduction.
-  const cContrib = matchMode === "optional" ? groupCTotal : 0;
+  // Difficulty counts whenever the C judges actually evaluated the routine,
+  // even if the mode flag from the TA has not flipped to "optional" yet.
+  const cContrib = matchMode === "optional" || cSubmitted.length > 0 ? groupCTotal : 0;
   const choreoTotal = roundScore(choreoApplied.reduce((s, d) => s + d.value, 0));
   const aggregateFinal = roundScore(
     Math.max(0, groupATotal + groupBNet + cContrib - chiefDeduction - choreoTotal),
@@ -788,7 +808,7 @@ function ChiefRefereeDashboardInner() {
             timerRunning={timerRunning}
             onOpen={() => setGroupDetail("B")}
           />
-          {matchMode === "optional" && (
+          {(matchMode === "optional" || cSubmitted.length > 0) && (
             <GroupColumn
               name="GROUP C"
               subtitle="Difficulty"
@@ -846,7 +866,7 @@ function ChiefRefereeDashboardInner() {
                     <span className="text-emerald-400">A {displayGroupATotal.toFixed(2)}</span>
                     <span className="text-white/30">+</span>
                     <span style={{ color: GOLD }}>B {displayGroupBNet.toFixed(2)}</span>
-                    {matchMode === "optional" && (
+                    {(matchMode === "optional" || cSubmitted.length > 0) && (
                       <>
                         <span className="text-white/30">+</span>
                         <span className="text-cyan-300">C {displayGroupCTotal.toFixed(2)}</span>
@@ -1036,7 +1056,7 @@ function ChiefRefereeDashboardInner() {
             arr.some(j => j.submitted || typeof j.score === "number" || typeof judgeOverrides[j.key] === "number");
           const aReady = hasAny(groupA);
           const bReady = hasAny(groupB);
-          const cReady = matchMode === "compulsory" ? true : hasAny(groupC);
+          const cReady = matchMode === "compulsory" || hasAny(groupC) || cSubmitted.length > 0;
           const minReady = (aReady && bReady && cReady) || forceUnlock;
           const missing: string[] = [];
           if (!aReady) missing.push("A");

@@ -211,7 +211,8 @@ function useLiveDisplay(sessionCode: string | null) {
         { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${sessionCode}` },
         (payload) => {
           const ev = (payload.new as { event_type?: string })?.event_type;
-          if (ev !== "global_reset" || cancelled) return;
+          const isReset = ev === "global_reset" || ev === "next_athlete" || ev === "GLOBAL_RESET" || ev === "NEXT_ATHLETE";
+          if (!isReset || cancelled) return;
           currentAthleteId = null;
           applyResult(null);
           setAthlete(null);
