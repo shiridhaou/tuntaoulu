@@ -559,10 +559,9 @@ function ChiefRefereeDashboardInner() {
     const bs: { key: string; v: number }[] = [];
     for (let i = 0; i < team.numB; i++) {
       const k = `B${i + 1}`;
-      const v = scoreFor(k, judgeBScores[i] ?? null);
+      const v = bBaseFor(k, i);
       // A slot with an actual numeric score always participates in B_avg, even
       // if the seat was never formally assigned (same rule as A/C slots).
-      if (v === null && !isBActive(k)) continue;
       if (v !== null) bs.push({ key: k, v });
     }
     const out: Record<string, BTrimRole> = {};
@@ -613,8 +612,8 @@ function ChiefRefereeDashboardInner() {
       ...extraSlotsFor("B", team.numB),
     ].map((k, i) => {
       const live = judgeOverrides[k];
-      const base = i < team.numB ? (judgeBScores[i] ?? null) : (live === undefined ? null : live);
-      return { key: k, label: k, group: "B" as GroupKey, online: approvedJudges.includes(k), score: scoreFor(k, base), bRole: bRoles[k], submitted: submittedSlots.includes(k) };
+      const base = i < team.numB ? bBaseFor(k, i) : (live === undefined ? null : live);
+      return { key: k, label: k, group: "B" as GroupKey, online: approvedJudges.includes(k), score: base, bRole: bRoles[k], submitted: submittedSlots.includes(k) };
     }),
     ...[
       ...Array.from({ length: team.numC }, (_, i) => `C${i + 1}`),
