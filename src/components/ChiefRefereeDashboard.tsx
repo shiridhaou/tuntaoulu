@@ -539,16 +539,30 @@ function ChiefRefereeDashboardInner() {
     const o = judgeOverrides[key];
     return approvedJudges.includes(key) || submittedSlots.includes(key) || typeof o === "number";
   };
+  void isBActive;
+
+  // Authoritative per-slot B value. NEVER fall back to the local default B
+  // baseline (3.000 / 5.000): that dummy value leaked into B_avg for seats that
+  // never submitted, producing totals like 8.713. Only a chief override or a
+  // real submission yields a number; anything else is null (not counted).
+  const bBaseFor = (key: string, idx: number): number | null => {
+    const o = judgeOverrides[key];
+    if (typeof o === "number") return o;
+    if (submittedSlots.includes(key)) {
+      const v = judgeBScores[idx];
+      return typeof v === "number" ? v : null;
+    }
+    return null;
+  };
 
   // B trim roles — over the first numB B-judges that are active
   const bRoles: Record<string, BTrimRole> = useMemo(() => {
     const bs: { key: string; v: number }[] = [];
     for (let i = 0; i < team.numB; i++) {
       const k = `B${i + 1}`;
-      const v = scoreFor(k, judgeBScores[i] ?? null);
+      const v = bBaseFor(k, i);
       // A slot with an actual numeric score always participates in B_avg, even
       // if the seat was never formally assigned (same rule as A/C slots).
-      if (v === null && !isBActive(k)) continue;
       if (v !== null) bs.push({ key: k, v });
     }
     const out: Record<string, BTrimRole> = {};
@@ -599,8 +613,8 @@ function ChiefRefereeDashboardInner() {
       ...extraSlotsFor("B", team.numB),
     ].map((k, i) => {
       const live = judgeOverrides[k];
-      const base = i < team.numB ? (judgeBScores[i] ?? null) : (live === undefined ? null : live);
-      return { key: k, label: k, group: "B" as GroupKey, online: approvedJudges.includes(k), score: scoreFor(k, base), bRole: bRoles[k], submitted: submittedSlots.includes(k) };
+      const base = i < team.numB ? bBaseFor(k, i) : (live === undefined ? null : live);
+      return { key: k, label: k, group: "B" as GroupKey, online: approvedJudges.includes(k), score: base, bRole: bRoles[k], submitted: submittedSlots.includes(k) };
     }),
     ...[
       ...Array.from({ length: team.numC }, (_, i) => `C${i + 1}`),
