@@ -570,9 +570,25 @@ function ChiefRefereeDashboardInner() {
   // (NOT from the chief-local `judgeAScore`/`judgeCScore` which are derived
   // from chief's local deductions/attempts and would otherwise stay stuck
   // at the configured maxA / 0).
+  // Extra slots that actually produced a submission but fall outside the
+  // configured team size (e.g. a C4 judge while numC = 3). Without this the top
+  // group card stayed at 0.00 while the raw submissions list showed the score.
+  const extraSlotsFor = (prefix: "A" | "C", count: number) => {
+    const seen = new Set<string>([...Object.keys(judgeOverrides), ...submittedSlots]);
+    return Array.from(seen)
+      .filter((k) => {
+        const m = /^([ABC])(\d+)$/.exec(k);
+        if (!m || m[1] !== prefix) return false;
+        return Number(m[2]) > count;
+      })
+      .sort((a, b) => a.localeCompare(b));
+  };
+
   const judges: JudgeSlot[] = [
-    ...Array.from({ length: team.numA }, (_, i) => {
-      const k = `A${i + 1}`;
+    ...[
+      ...Array.from({ length: team.numA }, (_, i) => `A${i + 1}`),
+      ...extraSlotsFor("A", team.numA),
+    ].map((k) => {
       const live = judgeOverrides[k];
       return { key: k, label: k, group: "A" as GroupKey, online: approvedJudges.includes(k), score: (live === undefined ? null : live), submitted: submittedSlots.includes(k) };
     }),
@@ -580,8 +596,10 @@ function ChiefRefereeDashboardInner() {
       const k = `B${i + 1}`;
       return { key: k, label: k, group: "B" as GroupKey, online: approvedJudges.includes(k), score: scoreFor(k, judgeBScores[i] ?? null), bRole: bRoles[k], submitted: submittedSlots.includes(k) };
     }),
-    ...Array.from({ length: team.numC }, (_, i) => {
-      const k = `C${i + 1}`;
+    ...[
+      ...Array.from({ length: team.numC }, (_, i) => `C${i + 1}`),
+      ...extraSlotsFor("C", team.numC),
+    ].map((k) => {
       const live = judgeOverrides[k];
       return { key: k, label: k, group: "C" as GroupKey, online: approvedJudges.includes(k), score: (live === undefined ? null : live), submitted: submittedSlots.includes(k) };
     }),
