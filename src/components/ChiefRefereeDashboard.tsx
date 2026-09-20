@@ -627,7 +627,9 @@ function ChiefRefereeDashboardInner() {
 
   // Group A already arrives net of its own deductions. The only deduction
   // applied after A+B+C here is the explicit Chief Judge deduction.
-  const cContrib = matchMode === "optional" ? groupCTotal : 0;
+  // Difficulty counts whenever the C judges actually evaluated the routine,
+  // even if the mode flag from the TA has not flipped to "optional" yet.
+  const cContrib = matchMode === "optional" || cSubmitted.length > 0 ? groupCTotal : 0;
   const choreoTotal = roundScore(choreoApplied.reduce((s, d) => s + d.value, 0));
   const aggregateFinal = roundScore(
     Math.max(0, groupATotal + groupBNet + cContrib - chiefDeduction - choreoTotal),
