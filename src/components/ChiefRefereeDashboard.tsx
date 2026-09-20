@@ -866,7 +866,7 @@ function ChiefRefereeDashboardInner() {
                     <span className="text-emerald-400">A {displayGroupATotal.toFixed(2)}</span>
                     <span className="text-white/30">+</span>
                     <span style={{ color: GOLD }}>B {displayGroupBNet.toFixed(2)}</span>
-                    {matchMode === "optional" && (
+                    {(matchMode === "optional" || cSubmitted.length > 0) && (
                       <>
                         <span className="text-white/30">+</span>
                         <span className="text-cyan-300">C {displayGroupCTotal.toFixed(2)}</span>
