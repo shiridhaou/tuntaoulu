@@ -594,9 +594,13 @@ function ChiefRefereeDashboardInner() {
       const live = judgeOverrides[k];
       return { key: k, label: k, group: "A" as GroupKey, online: approvedJudges.includes(k), score: (live === undefined ? null : live), submitted: submittedSlots.includes(k) };
     }),
-    ...Array.from({ length: team.numB }, (_, i) => {
-      const k = `B${i + 1}`;
-      return { key: k, label: k, group: "B" as GroupKey, online: approvedJudges.includes(k), score: scoreFor(k, judgeBScores[i] ?? null), bRole: bRoles[k], submitted: submittedSlots.includes(k) };
+    ...[
+      ...Array.from({ length: team.numB }, (_, i) => `B${i + 1}`),
+      ...extraSlotsFor("B", team.numB),
+    ].map((k, i) => {
+      const live = judgeOverrides[k];
+      const base = i < team.numB ? (judgeBScores[i] ?? null) : (live === undefined ? null : live);
+      return { key: k, label: k, group: "B" as GroupKey, online: approvedJudges.includes(k), score: scoreFor(k, base), bRole: bRoles[k], submitted: submittedSlots.includes(k) };
     }),
     ...[
       ...Array.from({ length: team.numC }, (_, i) => `C${i + 1}`),
