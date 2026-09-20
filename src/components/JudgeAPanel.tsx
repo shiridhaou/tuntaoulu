@@ -93,6 +93,38 @@ export function JudgeAPanel() {
 
   useEffect(() => { setConfirmed([]); setSubmitted(false); }, [currentAthlete?.id]);
 
+  // The TA's athlete call is the authoritative athlete pointer — clear the local
+  // code list whenever it changes, even if the local roster index has not moved.
+  useEffect(() => { setConfirmed([]); setSubmitted(false); }, [aSync.athleteId]);
+
+  // GLOBAL_RESET / NEXT_ATHLETE from the Technical Assistant clears this panel
+  // instantly (no refresh). Single memoized subscription, torn down on unmount.
+  const clearForReset = useCallback(() => {
+    setConfirmed([]);
+    setSubmitted(false);
+    resetJudgeADeductions();
+  }, [resetJudgeADeductions]);
+
+  useEffect(() => {
+    const code = sessionCode ?? activeSession;
+    if (!code) return;
+    const ch = supabase
+      .channel(`ja-reset-${code}-${Math.random().toString(36).slice(2, 8)}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${code}` },
+        (payload) => {
+          const ev = String(((payload.new ?? {}) as { event_type?: string }).event_type ?? "").toLowerCase();
+          if (ev !== "global_reset" && ev !== "next_athlete") return;
+          // Defer out of the realtime callback so the socket handler never
+          // blocks paint (INP).
+          queueMicrotask(clearForReset);
+        },
+      )
+      .subscribe();
+    return () => { try { supabase.removeChannel(ch); } catch { /* ignore */ } };
+  }, [sessionCode, activeSession, clearForReset]);
+
   // Notify the judge whenever the TA changes the match mode or the style live.
   const lastCfgRef = useRef<string>("");
   useEffect(() => {
