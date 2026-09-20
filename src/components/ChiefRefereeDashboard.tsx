@@ -545,8 +545,10 @@ function ChiefRefereeDashboardInner() {
     const bs: { key: string; v: number }[] = [];
     for (let i = 0; i < team.numB; i++) {
       const k = `B${i + 1}`;
-      if (!isBActive(k)) continue;
       const v = scoreFor(k, judgeBScores[i] ?? null);
+      // A slot with an actual numeric score always participates in B_avg, even
+      // if the seat was never formally assigned (same rule as A/C slots).
+      if (v === null && !isBActive(k)) continue;
       if (v !== null) bs.push({ key: k, v });
     }
     const out: Record<string, BTrimRole> = {};
