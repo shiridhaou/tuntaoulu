@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useCompetition, STYLE_CONFIGS } from "@/store/competition-store";
 import { useLogout } from "@/hooks/useLogout";
 import { submitJudgeScore } from "@/lib/scoreSubmit";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ArrowRight, Send, Undo2, Wifi, WifiOff, CheckCircle2, RotateCcw } from "lucide-react";
 import { useMatchSync } from "@/hooks/useMatchSync";
