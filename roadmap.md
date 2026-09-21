@@ -8,3 +8,5 @@
 - [x] Standardize official score displays to three decimals.
 - [x] Add and publish the Chief Judge deduction.
 - [x] Verify Chief and public score flows.
+- [x] Make TA time deductions informational and exclude them from published totals.
+- [x] Add the capped, Western-numeral HD deduction field with presets and clear.

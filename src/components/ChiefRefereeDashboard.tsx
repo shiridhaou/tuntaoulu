@@ -25,7 +25,7 @@ import { TIME_WINDOWS, fmtWindow, type TimeWindow } from "@/lib/timeRules";
 import { modeCaps } from "@/lib/matchMode";
 import { computeGroupAConsensus } from "@/lib/groupAConsensus";
 import { useGroupAConsensus } from "@/hooks/useGroupAConsensus";
-import { roundScore } from "@/lib/numFormat";
+import { roundScore, toWesternDigits } from "@/lib/numFormat";
 import { CHOREO_CODES, lookupChoreoCode } from "@/lib/choreographyCodes";
 
 import { pushDisplaySettings, uploadSponsorLogo } from "@/hooks/useDisplaySettings";
@@ -313,9 +313,26 @@ function ChiefRefereeDashboardInner() {
   }, [currentAthlete?.id]);
 
   const applyChiefDeduction = (value: number) => {
-    const next = roundScore(Math.max(0, Number.isFinite(value) ? value : 0));
+    const next = roundScore(Math.min(2, Math.max(0, Number.isFinite(value) ? value : 0)));
     setChiefDeduction(next);
     setChiefDeductionDraft(next.toFixed(3));
+  };
+
+  const updateChiefDeductionDraft = (rawValue: string) => {
+    const western = toWesternDigits(rawValue).replace(",", ".");
+    const stripped = western.replace(/[^0-9.]/g, "");
+    const [integerPart = "", ...decimalParts] = stripped.split(".");
+    const hasDecimalPoint = stripped.includes(".");
+    const normalizedInteger = integerPart.replace(/^0+(?=\d)/, "").slice(0, 1) || "0";
+    const decimalPart = decimalParts.join("").slice(0, 3);
+    const draft = hasDecimalPoint ? `${normalizedInteger}.${decimalPart}` : normalizedInteger;
+    const numericValue = Number(draft);
+    if (Number.isFinite(numericValue) && numericValue > 2) {
+      applyChiefDeduction(2);
+      return;
+    }
+    setChiefDeductionDraft(draft);
+    setChiefDeduction(roundScore(Math.max(0, Number.isFinite(numericValue) ? numericValue : 0)));
   };
 
   /** Apply a choreography code (80–86). Duplicates are rejected. */
@@ -454,7 +471,7 @@ function ChiefRefereeDashboardInner() {
         score_a: groupATotal,
         score_b: groupBNet,
         score_c: matchMode === "optional" ? groupCTotal : null,
-        deductions: roundScore(taDeduction + chiefDeduction + choreoTotal),
+        deductions: roundScore(chiefDeduction + choreoTotal),
         final_score: aggregateFinal,
         published: true,
         payload: {
@@ -464,11 +481,12 @@ function ChiefRefereeDashboardInner() {
           b_individual,
           c_movements,
           ta_oob_count: taOobCount,
-          ta_deduction: roundScore(taDeduction),
+          ta_deduction: 0,
+          ta_info_deduction: roundScore(taDeduction),
           chief_deduction: chiefDeduction,
           choreo_deduction: choreoTotal,
           choreo_codes: choreoApplied,
-          total_external_deduction: roundScore(taDeduction + chiefDeduction + choreoTotal),
+          total_external_deduction: roundScore(chiefDeduction + choreoTotal),
           committed_at: Date.now(),
         } as never,
       });
@@ -486,8 +504,9 @@ function ChiefRefereeDashboardInner() {
             score_a: groupATotal,
             score_b: groupBNet,
             score_c: matchMode === "optional" ? groupCTotal : null,
-            deductions: roundScore(taDeduction + chiefDeduction + choreoTotal),
-            ta_deduction: roundScore(taDeduction),
+            deductions: roundScore(chiefDeduction + choreoTotal),
+            ta_deduction: 0,
+            ta_info_deduction: roundScore(taDeduction),
             chief_deduction: chiefDeduction,
             choreo_deduction: choreoTotal,
             choreo_codes: choreoApplied,
@@ -518,7 +537,7 @@ function ChiefRefereeDashboardInner() {
         team: currentAthlete.country ?? null,
         style: competitionStyle,
         difficultyScore: matchMode === "optional" ? groupCTotal : null,
-        deductionScore: roundScore(taDeduction + chiefDeduction + choreoTotal),
+        deductionScore: roundScore(chiefDeduction + choreoTotal),
         finalScore: aggregateFinal,
         timestamp: new Date().toISOString(),
       });
@@ -941,18 +960,20 @@ function ChiefRefereeDashboardInner() {
                       </button>
                     ))}
                     <input
-                      type="number"
-                      min="0"
-                      step="0.001"
+                      type="text"
                       inputMode="decimal"
                       aria-label="خصم رئيس الحكام"
                       value={chiefDeductionDraft}
-                      onChange={(event) => setChiefDeductionDraft(event.target.value)}
+                      onChange={(event) => updateChiefDeductionDraft(event.target.value)}
                       onBlur={() => applyChiefDeduction(Number(chiefDeductionDraft))}
                       onKeyDown={(event) => {
-                        if (event.key === "Enter") applyChiefDeduction(Number(chiefDeductionDraft));
+                        if (event.key === "Enter") {
+                          applyChiefDeduction(Number(chiefDeductionDraft));
+                          event.currentTarget.blur();
+                        }
                       }}
-                      className="h-7 w-20 rounded-md border border-white/20 bg-black/40 px-2 text-center text-[10px] font-heading font-black tabular-nums text-white outline-none focus:border-red-300"
+                      maxLength={5}
+                      className="h-7 w-20 appearance-none rounded-md border border-white/20 bg-black/40 px-2 text-center text-[10px] font-heading font-black tabular-nums text-white outline-none focus:border-red-300 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
                     <button
                       type="button"

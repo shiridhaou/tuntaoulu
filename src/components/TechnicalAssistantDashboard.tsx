@@ -920,8 +920,9 @@ function TADashboardInner() {
   }
 
   // ──────────────────────────────────────────────────────────────────────
-  // TA-side deduction broadcaster: writes ta_deductions to current_match so
-  // every dashboard (Chief, Public, Judges) sees the same automatic numbers.
+  // TA-side advisory broadcaster: writes time/OOB suggestions to current_match
+  // for the Chief to review. These values are informational and never reduce
+  // the final score automatically.
   // ──────────────────────────────────────────────────────────────────────
   async function broadcastTaDeductions(opts: { atSec: number; oob: number; final?: boolean }) {
     if (!sessionCode) return;
@@ -992,7 +993,7 @@ function TADashboardInner() {
     const td = checkCategoryTime(timeRuleId, timerSec);
     if (td.value > 0) {
       pushLog("time", `⏱ ${td.reason} → −${td.value.toFixed(2)}`);
-      toast.warning(`خصم زمني تلقائي −${td.value.toFixed(2)} · ${td.reason}`);
+      toast.warning(`اقتراح خصم زمني للمراجعة −${td.value.toFixed(2)} · ${td.reason}`);
     } else if (timerSec > 0) {
       pushLog("time", `⏱ ضمن الزمن المسموح (${timerSec}s)`);
     }

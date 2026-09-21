@@ -201,9 +201,10 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
         b_individual: bIndividualScores,
         c_movements: sheetData.cMovements,
         ta_oob_count: taOobCount,
-        ta_deduction: taDeduction,
+        ta_deduction: 0,
+        ta_info_deduction: taDeduction,
         chief_deduction: chiefDeduction,
-        total_external_deduction: taDeduction + chiefDeduction,
+        total_external_deduction: chiefDeduction,
         committed_at: sheetData.committedAt,
       };
       // Delete prior result for this athlete in this session, then insert fresh
@@ -221,7 +222,7 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
         score_a: groupAScore,
         score_b: groupBAverage,
         score_c: matchMode === "optional" ? groupCScore : null,
-        deductions: taDeduction + chiefDeduction,
+        deductions: chiefDeduction,
         final_score: finalScore,
         published: true,
         payload: payload as any,
@@ -448,7 +449,7 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
                   TECHNICAL ASSISTANT · DEDUCTIONS
                 </p>
                 <Row label="Out of Bounds (OOB) events" value={String(taOobCount)} />
-                <Row label="TA total deduction" value={`− ${taDeduction.toFixed(3)}`} color={RED} />
+                <Row label="TA time suggestion · info only" value={taDeduction.toFixed(3)} color={RED} />
                 <Row label="Chief Judge deduction · HD" value={`− ${chiefDeduction.toFixed(3)}`} color={RED} />
               </section>
 
@@ -460,7 +461,7 @@ export function FinalScoreSheetModal(props: FinalScoreSheetModalProps) {
                 <Row label="Group A" value={groupAScore.toFixed(3)} />
                 <Row label="Group B (avg)" value={groupBAverage.toFixed(3)} />
                 {matchMode === "optional" && <Row label="Group C" value={groupCScore.toFixed(3)} />}
-                <Row label="TA deduction" value={`− ${taDeduction.toFixed(3)}`} color={RED} />
+                <Row label="TA deduction · info only" value="0.000" color={RED} />
                 <Row label="Chief Judge deduction · HD" value={`− ${chiefDeduction.toFixed(3)}`} color={RED} />
                 <div className="mt-2 pt-2 border-t border-white/15 flex items-center justify-between">
                   <span className="text-xs font-heading font-black tracking-wider text-white">FINAL SCORE</span>

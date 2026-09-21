@@ -281,7 +281,7 @@ export function buildScoreSheetPdf(d: ScoreSheetData): { blob: Blob; filename: s
   // ── TA Deductions ────────────────────────────────────────
   section("TECHNICAL ASSISTANT · DEDUCTIONS", NAVY);
   kv("Out of Bounds (OOB) events", String(d.taOobCount), NAVY);
-  kv("TA total deduction", `− ${fmt(d.taDeduction)}`, RED);
+  kv("TA time suggestion · info only", fmt(d.taDeduction), RED);
   kv("Chief Judge deduction · HD", `− ${fmt(d.chiefDeduction)}`, RED);
   y += 2;
 
@@ -290,7 +290,7 @@ export function buildScoreSheetPdf(d: ScoreSheetData): { blob: Blob; filename: s
   kv("Group A", fmt(d.groupAScore), NAVY);
   kv("Group B (avg)", fmt(d.groupBAverage), NAVY);
   if (d.matchMode === "optional") kv("Group C", fmt(d.groupCScore), NAVY);
-  kv("TA deduction", `− ${fmt(d.taDeduction)}`, RED);
+  kv("TA deduction · info only", fmt(0), RED);
   kv("Chief Judge deduction · HD", `− ${fmt(d.chiefDeduction)}`, RED);
 
   ensure(12);
