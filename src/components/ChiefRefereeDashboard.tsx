@@ -841,8 +841,8 @@ function ChiefRefereeDashboardInner() {
       )}
 
       {/* MAIN — Command Center grid + giant FINAL TOTAL */}
-      <section className="relative z-10 flex-1 px-4 py-3 flex flex-col gap-3 min-h-0 overflow-y-auto">
-        <div className={`grid ${matchMode === "compulsory" ? "grid-cols-2" : "grid-cols-3"} gap-3 shrink-0`} style={{ minHeight: "240px" }}>
+      <section className="relative z-10 flex-1 px-4 py-2 flex flex-col gap-2 min-h-0 overflow-hidden">
+        <div className={`grid ${matchMode === "compulsory" ? "grid-cols-2" : "grid-cols-3"} gap-3 h-[clamp(128px,22vh,180px)] shrink-0`}>
           <GroupColumn
             name="GROUP A"
             subtitle="Quality"
@@ -865,7 +865,7 @@ function ChiefRefereeDashboardInner() {
             timerRunning={timerRunning}
             onOpen={() => setGroupDetail("B")}
           />
-          {(matchMode === "optional" || cSubmitted.length > 0) && (
+          {matchMode === "optional" && (
             <GroupColumn
               name="GROUP C"
               subtitle="Difficulty"
@@ -923,12 +923,10 @@ function ChiefRefereeDashboardInner() {
                     <span className="text-emerald-400">A {displayGroupATotal.toFixed(2)}</span>
                     <span className="text-white/30">+</span>
                     <span style={{ color: GOLD }}>B {displayGroupBNet.toFixed(2)}</span>
-                    {(matchMode === "optional" || cSubmitted.length > 0) && (
-                      <>
-                        <span className="text-white/30">+</span>
-                        <span className="text-cyan-300">C {displayGroupCTotal.toFixed(2)}</span>
-                      </>
-                    )}
+                    <>
+                      <span className="text-white/30">+</span>
+                      <span className="text-cyan-300">C {(matchMode === "optional" ? displayGroupCTotal : 0).toFixed(2)}</span>
+                    </>
                     <span className="text-white/30">·</span>
                     <span
                       key={`ta-${taPulse}`}
@@ -2286,11 +2284,11 @@ function RawJudgesBreakdown({
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-md px-3 py-2 shrink-0">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-md px-3 py-1.5 shrink min-h-0 overflow-hidden">
       <p className="text-[9px] uppercase tracking-[0.3em] text-white/50 font-body mb-1.5">
         Raw Judge Submissions · بيانات الحكام الخام
       </p>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 max-h-[180px] overflow-y-auto pr-1">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 max-h-[88px] overflow-y-auto pr-1">
         {/* Group A */}
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.04] p-2">
           <p className="text-[9px] font-heading font-black tracking-[0.3em] text-emerald-400 mb-1.5">A · QUALITY</p>
