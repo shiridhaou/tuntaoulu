@@ -965,6 +965,10 @@ function ChiefRefereeDashboardInner() {
                       aria-label="خصم رئيس الحكام"
                       value={chiefDeductionDraft}
                       onChange={(event) => updateChiefDeductionDraft(event.target.value)}
+                      onFocus={(event) => event.currentTarget.select()}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
                       onBlur={() => applyChiefDeduction(Number(chiefDeductionDraft))}
                       onKeyDown={(event) => {
                         if (event.key === "Enter") {
