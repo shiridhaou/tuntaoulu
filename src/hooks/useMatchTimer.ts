@@ -173,8 +173,9 @@ export function useMatchTimer({
     await broadcastTaDeductions({ atSec: timerSec, oob: oobPoints, final: true });
     const td = checkCategoryTime(timeRuleId, timerSec);
     if (td.value > 0) {
-      log("time", `⏱ ${td.reason} → −${td.value.toFixed(2)}`);
-      toast.warning(`خصم زمني تلقائي −${td.value.toFixed(2)} · ${td.reason}`);
+      // Informational only — the Chief Referee alone decides any deduction.
+      log("time", `⏱ ${td.reason} (للعلم فقط · القرار للحكم الرئيسي)`);
+      toast.warning(`تنبيه زمني للمراجعة: ${td.reason} — القرار للحكم الرئيسي`);
     } else if (timerSec > 0) {
       log("time", `⏱ ضمن الزمن المسموح (${timerSec}s)`);
     }

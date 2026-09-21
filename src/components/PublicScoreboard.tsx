@@ -387,9 +387,9 @@ function LiveScoreboard() {
   const totalDeduction = Number(publishedResult?.deductions ?? judgeADeductions.reduce((sum, d) => sum + d.value, 0));
   const chiefDeduction = Number(publishedPayload?.chief_deduction ?? 0);
   const choreoDeduction = Number(publishedPayload?.choreo_deduction ?? 0);
-  const taDeduction = Number(
-    publishedPayload?.ta_deduction ?? Math.max(0, totalDeduction - chiefDeduction - choreoDeduction),
-  );
+  // TA timing is informational only — it is never a deduction, so no fallback
+  // may derive a value from the stored total.
+  const taDeduction = 0;
   const displayAScore = Number(publishedResult?.score_a ?? judgeAScore);
   const displayBScore = Number(publishedResult?.score_b ?? judgeBAverage);
   const displayCScore = Number(publishedResult?.score_c ?? judgeCScore);

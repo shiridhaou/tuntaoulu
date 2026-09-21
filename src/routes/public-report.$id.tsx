@@ -213,7 +213,7 @@ function PublicReportPage() {
   const matchMode = (result.payload?.match_mode ?? "compulsory") as "compulsory" | "optional";
   const oob = result.payload?.ta_oob_count ?? 0;
   const chiefDeduction = Number(result.payload?.chief_deduction ?? 0);
-  const taDeduction = Number(result.payload?.ta_deduction ?? result.deductions ?? 0);
+  const taDeduction = 0; // TA timing is informational only, never deducted
   const confirmedForReport = breakdown.confirmedCodes.length > 0
     ? breakdown.confirmedCodes
     : (result.payload?.confirmed_codes ?? []).map(c => ({ code: c.code, count: Number(c.count ?? 1), slots: c.slots ?? [] }));
