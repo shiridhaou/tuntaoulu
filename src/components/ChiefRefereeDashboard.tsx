@@ -242,9 +242,8 @@ function ChiefRefereeDashboardInner() {
 
   // Timer ticks come from useMatchSync (TA is master). Chief is read-only.
 
-  // Subscribe to current_match: extract Match Mode AND ta_deductions live so
-  // OOB / time deductions from the Technical Assistant flow into the Chief's
-  // Final Total the instant they are applied (no need for "Sync" press).
+  // Subscribe to current_match: extract Match Mode and TA advisories live so
+  // the Chief can review them without applying them automatically to the score.
   useEffect(() => {
     if (!sessionCode) return;
     let cancelled = false;
@@ -962,6 +961,7 @@ function ChiefRefereeDashboardInner() {
                     <input
                       type="text"
                       inputMode="decimal"
+                      pattern="[0-9]*[.]?[0-9]{0,3}"
                       aria-label="خصم رئيس الحكام"
                       value={chiefDeductionDraft}
                       onChange={(event) => updateChiefDeductionDraft(event.target.value)}

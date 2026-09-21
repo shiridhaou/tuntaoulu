@@ -28,7 +28,7 @@ export interface FinalScoreSheetModalProps {
   // Group C
   groupCScore: number;
   groupCMax: number;
-  // Final aggregated by chief (post TA)
+  // Final aggregated by Chief; TA timing remains informational.
   finalScore: number;
 }
 
