@@ -10,4 +10,4 @@
 - [x] Verify Chief and public score flows.
 - [x] Make TA time deductions informational and exclude them from published totals.
 - [x] Add the capped, Western-numeral HD deduction field with presets and clear.
-- [ ] Fit the Chief Referee compulsory and optional layouts within one viewport.
+- [x] Fit the Chief Referee compulsory and optional layouts within one viewport.
