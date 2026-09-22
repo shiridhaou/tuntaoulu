@@ -26,6 +26,24 @@ export function fmtNum(value: number | null | undefined, digits = 3): string {
   });
 }
 
+/**
+ * Parse a numeric input value typed on any locale keyboard.
+ * Converts Eastern Arabic/Persian digits to 0-9 and accepts ".", "," or the
+ * Arabic decimal separator "٫" (U+066B) as the decimal point, so typing
+ * "0.10" never collapses to "010" → 10.
+ */
+export function parseDecimalInput(input: string | number | null | undefined): number {
+  if (input === null || input === undefined) return 0;
+  const s = toWesternDigits(String(input))
+    .replace(/[٫,]/g, ".")
+    .replace(/[^0-9.]/g, "");
+  // Keep only the first decimal point ("1.2.3" → "1.2").
+  const firstDot = s.indexOf(".");
+  const normalized = firstDot === -1 ? s : s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, "");
+  const v = parseFloat(normalized);
+  return isFinite(v) ? v : 0;
+}
+
 /** Round a score numerically to IWUF's displayed three-decimal precision. */
 export function roundScore(value: number): number {
   if (!isFinite(Number(value))) return 0;

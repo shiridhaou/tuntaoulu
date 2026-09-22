@@ -7,7 +7,7 @@ import { MAX_C_MOVEMENT, MAX_C_CONNECTION } from "@/lib/difficultyCodes";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useDifficultySheet, type DifficultySheetSourceAthlete } from "@/hooks/useDifficultySheet";
-import { toWesternDigits } from "@/lib/numFormat";
+import { parseDecimalInput, toWesternDigits } from "@/lib/numFormat";
 import { lookupCode, isConnectionCode, isKnownCode, KNOWN_CODE_OPTIONS } from "@/lib/difficultyCodes";
 import type { JudgeStatusRow } from "@/types/matchTypes";
 
@@ -91,7 +91,7 @@ export function DifficultyManager({
   const [newLabel, setNewLabel] = useState("");
 
   function handleAddRow() {
-    const v = parseFloat(newValue.replace(",", "."));
+    const v = newValue.trim() === "" ? NaN : parseDecimalInput(newValue);
     // Blank value → auto-fill the IWUF default for this code.
     const prevCode = [...sheet].reverse().find((d) => !isConnectionCode(d.code))?.code ?? null;
     const meta = lookupCode(newCode, { prevCode });
@@ -297,9 +297,9 @@ export function DifficultyManager({
                   )}
                 </div>
                 <Input
-                  type="number" step="0.05" min="0" max="1"
+                  type="number" step="0.01" min="0" max="2.00"
                   value={toWesternDigits(d.value)}
-                  onChange={(e) => updateRow(i, { value: parseFloat(toWesternDigits(e.target.value)) || 0 })}
+                  onChange={(e) => updateRow(i, { value: parseDecimalInput(e.target.value) })}
                   className="col-span-1 h-7 text-xs text-center font-mono font-bold text-emerald-400 bg-black border-white/10 num-west"
                   dir="ltr"
                   lang="en"
@@ -336,7 +336,7 @@ export function DifficultyManager({
           className="col-span-6 h-8 text-xs bg-black border-white/15"
         />
         <Input
-          type="number" step="0.05" min="0" max="1"
+          type="number" step="0.01" min="0" max="2.00"
           value={newValue}
           onChange={(e) => setNewValue(toWesternDigits(e.target.value))}
           onKeyDown={(e) => e.key === "Enter" && handleAddRow()}

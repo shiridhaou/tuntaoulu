@@ -20,7 +20,7 @@ import { joinSessionMembership, ensureDeviceSession } from "@/lib/sessionMembers
 import { matchControl, useMatchSync, broadcastSessionState } from "@/hooks/useMatchSync";
 import { useLogout } from "@/hooks/useLogout";
 import { getWebhookSettings, saveWebhookSettings, isValidWebhookUrl, type WebhookSettings } from "@/lib/resultsWebhook";
-import { dateInputProps, fmtClock, toWesternDigits } from "@/lib/numFormat";
+import { dateInputProps, fmtClock, parseDecimalInput, toWesternDigits } from "@/lib/numFormat";
 import { cleanUuid, newUuid } from "@/lib/uuid";
 import { normalizeStyle, styleLabelAr } from "@/lib/styleNames";
 import { SUB_STYLES, FAMILY_LABEL } from "@/lib/iwufDifficultyRules";
@@ -2391,7 +2391,7 @@ function DifficultyManager({
     const code = newCode.trim().toUpperCase();
     if (!code) { toast.error("أدخل كود الحركة"); return; }
     if (sheet.some((d) => d.code === code)) { toast.error("هذا الكود موجود مسبقاً"); return; }
-    const v = parseFloat(newValue.replace(",", "."));
+    const v = newValue.trim() === "" ? NaN : parseDecimalInput(newValue);
     setSheet((arr) => [...arr, {
       code,
       label: newLabel.trim() || code,
@@ -2552,11 +2552,13 @@ function DifficultyManager({
                   className="col-span-7 h-7 text-xs bg-black border-white/10 text-white"
                 />
                 <Input
-                  type="number" step="0.05" min="0" max="1"
+                  type="number" step="0.01" min="0" max="2.00"
                   value={d.value}
-                  onChange={(e) => updateRow(i, { value: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) => updateRow(i, { value: parseDecimalInput(e.target.value) })}
                   className="col-span-1 h-7 text-xs text-center font-mono font-bold text-emerald-400 bg-black border-white/10 num-west"
                   dir="ltr"
+                  lang="en"
+                  inputMode="decimal"
                 />
                 <Button onClick={() => removeRow(i)} size="icon" variant="ghost"
                   className="col-span-1 h-7 w-7 text-fed-red hover:bg-fed-red/10 mx-auto">
@@ -2586,12 +2588,14 @@ function DifficultyManager({
           className="col-span-6 h-8 text-xs bg-black border-white/15"
         />
         <Input
-          type="number" step="0.05" min="0" max="1"
+          type="number" step="0.01" min="0" max="2.00"
           value={newValue}
-          onChange={(e) => setNewValue(e.target.value)}
+          onChange={(e) => setNewValue(toWesternDigits(e.target.value))}
           onKeyDown={(e) => e.key === "Enter" && addRow()}
           className="col-span-2 h-8 text-xs text-center font-mono bg-black border-white/15"
           dir="ltr"
+          lang="en"
+          inputMode="decimal"
         />
         <Button onClick={addRow} size="sm" className="col-span-1 h-8 bg-emerald-500 hover:bg-emerald-600 text-white">
           <Plus className="h-3.5 w-3.5" />
