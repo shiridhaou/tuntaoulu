@@ -156,6 +156,14 @@ function useLiveDisplay(sessionCode: string | null) {
       ]);
     };
 
+    const loadReadyAthlete = async (athleteId: string) => {
+      currentAthleteId = athleteId;
+      applyResult(null);
+      setJudgeScores([]);
+      applyTaTotal(0);
+      await loadAthlete(athleteId);
+    };
+
     const loadResult = async (athleteId: string | null) => {
       // No live athlete → nothing to reveal. Past results remain published as
       // session ranking history, so they must NOT be shown as the current one.
@@ -230,6 +238,10 @@ function useLiveDisplay(sessionCode: string | null) {
         ? state.current_athlete_id
         : state.athlete_id;
       const isReady = state.match_status === "READY";
+      if (isReady && incomingAthleteId) {
+        void loadReadyAthlete(incomingAthleteId);
+        return;
+      }
       if (isReady || (hasAthleteKey && !incomingAthleteId)) {
         clearLiveSnapshot();
         return;
