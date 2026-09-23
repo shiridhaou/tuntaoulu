@@ -8,6 +8,7 @@ import { useDisplaySettings } from "@/hooks/useDisplaySettings";
 import { FullscreenToggle } from "./FullscreenToggle";
 import { useMatchSync, onSessionState, onPublicStandings, onStandingsToggle } from "@/hooks/useMatchSync";
 import { LeaderboardModal } from "./LeaderboardModal";
+import { useActiveSessionCode } from "@/hooks/useActiveSession";
 
 // Live data from TA's session (current_match + match_events)
 function useLiveSession() {
@@ -334,7 +335,8 @@ function StandingsOverlayListener({ sessionCode }: { sessionCode: string | null 
 }
 
 export function PublicScoreboard() {
-  const { sessionCode } = useCompetition();
+  const { sessionCode: storedSessionCode } = useCompetition();
+  const sessionCode = useActiveSessionCode(storedSessionCode);
   const { leaderboardMode } = useDisplaySettings(sessionCode);
   return (
     <>

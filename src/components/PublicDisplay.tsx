@@ -12,6 +12,7 @@ import { LeaderboardModal } from "./LeaderboardModal";
 import { PodiumOverlay } from "./PodiumOverlay";
 import { countryFlag } from "@/lib/affiliation";
 import { onSessionState, onStandingsToggle, onPublicStandings, type SessionStatePatch } from "@/hooks/useMatchSync";
+import { useActiveSessionCode } from "@/hooks/useActiveSession";
 import { styleLabelEn } from "@/lib/styleNames";
 
 
@@ -77,7 +78,7 @@ type JudgeScore = {
 // ── Current display session ─────────────────────────────────────────
 function useActiveSession() {
   const { sessionCode } = useCompetition();
-  return sessionCode;
+  return useActiveSessionCode(sessionCode);
 }
 
 // ── Live snapshot ─────────────────────────────────────────────────────

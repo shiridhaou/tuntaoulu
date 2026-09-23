@@ -200,6 +200,7 @@ export function CategoryArchivePanel({
         } as never,
       });
       if (eventError) throw eventError;
+      setCategory(nextAthlete?.age_category ?? "all");
       toast.success(nextAthlete
         ? `تمت الأرشفة — الفئة التالية ${nextAthlete.age_category ?? "جاهزة"}`
         : "تمت الأرشفة — لا توجد فئة نشطة تالية");
