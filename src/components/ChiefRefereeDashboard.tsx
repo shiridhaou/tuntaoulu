@@ -17,7 +17,7 @@ import { countryFlag } from "@/lib/affiliation";
 
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
-import { useMatchSync, broadcastSessionState } from "@/hooks/useMatchSync";
+import { useMatchSync, broadcastSessionState, broadcastStandingsToggle } from "@/hooks/useMatchSync";
 import { joinSessionMembership } from "@/lib/sessionMembership";
 import { toast } from "sonner";
 import { styleLabelAr, styleLabelEn, normalizeStyle } from "@/lib/styleNames";
@@ -138,9 +138,10 @@ function ChiefRefereeDashboardInner() {
         show_standings_overlay: next,
         payload: { show_standings_overlay: next },
       });
+      void broadcastStandingsToggle(sessionCode, next);
       await supabase.from("match_events").insert({
         session_code: sessionCode,
-        event_type: "TOGGLE_STANDINGS_OVERLAY",
+        event_type: "TOGGLE_STANDINGS",
         payload: { open: next, at: Date.now() } as never,
       });
     } catch { /* non-fatal: local modal already opened */ }

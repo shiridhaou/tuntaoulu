@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { affiliationLabel } from "@/lib/affiliation";
+import { affiliationLabel, countryCode, countryFlag } from "@/lib/affiliation";
 import { styleLabelAr } from "@/lib/styleNames";
 import { X, Trophy, RefreshCw, Printer } from "lucide-react";
 
@@ -45,11 +45,17 @@ export function LeaderboardModal({
   open,
   onClose,
   styleFilter,
+  eventTitle,
+  categoryTitle,
+  displayMode = "console",
 }: {
   sessionCode: string | null;
   open: boolean;
   onClose: () => void;
   styleFilter?: string | null;
+  eventTitle?: string;
+  categoryTitle?: string;
+  displayMode?: "console" | "arena";
 }) {
   const [rows, setRows] = useState<LeaderboardRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -121,16 +127,20 @@ export function LeaderboardModal({
 
   if (!open) return null;
 
+  const arena = displayMode === "arena";
+
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(10px)" }}>
-      <div className="w-full max-w-7xl max-h-[88vh] flex flex-col rounded-2xl border border-white/10 bg-black/80 overflow-hidden">
-        <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10 shrink-0">
+    <div className={`fixed inset-0 z-[120] flex items-center justify-center ${arena ? "p-0 animate-in fade-in duration-300" : "p-4"}`} style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(10px)" }}>
+      <div className={`${arena ? "h-screen max-h-screen max-w-none rounded-none border-x-0 animate-in slide-in-from-bottom-4 duration-300" : "max-h-[88vh] max-w-7xl rounded-2xl"} w-full flex flex-col border border-white/10 bg-black/80 overflow-hidden`}>
+        <header className={`flex items-center justify-between gap-3 border-b border-white/10 shrink-0 ${arena ? "px-8 py-6" : "px-4 py-3"}`} dir={arena ? "ltr" : undefined}>
           <div className="flex items-center gap-2 min-w-0">
-            <Trophy className="h-4 w-4" style={{ color: "#FACC15" }} />
+            <Trophy className={arena ? "h-8 w-8" : "h-4 w-4"} style={{ color: "#FACC15" }} />
             <div className="min-w-0">
-              <p className="text-sm font-heading font-black text-white truncate">الترتيب العام · STANDINGS</p>
-              <p className="text-[10px] font-bold text-white/45 truncate">
-                {styleFilter ? styleLabelAr(styleFilter) : "كل الأساليب"} · {rows.length} نتيجة منشورة
+              <p className={`${arena ? "text-2xl lg:text-3xl" : "text-sm"} font-heading font-black text-white truncate`}>
+                {eventTitle ?? "الترتيب العام · STANDINGS"}
+              </p>
+              <p className={`${arena ? "text-sm md:text-lg mt-1" : "text-[10px]"} font-bold text-white/45 truncate`}>
+                {categoryTitle || (styleFilter ? styleLabelAr(styleFilter) : "كل الأساليب")} · {rows.length} نتيجة منشورة
               </p>
             </div>
           </div>
@@ -155,14 +165,14 @@ export function LeaderboardModal({
           ) : (
             <table className="w-full text-white border-collapse">
               <thead className="sticky top-0 bg-black/90 backdrop-blur">
-                <tr className="text-[9px] uppercase tracking-[0.2em] text-white/40" dir="ltr">
+                <tr className={`${arena ? "text-sm" : "text-[9px]"} uppercase tracking-[0.2em] text-white/40`} dir="ltr">
                   <th className="p-2 text-left w-16">Rank</th>
+                  <th className="p-2 text-left">Country / Club</th>
                   <th className="p-2 text-left">Athlete</th>
-                  <th className="p-2 text-left">Club / Country</th>
-                  <th className="p-2 text-right w-16">A</th>
-                  <th className="p-2 text-right w-16">B</th>
-                  <th className="p-2 text-right w-16">C</th>
-                  <th className="p-2 text-right w-20">Ded.</th>
+                  {!arena && <th className="p-2 text-right w-16">A</th>}
+                  {!arena && <th className="p-2 text-right w-16">B</th>}
+                  {!arena && <th className="p-2 text-right w-16">C</th>}
+                  {!arena && <th className="p-2 text-right w-20">Ded.</th>}
                   <th className="p-2 text-right w-24">Final</th>
                 </tr>
               </thead>
@@ -171,7 +181,7 @@ export function LeaderboardModal({
                   <tr key={r.athleteId} className="border-t border-white/5 hover:bg-white/[0.03]">
                     <td className="p-2">
                       <span
-                        className="inline-flex h-7 min-w-7 px-1.5 items-center justify-center rounded-full text-[11px] font-black tabular-nums"
+                         className={`inline-flex items-center justify-center rounded-full font-black tabular-nums ${arena ? "h-12 min-w-12 px-2 text-xl" : "h-7 min-w-7 px-1.5 text-[11px]"}`}
                         style={i < 3
                           ? { background: `${MEDAL[i]}22`, border: `1px solid ${MEDAL[i]}88`, color: MEDAL[i] }
                           : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
@@ -180,15 +190,17 @@ export function LeaderboardModal({
                         {r.dns ? "DNS" : i + 1}
                       </span>
                     </td>
-                    <td className="p-2 text-xl font-heading font-black truncate max-w-[260px]">{r.name}</td>
-                    <td className="p-2 text-base text-white/60 truncate max-w-[220px]">
-                      {affiliationLabel(r.club, r.country) || "—"}
+                    <td className={`${arena ? "p-4 text-xl" : "p-2 text-base"} text-white/60 truncate max-w-[280px]`} dir="ltr">
+                      {arena
+                        ? [countryFlag(r.country), countryCode(r.country), r.club].filter(Boolean).join("  ·  ") || "—"
+                        : affiliationLabel(r.club, r.country) || "—"}
                     </td>
-                    <td className="p-2 text-right text-lg tabular-nums text-white/70" dir="ltr">{r.scoreA.toFixed(3)}</td>
-                    <td className="p-2 text-right text-lg tabular-nums text-white/70" dir="ltr">{r.scoreB.toFixed(3)}</td>
-                    <td className="p-2 text-right text-lg tabular-nums text-white/70" dir="ltr">{r.scoreC.toFixed(3)}</td>
-                    <td className="p-2 text-right text-lg tabular-nums text-red-300/80" dir="ltr">−{r.deductions.toFixed(3)}</td>
-                    <td className="p-2 text-right text-2xl font-black tabular-nums" style={{ color: r.dns ? "rgba(255,255,255,0.45)" : "#FACC15" }} dir="ltr">
+                    <td className={`${arena ? "p-4 text-2xl md:text-3xl" : "p-2 text-xl"} font-heading font-black truncate max-w-[420px]`}>{r.name}</td>
+                    {!arena && <td className="p-2 text-right text-lg tabular-nums text-white/70" dir="ltr">{r.scoreA.toFixed(3)}</td>}
+                    {!arena && <td className="p-2 text-right text-lg tabular-nums text-white/70" dir="ltr">{r.scoreB.toFixed(3)}</td>}
+                    {!arena && <td className="p-2 text-right text-lg tabular-nums text-white/70" dir="ltr">{r.scoreC.toFixed(3)}</td>}
+                    {!arena && <td className="p-2 text-right text-lg tabular-nums text-red-300/80" dir="ltr">−{r.deductions.toFixed(3)}</td>}
+                    <td className={`${arena ? "p-4 text-4xl" : "p-2 text-2xl"} text-right font-black tabular-nums`} style={{ color: r.dns ? "rgba(255,255,255,0.45)" : "#FACC15" }} dir="ltr">
                       {r.dns ? "DNS" : r.finalScore.toFixed(3)}
                     </td>
                   </tr>

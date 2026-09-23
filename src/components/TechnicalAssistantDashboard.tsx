@@ -17,7 +17,7 @@ import Papa from "papaparse";
 import { supabase } from "@/integrations/supabase/client";
 import { joinSessionMembership, ensureDeviceSession } from "@/lib/sessionMembership";
 
-import { matchControl, useMatchSync, broadcastSessionState } from "@/hooks/useMatchSync";
+import { matchControl, useMatchSync, broadcastSessionState, broadcastStandingsToggle, onStandingsToggle } from "@/hooks/useMatchSync";
 import { useLogout } from "@/hooks/useLogout";
 import { getWebhookSettings, saveWebhookSettings, isValidWebhookUrl, type WebhookSettings } from "@/lib/resultsWebhook";
 import { dateInputProps, fmtClock, parseDecimalInput, toWesternDigits } from "@/lib/numFormat";
@@ -191,6 +191,7 @@ function TADashboardInner() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<AgeCategory | "all">("all");
   const [dragOver, setDragOver] = useState(false);
+  const [standingsOpen, setStandingsOpen] = useState(false);
   const [preview, setPreview] = useState<ReturnType<typeof normalizeRow>[] | null>(null);
   const [tab, setTab] = useState("import");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -207,6 +208,11 @@ function TADashboardInner() {
   const sync = useMatchSync(sessionCode);
   const timerSec = sync.elapsedSec;
   const timerRunning = sync.timerState === "running";
+
+  useEffect(() => {
+    if (!sessionCode) return;
+    return onStandingsToggle(sessionCode, setStandingsOpen);
+  }, [sessionCode]);
 
   // Judges status
   const [judgeStatuses, setJudgeStatuses] = useState<JudgeStatusRow[]>([]);
@@ -388,6 +394,18 @@ function TADashboardInner() {
   async function emitEvent(event_type: string, payload: Record<string, any> = {}) {
     if (!sessionCode) return;
     await supabase.from("match_events").insert({ session_code: sessionCode, event_type, payload });
+  }
+
+  async function toggleStandings() {
+    if (!sessionCode) return;
+    const next = !standingsOpen;
+    setStandingsOpen(next);
+    void broadcastSessionState(sessionCode, {
+      show_standings_overlay: next,
+      payload: { show_standings_overlay: next },
+    });
+    void broadcastStandingsToggle(sessionCode, next);
+    await emitEvent("TOGGLE_STANDINGS", { open: next, at: Date.now() });
   }
 
   /**
@@ -829,6 +847,8 @@ function TADashboardInner() {
       elapsed_ms: 0,
       payload: { match_status: "READY", show_standings_overlay: false },
     });
+    setStandingsOpen(false);
+    void broadcastStandingsToggle(sessionCode, false);
     // 4) Previous results stay PUBLISHED — they are the session's ranking
     //    history (CURRENT PLACING / standings). The scoreboard clears itself
     //    because current_match.athlete_id is now null.
@@ -1238,6 +1258,17 @@ function TADashboardInner() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void toggleStandings()}
+              aria-pressed={standingsOpen}
+              className="h-7 px-2 border-gold/50 text-gold hover:bg-gold/10 text-[10px] font-heading font-black"
+              title="عرض الترتيب على شاشة الجمهور"
+            >
+              <Trophy className="h-3 w-3 ml-1" /> عرض الترتيب / Standings
+            </Button>
             {/* PROMINENT MODE TOGGLE — Compulsory / Optional.
                 Big, color-coded buttons so the TA can flip the whole tournament
                 in one tap and every Judge B / C screen rescales instantly. */}

@@ -11,7 +11,8 @@ import { useRoomPresence } from "@/hooks/useRoomPresence";
 import { LeaderboardModal } from "./LeaderboardModal";
 import { PodiumOverlay } from "./PodiumOverlay";
 import { countryFlag } from "@/lib/affiliation";
-import { onSessionState, type SessionStatePatch } from "@/hooks/useMatchSync";
+import { onSessionState, onStandingsToggle, type SessionStatePatch } from "@/hooks/useMatchSync";
+import { styleLabelEn } from "@/lib/styleNames";
 
 
 /**
@@ -935,6 +936,12 @@ export function PublicDisplay() {
   useEffect(() => {
     const code = (sessionCode ?? "").trim().toUpperCase();
     if (!code) return;
+    return onStandingsToggle(code, setStandingsOpen);
+  }, [sessionCode]);
+
+  useEffect(() => {
+    const code = (sessionCode ?? "").trim().toUpperCase();
+    if (!code) return;
     let cancelled = false;
     const ch = supabase
       .channel(`pdisplay-standings-${code}-${Math.random().toString(36).slice(2, 6)}`)
@@ -942,7 +949,8 @@ export function PublicDisplay() {
         { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${code}` },
         (payload) => {
           const event = (payload.new as { event_type?: string; payload?: { open?: boolean } }) ?? {};
-          if (cancelled || (event.event_type !== "toggle_standings_overlay" && event.event_type !== "TOGGLE_STANDINGS_OVERLAY")) return;
+          const eventType = event.event_type?.toUpperCase();
+          if (cancelled || (eventType !== "TOGGLE_STANDINGS" && eventType !== "TOGGLE_STANDINGS_OVERLAY")) return;
           setStandingsOpen(Boolean(event.payload?.open));
         })
       .subscribe();
@@ -1103,6 +1111,28 @@ export function PublicDisplay() {
     : payloadCMovements
         .filter((m: any) => typeof m?.code === "string")
         .map((m: any) => ({ code: String(m.code), success: typeof m.successful === "boolean" ? m.successful : typeof m.success === "boolean" ? m.success : null }));
+
+  // Standings is an arena-level takeover and must remain available while the
+  // display is waiting, live, published, showing VAR, or showing the podium.
+  if (sessionCode && standingsOpen) {
+    return (
+      <div className="h-screen w-screen relative overflow-hidden" style={{ background: NAVY }}>
+        <LeaderboardModal
+          sessionCode={sessionCode}
+          open
+          onClose={() => setStandingsOpen(false)}
+          styleFilter={result?.style ?? athlete?.style ?? null}
+          eventTitle="Tunisian Wushu Federation — Result List"
+          categoryTitle={[
+            athlete?.age_category,
+            (result?.style ?? athlete?.style) ? styleLabelEn(result?.style ?? athlete?.style) : null,
+          ].filter(Boolean).join(" · ")}
+          displayMode="arena"
+        />
+        <FullscreenToggle />
+      </div>
+    );
+  }
 
   // ── No session ─────────────────────────────────────────
   if (!sessionCode) {
@@ -1643,6 +1673,13 @@ export function PublicDisplay() {
         sessionCode={sessionCode}
         open={standingsOpen}
         onClose={() => setStandingsOpen(false)}
+        styleFilter={result?.style ?? athlete?.style ?? null}
+        eventTitle="Tunisian Wushu Federation — Result List"
+        categoryTitle={[
+          athlete?.age_category,
+          (result?.style ?? athlete?.style) ? styleLabelEn(result?.style ?? athlete?.style) : null,
+        ].filter(Boolean).join(" · ")}
+        displayMode="arena"
       />
       <FullscreenToggle />
 
