@@ -88,6 +88,25 @@ function sameJson(a: unknown, b: unknown): boolean {
   try { return JSON.stringify(a) === JSON.stringify(b); } catch { return a === b; }
 }
 
+function readDisplayPayload(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? value as Record<string, unknown> : {};
+}
+
+function readDisplayAthleteId(row: unknown): string | null {
+  const source = readDisplayPayload(row);
+  const payload = readDisplayPayload(source.payload);
+  const direct = source.athlete_id ?? source.current_athlete_id ?? payload.current_athlete_id ?? payload.athlete_id;
+  if (typeof direct === "string" && direct.trim()) return direct;
+  const activeAthlete = readDisplayPayload(payload.activeAthlete ?? payload.athlete);
+  const nested = activeAthlete.id;
+  return typeof nested === "string" && nested.trim() ? nested : null;
+}
+
+function readDisplayStatus(payload: Record<string, unknown>): string | null {
+  const raw = payload.match_status ?? payload.status;
+  return typeof raw === "string" && raw.trim() ? raw.trim().toUpperCase() : null;
+}
+
 function useLiveDisplay(sessionCode: string | null) {
   const [athlete, setAthlete] = useState<AthleteRow | null>(null);
   const [judgeScores, setJudgeScores] = useState<JudgeScore[]>([]);
@@ -101,6 +120,7 @@ function useLiveDisplay(sessionCode: string | null) {
     if (!sessionCode) return;
     let cancelled = false;
     let currentAthleteId: string | null = null;
+    let currentMatchStatus: string | null = null;
 
     const applyTaTotal = (taTotal: number) => {
       if (cancelled || taRef.current === taTotal) return;
@@ -156,6 +176,41 @@ function useLiveDisplay(sessionCode: string | null) {
       ]);
     };
 
+    const applyCurrentMatchRow = async (row: unknown) => {
+      if (cancelled) return;
+      if (!row) {
+        clearLiveSnapshot();
+        currentMatchStatus = "READY";
+        return;
+      }
+      const source = readDisplayPayload(row);
+      const payload = readDisplayPayload(source.payload);
+      const incomingAthleteId = readDisplayAthleteId(row);
+      const nextStatus = readDisplayStatus(payload);
+      const previousAthleteId = currentAthleteId;
+      const previousStatus = currentMatchStatus;
+      const athleteChanged = incomingAthleteId !== previousAthleteId;
+      const statusChanged = nextStatus !== null && nextStatus !== previousStatus;
+      if (nextStatus) currentMatchStatus = nextStatus;
+      if (typeof payload.show_standings_overlay === "boolean") {
+        setShowStandingsOverlay(payload.show_standings_overlay);
+      }
+      const td = source.ta_deductions;
+      applyTaTotal(td && typeof td === "object" ? Number((td as { total?: unknown }).total ?? 0) : 0);
+
+      if (!incomingAthleteId || nextStatus === "READY" && !incomingAthleteId || nextStatus === "GLOBAL_RESET" || nextStatus === "NEXT_ATHLETE") {
+        clearLiveSnapshot();
+        return;
+      }
+
+      if (athleteChanged || (statusChanged && (nextStatus === "READY" || nextStatus === "CALLED" || nextStatus === "LIVE"))) {
+        await loadReadyAthlete(incomingAthleteId);
+        return;
+      }
+
+      scheduleReload();
+    };
+
     const loadReadyAthlete = async (athleteId: string) => {
       currentAthleteId = athleteId;
       applyResult(null);
@@ -201,6 +256,7 @@ function useLiveDisplay(sessionCode: string | null) {
         const currentPayload = cm?.payload && typeof cm.payload === "object"
           ? cm.payload as Record<string, unknown>
           : {};
+        currentMatchStatus = readDisplayStatus(currentPayload);
         if (typeof currentPayload.show_standings_overlay === "boolean") {
           setShowStandingsOverlay(currentPayload.show_standings_overlay);
         }
@@ -228,22 +284,36 @@ function useLiveDisplay(sessionCode: string | null) {
     // reconnect/late-join recovery, while this channel changes the arena UI at once.
     const offSessionState = onSessionState(sessionCode, (raw) => {
       const state = raw as SessionStatePatch;
+      const statePayload = readDisplayPayload(state.payload);
+      const stateStatus = readDisplayStatus({ ...statePayload, match_status: state.match_status ?? statePayload.match_status });
       if (typeof state.show_standings_overlay === "boolean") {
         setShowStandingsOverlay(state.show_standings_overlay);
       }
 
       const hasAthleteKey = Object.prototype.hasOwnProperty.call(state, "current_athlete_id")
-        || Object.prototype.hasOwnProperty.call(state, "athlete_id");
+        || Object.prototype.hasOwnProperty.call(state, "athlete_id")
+        || Object.prototype.hasOwnProperty.call(statePayload, "current_athlete_id")
+        || Object.prototype.hasOwnProperty.call(statePayload, "athlete_id")
+        || Object.prototype.hasOwnProperty.call(statePayload, "activeAthlete")
+        || Object.prototype.hasOwnProperty.call(statePayload, "athlete");
       const incomingAthleteId = state.current_athlete_id !== undefined
         ? state.current_athlete_id
-        : state.athlete_id;
-      const isReady = state.match_status === "READY";
+        : state.athlete_id !== undefined
+        ? state.athlete_id
+        : readDisplayAthleteId({ payload: statePayload });
+      const statusChanged = stateStatus !== null && stateStatus !== currentMatchStatus;
+      if (stateStatus) currentMatchStatus = stateStatus;
+      const isReady = stateStatus === "READY";
       if (isReady && incomingAthleteId) {
         void loadReadyAthlete(incomingAthleteId);
         return;
       }
       if (isReady || (hasAthleteKey && !incomingAthleteId)) {
         clearLiveSnapshot();
+        return;
+      }
+      if (incomingAthleteId && (stateStatus === "CALLED" || stateStatus === "LIVE") && (statusChanged || incomingAthleteId !== currentAthleteId)) {
+        void loadReadyAthlete(incomingAthleteId);
         return;
       }
       if (incomingAthleteId && incomingAthleteId !== currentAthleteId) {
@@ -256,10 +326,7 @@ function useLiveDisplay(sessionCode: string | null) {
       .on("postgres_changes",
         { event: "*", schema: "public", table: "current_match", filter: `session_code=eq.${sessionCode}` },
         (payload) => {
-          const row = payload.new as any;
-          const td = row?.ta_deductions;
-          applyTaTotal(td && typeof td === "object" ? Number(td.total ?? 0) : 0);
-          scheduleReload();
+          void applyCurrentMatchRow(payload.eventType === "DELETE" ? null : payload.new);
         })
       .on("postgres_changes",
         { event: "*", schema: "public", table: "judge_scores", filter: `session_code=eq.${sessionCode}` },
