@@ -1416,7 +1416,7 @@ function GroupColumn({
   return (
     <button
       onClick={onOpen}
-      className="rounded-2xl border backdrop-blur-md p-3 flex flex-col text-left hover:brightness-110 transition-all min-h-0 overflow-hidden"
+      className="rounded-2xl border backdrop-blur-md px-3 py-2 flex flex-col text-left hover:brightness-110 transition-all min-h-0 overflow-hidden"
       style={{
         borderColor: revealed ? `${color}88` : `${color}44`,
         background: `linear-gradient(180deg, ${color}10, ${color}03)`,
@@ -1424,7 +1424,7 @@ function GroupColumn({
       }}
       title="عرض تفاصيل الحكام"
     >
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-0.5">
         <div>
           <p className="text-[11px] font-heading font-black tracking-[0.3em]" style={{ color }}>
             {name}
@@ -1435,7 +1435,7 @@ function GroupColumn({
       </div>
 
       <p
-        className="text-3xl md:text-4xl font-heading font-black tabular-nums mt-1 whitespace-nowrap overflow-visible"
+        className="text-3xl md:text-4xl font-heading font-black tabular-nums whitespace-nowrap overflow-visible"
         style={{
           color: revealed ? color : "rgba(255,255,255,0.2)",
           textShadow: revealed ? `0 0 18px ${color}AA, 0 0 36px ${color}44` : "none",
@@ -1445,10 +1445,10 @@ function GroupColumn({
       >
         {revealed ? summary.toFixed(2) : "—.——"}
       </p>
-      <p className="text-[9px] text-white/40 font-body mt-0.5 whitespace-nowrap" dir="ltr">{summaryLabel}</p>
+      <p className="text-[9px] text-white/40 font-body whitespace-nowrap" dir="ltr">{summaryLabel}</p>
 
       {/* Mini-grid of individual judge results — aligned on the card's divider line (v1.2.3) */}
-      <div className="mt-auto pt-1.5 border-t shrink-0" style={{ borderColor: `${color}33` }}>
+      <div className="mt-auto pt-1 border-t shrink-0" style={{ borderColor: `${color}33` }}>
         <div className="flex flex-wrap gap-1.5 items-center justify-center">
           {judges.map(j => (
             <JudgeChip key={j.key} slot={j} revealed={revealed} />
