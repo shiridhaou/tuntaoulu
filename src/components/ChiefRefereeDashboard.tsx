@@ -1450,7 +1450,7 @@ function GroupColumn({
       {/* Mini-grid of individual judge results — directly under the group total (v1.2.2) */}
       <div className="mt-2 pt-2 border-t shrink-0" style={{ borderColor: `${color}33` }}>
         <p className="text-[8px] uppercase tracking-[0.25em] text-white/35 font-body mb-1.5">Individual</p>
-        <div className="flex flex-wrap gap-1.5 items-center justify-center">
+        <div className="flex flex-wrap gap-1.5 items-center justify-center h-full">
           {judges.map(j => (
             <JudgeChip key={j.key} slot={j} revealed={revealed} />
           ))}
