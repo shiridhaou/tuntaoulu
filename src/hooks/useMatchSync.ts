@@ -130,8 +130,12 @@ export async function broadcastStandingsToggle(sessionCode: string, open: boolea
   const ch = getSessionStateChannel(sessionCode);
   if (ch.state !== "joined") {
     await new Promise<void>((resolve) => {
-      ch.subscribe((status) => { if (status === "SUBSCRIBED") resolve(); });
-      setTimeout(resolve, 1500);
+      const startedAt = Date.now();
+      const waitForJoin = () => {
+        if (ch.state === "joined" || Date.now() - startedAt >= 1500) resolve();
+        else setTimeout(waitForJoin, 50);
+      };
+      waitForJoin();
     });
   }
   try {

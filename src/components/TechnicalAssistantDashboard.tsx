@@ -17,7 +17,7 @@ import Papa from "papaparse";
 import { supabase } from "@/integrations/supabase/client";
 import { joinSessionMembership, ensureDeviceSession } from "@/lib/sessionMembership";
 
-import { matchControl, useMatchSync, broadcastSessionState, broadcastStandingsToggle } from "@/hooks/useMatchSync";
+import { matchControl, useMatchSync, broadcastSessionState, broadcastStandingsToggle, onStandingsToggle } from "@/hooks/useMatchSync";
 import { useLogout } from "@/hooks/useLogout";
 import { getWebhookSettings, saveWebhookSettings, isValidWebhookUrl, type WebhookSettings } from "@/lib/resultsWebhook";
 import { dateInputProps, fmtClock, parseDecimalInput, toWesternDigits } from "@/lib/numFormat";
@@ -208,6 +208,11 @@ function TADashboardInner() {
   const sync = useMatchSync(sessionCode);
   const timerSec = sync.elapsedSec;
   const timerRunning = sync.timerState === "running";
+
+  useEffect(() => {
+    if (!sessionCode) return;
+    return onStandingsToggle(sessionCode, setStandingsOpen);
+  }, [sessionCode]);
 
   // Judges status
   const [judgeStatuses, setJudgeStatuses] = useState<JudgeStatusRow[]>([]);

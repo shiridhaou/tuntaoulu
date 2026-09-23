@@ -131,7 +131,7 @@ export function LeaderboardModal({
 
   return (
     <div className={`fixed inset-0 z-[120] flex items-center justify-center ${arena ? "p-0 animate-in fade-in duration-300" : "p-4"}`} style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(10px)" }}>
-      <div className={`${arena ? "h-screen max-h-screen rounded-none border-x-0 animate-in slide-in-from-bottom-4 duration-300" : "max-h-[88vh] rounded-2xl"} w-full max-w-7xl flex flex-col border border-white/10 bg-black/80 overflow-hidden`}>
+      <div className={`${arena ? "h-screen max-h-screen max-w-none rounded-none border-x-0 animate-in slide-in-from-bottom-4 duration-300" : "max-h-[88vh] max-w-7xl rounded-2xl"} w-full flex flex-col border border-white/10 bg-black/80 overflow-hidden`}>
         <header className={`flex items-center justify-between gap-3 border-b border-white/10 shrink-0 ${arena ? "px-8 py-6" : "px-4 py-3"}`}>
           <div className="flex items-center gap-2 min-w-0">
             <Trophy className={arena ? "h-8 w-8" : "h-4 w-4"} style={{ color: "#FACC15" }} />
@@ -181,7 +181,7 @@ export function LeaderboardModal({
                   <tr key={r.athleteId} className="border-t border-white/5 hover:bg-white/[0.03]">
                     <td className="p-2">
                       <span
-                        className="inline-flex h-7 min-w-7 px-1.5 items-center justify-center rounded-full text-[11px] font-black tabular-nums"
+                         className={`inline-flex items-center justify-center rounded-full font-black tabular-nums ${arena ? "h-12 min-w-12 px-2 text-xl" : "h-7 min-w-7 px-1.5 text-[11px]"}`}
                         style={i < 3
                           ? { background: `${MEDAL[i]}22`, border: `1px solid ${MEDAL[i]}88`, color: MEDAL[i] }
                           : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}

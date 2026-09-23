@@ -1653,7 +1653,10 @@ export function PublicDisplay() {
         onClose={() => setStandingsOpen(false)}
         styleFilter={result?.style ?? athlete?.style ?? null}
         eventTitle="Tunisian Wushu Federation — Result List"
-        categoryTitle={[athlete?.age_category, styleLabelEn(result?.style ?? athlete?.style)].filter(Boolean).join(" · ")}
+        categoryTitle={[
+          athlete?.age_category,
+          (result?.style ?? athlete?.style) ? styleLabelEn(result?.style ?? athlete?.style) : null,
+        ].filter(Boolean).join(" · ")}
         displayMode="arena"
       />
       <FullscreenToggle />
