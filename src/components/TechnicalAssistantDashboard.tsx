@@ -80,6 +80,7 @@ const STATUS_META: Record<Athlete["status"], { label: string; cls: string; icon:
   waiting: { label: "انتظار", cls: "bg-muted/40 text-muted-foreground border-muted", icon: Clock },
   judging: { label: "جاري التحكيم", cls: "bg-fed-blue/15 text-fed-blue border-fed-blue/40", icon: Loader2 },
   done:    { label: "انتهى", cls: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40", icon: CheckCircle2 },
+  archived: { label: "مؤرشف", cls: "bg-white/5 text-white/50 border-white/20", icon: Archive },
 };
 
 const CATEGORIES: AgeCategory[] = ["Poussins", "Pupilles", "Benjamins", "Minimes", "Cadets", "Juniors", "Seniors"];
