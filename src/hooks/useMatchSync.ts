@@ -47,6 +47,7 @@ export interface SessionStatePatch {
 
 /** Realtime broadcast channel used for instant config (style / mode) pushes. */
 export const SESSION_STATE_EVENT = "session_state_change";
+export const STANDINGS_TOGGLE_EVENT = "TOGGLE_STANDINGS";
 export const sessionStateChannel = (code: string) => `session-state-${code}`;
 
 /**
@@ -57,6 +58,7 @@ export const sessionStateChannel = (code: string) => `session-state-${code}`;
  */
 const stateChannels = new Map<string, ReturnType<typeof supabase.channel>>();
 const stateListeners = new Map<string, Set<(p: Record<string, unknown>) => void>>();
+const standingsListeners = new Map<string, Set<(open: boolean) => void>>();
 
 export function getSessionStateChannel(code: string) {
   const topic = sessionStateChannel(code);
@@ -64,8 +66,12 @@ export function getSessionStateChannel(code: string) {
   if (!ch) {
     ch = supabase.channel(topic, { config: { broadcast: { self: true } } });
     stateListeners.set(topic, new Set());
+    standingsListeners.set(topic, new Set());
     ch.on("broadcast", { event: SESSION_STATE_EVENT }, ({ payload }) => {
       stateListeners.get(topic)?.forEach((fn) => fn((payload ?? {}) as Record<string, unknown>));
+    }).on("broadcast", { event: STANDINGS_TOGGLE_EVENT }, ({ payload }) => {
+      const open = Boolean((payload as { open?: unknown } | null)?.open);
+      standingsListeners.get(topic)?.forEach((fn) => fn(open));
     }).subscribe();
     stateChannels.set(topic, ch);
   }
@@ -77,6 +83,16 @@ export function onSessionState(code: string, fn: (p: Record<string, unknown>) =>
   getSessionStateChannel(code);
   const topic = sessionStateChannel(code);
   const set = stateListeners.get(topic)!;
+  set.add(fn);
+  return () => { set.delete(fn); };
+}
+
+/** Subscribe to the isolated arena standings toggle broadcast. */
+export function onStandingsToggle(code: string, fn: (open: boolean) => void) {
+  getSessionStateChannel(code);
+  const topic = sessionStateChannel(code);
+  const set = standingsListeners.get(topic);
+  if (!set) return () => undefined;
   set.add(fn);
   return () => { set.delete(fn); };
 }
@@ -107,6 +123,20 @@ export async function broadcastSessionState(
   try {
     await ch.send({ type: "broadcast", event: SESSION_STATE_EVENT, payload: patch });
   } catch { /* never block the operator UI on a broadcast failure */ }
+}
+
+/** Send the dedicated standings event without coupling it to match-state updates. */
+export async function broadcastStandingsToggle(sessionCode: string, open: boolean) {
+  const ch = getSessionStateChannel(sessionCode);
+  if (ch.state !== "joined") {
+    await new Promise<void>((resolve) => {
+      ch.subscribe((status) => { if (status === "SUBSCRIBED") resolve(); });
+      setTimeout(resolve, 1500);
+    });
+  }
+  try {
+    await ch.send({ type: "broadcast", event: STANDINGS_TOGGLE_EVENT, payload: { open } });
+  } catch { /* never block an operator action on a broadcast failure */ }
 }
 
 

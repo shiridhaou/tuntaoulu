@@ -13,3 +13,5 @@
 - [x] Fit the Chief Referee compulsory and optional layouts within one viewport.
 - [x] Synchronize arena athlete/reset/standings state with the Chief screen.
 - [x] Center the Chief screen's A/B/C judge status badges.
+- [x] Synchronize the Chief and Technical Assistant standings toggle with the arena display.
+- [x] Present category standings in a full-screen IWUF-style arena overlay.

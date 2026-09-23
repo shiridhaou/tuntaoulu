@@ -306,7 +306,8 @@ function StandingsOverlayListener({ sessionCode }: { sessionCode: string | null 
       .on("postgres_changes",
         { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${code}` },
         (payload: any) => {
-          if (payload.new?.event_type !== "toggle_standings_overlay" && payload.new?.event_type !== "TOGGLE_STANDINGS_OVERLAY") return;
+          const eventType = String(payload.new?.event_type ?? "").toUpperCase();
+          if (eventType !== "TOGGLE_STANDINGS" && eventType !== "TOGGLE_STANDINGS_OVERLAY") return;
           if (cancelled) return;
           setOpen(!!payload.new?.payload?.open);
         })
