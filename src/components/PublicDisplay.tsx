@@ -1112,6 +1112,28 @@ export function PublicDisplay() {
         .filter((m: any) => typeof m?.code === "string")
         .map((m: any) => ({ code: String(m.code), success: typeof m.successful === "boolean" ? m.successful : typeof m.success === "boolean" ? m.success : null }));
 
+  // Standings is an arena-level takeover and must remain available while the
+  // display is waiting, live, published, showing VAR, or showing the podium.
+  if (sessionCode && standingsOpen) {
+    return (
+      <div className="h-screen w-screen relative overflow-hidden" style={{ background: NAVY }}>
+        <LeaderboardModal
+          sessionCode={sessionCode}
+          open
+          onClose={() => setStandingsOpen(false)}
+          styleFilter={result?.style ?? athlete?.style ?? null}
+          eventTitle="Tunisian Wushu Federation — Result List"
+          categoryTitle={[
+            athlete?.age_category,
+            (result?.style ?? athlete?.style) ? styleLabelEn(result?.style ?? athlete?.style) : null,
+          ].filter(Boolean).join(" · ")}
+          displayMode="arena"
+        />
+        <FullscreenToggle />
+      </div>
+    );
+  }
+
   // ── No session ─────────────────────────────────────────
   if (!sessionCode) {
     return (
