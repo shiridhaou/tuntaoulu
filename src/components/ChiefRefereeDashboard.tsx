@@ -139,9 +139,10 @@ function ChiefRefereeDashboardInner() {
         payload: { show_standings_overlay: next },
       });
       void broadcastStandingsToggle(sessionCode, next);
+      void broadcastPublicStandings(sessionCode, next);
       await supabase.from("match_events").insert({
         session_code: sessionCode,
-        event_type: "TOGGLE_STANDINGS",
+        event_type: "SHOW_PUBLIC_STANDINGS",
         payload: { open: next, at: Date.now() } as never,
       });
     } catch { /* non-fatal: local modal already opened */ }
