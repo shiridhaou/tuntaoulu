@@ -51,6 +51,58 @@ export const STANDINGS_TOGGLE_EVENT = "TOGGLE_STANDINGS";
 export const sessionStateChannel = (code: string) => `session-state-${code}`;
 
 /**
+ * Dedicated arena-display channel. The Chief / TA "Standings" button emits
+ * SHOW_PUBLIC_STANDINGS here so the arena screen can open its full-screen
+ * standings overlay independently of the match-state channel.
+ */
+export const PUBLIC_STANDINGS_EVENT = "SHOW_PUBLIC_STANDINGS";
+export const arenaDisplayChannel = (code: string) => `arena-display-${code}`;
+const arenaChannels = new Map<string, ReturnType<typeof supabase.channel>>();
+const arenaListeners = new Map<string, Set<(open: boolean) => void>>();
+
+export function getArenaDisplayChannel(code: string) {
+  const topic = arenaDisplayChannel(code);
+  let ch = arenaChannels.get(topic);
+  if (!ch) {
+    ch = supabase.channel(topic, { config: { broadcast: { self: true } } });
+    arenaListeners.set(topic, new Set());
+    ch.on("broadcast", { event: PUBLIC_STANDINGS_EVENT }, ({ payload }) => {
+      const open = Boolean((payload as { open?: unknown } | null)?.open);
+      arenaListeners.get(topic)?.forEach((fn) => fn(open));
+    }).subscribe();
+    arenaChannels.set(topic, ch);
+  }
+  return ch;
+}
+
+/** Subscribe to SHOW_PUBLIC_STANDINGS on the arena-display channel. */
+export function onPublicStandings(code: string, fn: (open: boolean) => void) {
+  getArenaDisplayChannel(code);
+  const set = arenaListeners.get(arenaDisplayChannel(code));
+  if (!set) return () => undefined;
+  set.add(fn);
+  return () => { set.delete(fn); };
+}
+
+/** Emit SHOW_PUBLIC_STANDINGS to every connected arena display. */
+export async function broadcastPublicStandings(code: string, open: boolean) {
+  const ch = getArenaDisplayChannel(code);
+  if (ch.state !== "joined") {
+    await new Promise<void>((resolve) => {
+      const startedAt = Date.now();
+      const waitForJoin = () => {
+        if (ch.state === "joined" || Date.now() - startedAt >= 1500) resolve();
+        else setTimeout(waitForJoin, 50);
+      };
+      waitForJoin();
+    });
+  }
+  try {
+    await ch.send({ type: "broadcast", event: PUBLIC_STANDINGS_EVENT, payload: { open } });
+  } catch { /* never block an operator action on a broadcast failure */ }
+}
+
+/**
  * A single shared channel instance per session topic.
  * Joining the same topic twice on one socket makes supabase-js error out
  * ("tried to subscribe multiple times"), which silently killed TA broadcasts
