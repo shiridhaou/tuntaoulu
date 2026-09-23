@@ -758,7 +758,7 @@ function ChiefRefereeDashboardInner() {
   // applied after A+B+C here is the explicit Chief Judge deduction.
   // Difficulty counts whenever the C judges actually evaluated the routine,
   // even if the mode flag from the TA has not flipped to "optional" yet.
-  const cContrib = matchMode === "optional" || cSubmitted.length > 0 ? groupCTotal : 0;
+  const cContrib = matchMode === "optional" || cEvaluatedCount > 0 ? groupCTotal : 0;
   const choreoTotal = roundScore(choreoApplied.reduce((s, d) => s + d.value, 0));
   const aggregateFinal = roundScore(
     Math.max(0, groupATotal + groupBNet + cContrib - chiefDeduction - choreoTotal),
@@ -766,7 +766,7 @@ function ChiefRefereeDashboardInner() {
   // Show real aggregates whenever ANY judge has submitted — even if TA hasn't
   // formally "called" the athlete via current_match.athlete_id yet. This fixes
   // the case where group totals + final stay at 0.00 despite scores arriving.
-  const hasAnySubmission = aSubmitted.length > 0 || bKept.length > 0 || cSubmitted.length > 0;
+  const hasAnySubmission = aSubmitted.length > 0 || bKept.length > 0 || cEvaluatedCount > 0;
   const showLive = hasActiveAthlete || hasAnySubmission;
   const displayGroupATotal = showLive ? groupATotal : 0;
   const displayGroupBNet = showLive ? groupBNet : 0;
