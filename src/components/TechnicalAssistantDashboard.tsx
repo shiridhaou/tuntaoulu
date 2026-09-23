@@ -1416,14 +1416,27 @@ function TADashboardInner() {
                   </SheetTitle>
                 </SheetHeader>
                 <Tabs value={tab} onValueChange={setTab} className="w-full mt-4">
-                  <TabsList className="grid grid-cols-2 w-full bg-card/40 backdrop-blur p-1 h-auto">
+                  <TabsList className="grid grid-cols-3 w-full bg-card/40 backdrop-blur p-1 h-auto">
                     <TabsTrigger value="import" className="data-[state=active]:bg-fed-blue data-[state=active]:text-white py-2">
                       <FileSpreadsheet className="h-4 w-4 ml-1.5" /> استيراد
                     </TabsTrigger>
                     <TabsTrigger value="setup" className="data-[state=active]:bg-gold data-[state=active]:text-navy py-2">
                       <Settings className="h-4 w-4 ml-1.5" /> الإعدادات
                     </TabsTrigger>
+                    <TabsTrigger value="archive" className="data-[state=active]:bg-fed-red data-[state=active]:text-white py-2">
+                      <Archive className="h-4 w-4 ml-1.5" /> الأرشفة
+                    </TabsTrigger>
                   </TabsList>
+
+                  {/* ===== TAB: CATEGORY SUMMARY & ARCHIVE ===== */}
+                  <TabsContent value="archive" className="mt-4">
+                    <CategoryArchivePanel
+                      sessionCode={sessionCode}
+                      tournamentName={tournament?.name ?? null}
+                      athletes={athletes}
+                      onArchived={() => { void loadAthletes(); }}
+                    />
+                  </TabsContent>
 
                   {/* ===== TAB: SETUP ===== */}
                   <TabsContent value="setup" className="mt-4">
