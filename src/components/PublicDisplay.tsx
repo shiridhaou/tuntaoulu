@@ -278,6 +278,7 @@ function useLiveDisplay(sessionCode: string | null) {
         }
         const td = (cm as any)?.ta_deductions;
         applyTaTotal(td && typeof td === "object" ? Number(td.total ?? 0) : 0);
+        currentAthleteId = currentId;
         const resultAthleteId = await loadResult(currentId);
         currentAthleteId = currentId ?? resultAthleteId;
         await Promise.all([
