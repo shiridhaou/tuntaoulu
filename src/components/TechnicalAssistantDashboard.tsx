@@ -1434,7 +1434,7 @@ function TADashboardInner() {
                       sessionCode={sessionCode}
                       tournamentName={tournament?.name ?? null}
                       athletes={athletes}
-                      onArchived={() => { void loadAthletes(); }}
+                      onArchived={() => { void loadActive(); }}
                     />
                   </TabsContent>
 
