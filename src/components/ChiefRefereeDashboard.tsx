@@ -17,7 +17,7 @@ import { countryFlag } from "@/lib/affiliation";
 
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
-import { useMatchSync, broadcastSessionState, broadcastStandingsToggle } from "@/hooks/useMatchSync";
+import { useMatchSync, broadcastSessionState, broadcastStandingsToggle, broadcastPublicStandings } from "@/hooks/useMatchSync";
 import { joinSessionMembership } from "@/lib/sessionMembership";
 import { toast } from "sonner";
 import { styleLabelAr, styleLabelEn, normalizeStyle } from "@/lib/styleNames";

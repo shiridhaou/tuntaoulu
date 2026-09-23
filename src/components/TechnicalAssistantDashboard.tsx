@@ -17,7 +17,7 @@ import Papa from "papaparse";
 import { supabase } from "@/integrations/supabase/client";
 import { joinSessionMembership, ensureDeviceSession } from "@/lib/sessionMembership";
 
-import { matchControl, useMatchSync, broadcastSessionState, broadcastStandingsToggle, onStandingsToggle } from "@/hooks/useMatchSync";
+import { matchControl, useMatchSync, broadcastSessionState, broadcastStandingsToggle, broadcastPublicStandings, onStandingsToggle } from "@/hooks/useMatchSync";
 import { useLogout } from "@/hooks/useLogout";
 import { getWebhookSettings, saveWebhookSettings, isValidWebhookUrl, type WebhookSettings } from "@/lib/resultsWebhook";
 import { dateInputProps, fmtClock, parseDecimalInput, toWesternDigits } from "@/lib/numFormat";
@@ -405,7 +405,8 @@ function TADashboardInner() {
       payload: { show_standings_overlay: next },
     });
     void broadcastStandingsToggle(sessionCode, next);
-    await emitEvent("TOGGLE_STANDINGS", { open: next, at: Date.now() });
+    void broadcastPublicStandings(sessionCode, next);
+    await emitEvent("SHOW_PUBLIC_STANDINGS", { open: next, at: Date.now() });
   }
 
   /**
