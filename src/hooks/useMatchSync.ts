@@ -33,6 +33,18 @@ export interface MatchSyncSnapshot {
   payload: Record<string, unknown> | null;
 }
 
+export interface SessionStatePatch {
+  style?: string | null;
+  athlete_id?: string | null;
+  current_athlete_id?: string | null;
+  match_status?: string;
+  show_standings_overlay?: boolean;
+  payload?: Record<string, unknown>;
+  timer_state?: TimerState;
+  started_at?: string | null;
+  elapsed_ms?: number;
+}
+
 /** Realtime broadcast channel used for instant config (style / mode) pushes. */
 export const SESSION_STATE_EVENT = "session_state_change";
 export const sessionStateChannel = (code: string) => `session-state-${code}`;
@@ -77,14 +89,7 @@ export function onSessionState(code: string, fn: (p: Record<string, unknown>) =>
  */
 export async function broadcastSessionState(
   sessionCode: string,
-  patch: {
-    style?: string | null;
-    athlete_id?: string | null;
-    payload?: Record<string, unknown>;
-    timer_state?: TimerState;
-    started_at?: string | null;
-    elapsed_ms?: number;
-  },
+  patch: SessionStatePatch,
 ) {
   const ch = getSessionStateChannel(sessionCode);
   if (ch.state !== "joined") {
@@ -145,15 +150,23 @@ export function useMatchSync(sessionCode: string | null): MatchSyncSnapshot {
     // `session_state_change` broadcast whenever style / mode / timer change,
     // so judge panels update even if postgres replication lags.
     const offState = onSessionState(sessionCode, (raw) => {
-      const p = raw as Partial<MatchSyncRow>;
+      const p = raw as Partial<MatchSyncRow> & SessionStatePatch;
+      const incomingAthleteId = p.athlete_id !== undefined
+        ? p.athlete_id
+        : p.current_athlete_id;
+      const statePayload: Record<string, unknown> = {
+        ...((p.payload as Record<string, unknown>) ?? {}),
+      };
+      if (p.match_status !== undefined) statePayload.match_status = p.match_status;
+      if (p.show_standings_overlay !== undefined) statePayload.show_standings_overlay = p.show_standings_overlay;
       setRow((prev) => ({
         session_code: sessionCode,
-        athlete_id: p.athlete_id !== undefined ? p.athlete_id : (prev?.athlete_id ?? null),
+        athlete_id: incomingAthleteId !== undefined ? incomingAthleteId : (prev?.athlete_id ?? null),
         timer_state: p.timer_state !== undefined ? p.timer_state : (prev?.timer_state ?? "idle"),
         started_at: p.started_at !== undefined ? p.started_at : (prev?.started_at ?? null),
         elapsed_ms: p.elapsed_ms !== undefined ? p.elapsed_ms : (prev?.elapsed_ms ?? 0),
         style: p.style !== undefined ? p.style : (prev?.style ?? null),
-        payload: { ...(prev?.payload ?? {}), ...((p.payload as Record<string, unknown>) ?? {}) },
+        payload: { ...(prev?.payload ?? {}), ...statePayload },
         updated_at: new Date().toISOString(),
       }));
     });

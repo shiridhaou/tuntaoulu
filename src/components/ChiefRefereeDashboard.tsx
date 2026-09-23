@@ -134,9 +134,13 @@ function ChiefRefereeDashboardInner() {
     setStandingsOpen(next);
     if (!sessionCode) return;
     try {
+      void broadcastSessionState(sessionCode, {
+        show_standings_overlay: next,
+        payload: { show_standings_overlay: next },
+      });
       await supabase.from("match_events").insert({
         session_code: sessionCode,
-        event_type: "toggle_standings_overlay",
+        event_type: "TOGGLE_STANDINGS_OVERLAY",
         payload: { open: next, at: Date.now() } as never,
       });
     } catch { /* non-fatal: local modal already opened */ }
@@ -398,6 +402,52 @@ function ChiefRefereeDashboardInner() {
           .forEach(k => window.localStorage.removeItem(k));
       } catch (e) { console.warn("[CHIEF] local cache wipe failed", e); }
     }
+  };
+
+  const selectAthleteForReady = async (index: number) => {
+    setCurrentAthleteIndex(index);
+    const athlete = athletes[index];
+    if (!sessionCode || !athlete) return;
+    const { data: current } = await supabase
+      .from("current_match")
+      .select("payload")
+      .eq("session_code", sessionCode)
+      .maybeSingle();
+    const previousPayload = current?.payload && typeof current.payload === "object"
+      ? current.payload as Record<string, unknown>
+      : {};
+    const athletePayload = {
+      id: athlete.id,
+      name: athlete.name,
+      bib: athlete.bib ?? null,
+      club: athlete.club ?? null,
+      country: athlete.country,
+      category: athlete.category,
+    };
+    const payload = {
+      ...previousPayload,
+      athlete: athletePayload,
+      activeAthlete: athletePayload,
+      match_status: "READY",
+      show_standings_overlay: false,
+      published_result: null,
+    };
+    await supabase.from("current_match").upsert({
+      session_code: sessionCode,
+      athlete_id: athlete.id,
+      timer_state: "idle",
+      started_at: null,
+      elapsed_ms: 0,
+      payload: payload as never,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "session_code" });
+    await broadcastSessionState(sessionCode, {
+      athlete_id: athlete.id,
+      current_athlete_id: athlete.id,
+      match_status: "READY",
+      show_standings_overlay: false,
+      payload,
+    });
   };
 
   // ── Publish current scores to the Public Display in real time ─────────────
@@ -779,7 +829,7 @@ function ChiefRefereeDashboardInner() {
               and system status now live in the slide-over control panel. */}
           <div className="flex items-center justify-end gap-1.5">
             <button
-              onClick={() => setStandingsOpen(true)}
+              onClick={() => void toggleStandingsOverlay()}
               title="الترتيب العام · Standings"
               className="h-8 px-3 rounded-full border flex items-center gap-1.5 font-heading font-black text-[10px] tracking-[0.2em] transition-all"
               style={{ background: `${GOLD}15`, borderColor: `${GOLD}88`, color: GOLD }}
@@ -1239,7 +1289,7 @@ function ChiefRefereeDashboardInner() {
           setCompetitionStyle={setCompetitionStyle}
           athletes={athletes}
           currentAthleteIndex={currentAthleteIndex}
-          setCurrentAthleteIndex={setCurrentAthleteIndex}
+          setCurrentAthleteIndex={(index) => { void selectAthleteForReady(index); }}
           marqueeText={marqueeText}
           setMarqueeText={setMarqueeText}
           sponsorLogos={sponsorLogos}
@@ -1266,7 +1316,7 @@ function ChiefRefereeDashboardInner() {
       <LeaderboardModal
         sessionCode={sessionCode}
         open={standingsOpen}
-        onClose={() => setStandingsOpen(false)}
+        onClose={() => { if (standingsOpen) void toggleStandingsOverlay(); }}
         styleFilter={(timerSync.style ?? competitionStyle) ?? null}
       />
 
@@ -1400,7 +1450,7 @@ function GroupColumn({
       {/* Mini-grid of individual judge results — directly under the group total (v1.2.2) */}
       <div className="mt-2 pt-2 border-t shrink-0" style={{ borderColor: `${color}33` }}>
         <p className="text-[8px] uppercase tracking-[0.25em] text-white/35 font-body mb-1.5">Individual</p>
-        <div className="flex flex-wrap gap-1.5 justify-center">
+        <div className="flex flex-wrap gap-1.5 items-center justify-center">
           {judges.map(j => (
             <JudgeChip key={j.key} slot={j} revealed={revealed} />
           ))}
@@ -1434,8 +1484,8 @@ function StatusOrb({ state, color }: { state: "waiting" | "active" | "submitted"
 function JudgeChip({ slot, revealed }: { slot: JudgeSlot; revealed: boolean }) {
   if (!slot.online) {
     return (
-      <div className="flex flex-col items-center gap-0.5 opacity-40 w-[42px]">
-        <div className="h-9 w-9 rounded-full border border-dashed border-white/20 flex items-center justify-center">
+      <div className="flex flex-col items-center justify-center self-center gap-0.5 opacity-40 w-[42px]">
+        <div className="h-9 w-9 rounded-full border border-dashed border-white/20 flex items-center justify-center self-center">
           <span className="text-[8px] font-heading font-black text-white/40" dir="ltr">{slot.label}</span>
         </div>
         <span className="text-[8px] text-white/30 font-body leading-none">انتظار</span>
@@ -1462,8 +1512,8 @@ function JudgeChip({ slot, revealed }: { slot: JudgeSlot; revealed: boolean }) {
     : "rgba(255,255,255,0.4)";
 
   return (
-    <div className="flex flex-col items-center gap-0.5 w-[42px]">
-      <div className="relative h-9 w-9 rounded-full border-2 flex flex-col items-center justify-center transition-all"
+    <div className="flex flex-col items-center justify-center self-center gap-0.5 w-[42px]">
+      <div className="relative h-9 w-9 rounded-full border-2 flex flex-col items-center justify-center self-center transition-all"
         style={{ borderColor: ring, background: "rgba(255,255,255,0.03)" }}>
         <span className="text-[7px] font-heading font-black text-white/70 leading-none" dir="ltr">{slot.label}</span>
         <span className="text-[10px] font-heading font-black tabular-nums leading-none mt-0.5" style={{ color: valueColor }} dir="ltr">
@@ -1520,7 +1570,7 @@ function GroupDetailModal({
             return (
               <div key={j.key} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
                 <div className="flex items-center gap-3">
-                  <span className="h-9 w-9 rounded-full border flex items-center justify-center text-[10px] font-heading font-black text-white" style={{ borderColor: j.online ? "rgba(52,211,153,0.5)" : "rgba(255,255,255,0.15)" }} dir="ltr">
+                  <span className="h-9 w-9 rounded-full border flex items-center justify-center self-center text-[10px] font-heading font-black text-white" style={{ borderColor: j.online ? "rgba(52,211,153,0.5)" : "rgba(255,255,255,0.15)" }} dir="ltr">
                     {j.label}
                   </span>
                   <div>
@@ -2194,12 +2244,27 @@ function NextAthleteButton({
           timer_state: "idle",
           started_at: null,
           elapsed_ms: 0,
-          payload: {} as never,
+          payload: { match_status: "READY", show_standings_overlay: false } as never,
           ta_deductions: {} as never,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "session_code" },
       );
+      await broadcastSessionState(sessionCode, {
+        athlete_id: null,
+        current_athlete_id: null,
+        match_status: "READY",
+        show_standings_overlay: false,
+        timer_state: "idle",
+        started_at: null,
+        elapsed_ms: 0,
+        payload: { match_status: "READY", show_standings_overlay: false },
+      });
+      await supabase.from("match_events").insert({
+        session_code: sessionCode,
+        event_type: "next_athlete",
+        payload: { at: Date.now() } as never,
+      });
       // b) Clear judge_scores for the session
       await supabase.from("judge_scores").delete().eq("session_code", sessionCode);
       // c) Clear judge_status for the session
