@@ -730,9 +730,29 @@ function ChiefRefereeDashboardInner() {
   const bKept = groupB.filter(j => j.bRole !== "high" && j.bRole !== "low" && j.score !== null).map(j => j.score as number);
   const groupBNet = bKept.length ? roundScore(bKept.reduce((s, v) => s + v, 0) / bKept.length) : 0;
   const cSubmitted = groupC.filter(j => typeof j.score === "number").map(j => j.score as number);
-  const groupCTotal = cSubmitted.length
+  const liveGroupCTotal = cSubmitted.length
     ? roundScore(cSubmitted.reduce((s, v) => s + v, 0) / cSubmitted.length)
     : 0;
+  // GROUP C PERSISTENCE — a received difficulty score must survive screen
+  // refreshes and READY transitions. It is only replaced when a new Group C
+  // submission arrives, and only dropped when the athlete actually changes.
+  const stickyCRef = useRef<{ athleteId: string | null; total: number; count: number }>({
+    athleteId: null, total: 0, count: 0,
+  });
+  const stickyAthleteId = currentAthlete?.id ?? timerSync.athleteId ?? null;
+  if (stickyCRef.current.athleteId !== stickyAthleteId && stickyAthleteId !== null) {
+    if (cSubmitted.length > 0) {
+      stickyCRef.current = { athleteId: stickyAthleteId, total: liveGroupCTotal, count: cSubmitted.length };
+    } else if (stickyCRef.current.athleteId !== null) {
+      stickyCRef.current = { athleteId: stickyAthleteId, total: 0, count: 0 };
+    } else {
+      stickyCRef.current = { athleteId: stickyAthleteId, total: stickyCRef.current.total, count: stickyCRef.current.count };
+    }
+  } else if (cSubmitted.length > 0) {
+    stickyCRef.current = { athleteId: stickyAthleteId, total: liveGroupCTotal, count: cSubmitted.length };
+  }
+  const groupCTotal = cSubmitted.length > 0 ? liveGroupCTotal : stickyCRef.current.total;
+  const cEvaluatedCount = cSubmitted.length > 0 ? cSubmitted.length : stickyCRef.current.count;
 
   // Group A already arrives net of its own deductions. The only deduction
   // applied after A+B+C here is the explicit Chief Judge deduction.
