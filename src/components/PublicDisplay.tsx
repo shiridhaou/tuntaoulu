@@ -97,7 +97,7 @@ function readDisplayAthleteId(row: unknown): string | null {
   const payload = readDisplayPayload(source.payload);
   const direct = source.athlete_id ?? source.current_athlete_id ?? payload.current_athlete_id ?? payload.athlete_id;
   if (typeof direct === "string" && direct.trim()) return direct;
-  const activeAthlete = readDisplayPayload(payload.activeAthlete ?? payload.athlete);
+  const activeAthlete = readDisplayPayload(source.activeAthlete ?? source.athlete ?? payload.activeAthlete ?? payload.athlete);
   const nested = activeAthlete.id;
   return typeof nested === "string" && nested.trim() ? nested : null;
 }
@@ -114,6 +114,7 @@ function useLiveDisplay(sessionCode: string | null) {
   const [liveTaDeduction, setLiveTaDeduction] = useState<number>(0);
   const [liveTaPulse, setLiveTaPulse] = useState<number>(0);
   const [showStandingsOverlay, setShowStandingsOverlay] = useState(false);
+  const [displayEpoch, setDisplayEpoch] = useState(0);
   const taRef = useRef<number>(0);
 
   useEffect(() => {
@@ -121,6 +122,7 @@ function useLiveDisplay(sessionCode: string | null) {
     let cancelled = false;
     let currentAthleteId: string | null = null;
     let currentMatchStatus: string | null = null;
+    let snapshotVersion = 0;
 
     const applyTaTotal = (taTotal: number) => {
       if (cancelled || taRef.current === taTotal) return;
@@ -131,24 +133,26 @@ function useLiveDisplay(sessionCode: string | null) {
 
     const loadAthlete = async (athleteId: string | null) => {
       if (!athleteId) { setAthlete((prev) => (prev === null ? prev : null)); return; }
+      const requestedVersion = snapshotVersion;
       const { data } = await supabase
         .from("athletes")
         .select("id,full_name,bib_number,country,club,age_category,difficulty_codes,style,tournament_id")
         .eq("id", athleteId)
         .maybeSingle();
-      if (cancelled) return;
+      if (cancelled || requestedVersion !== snapshotVersion || athleteId !== currentAthleteId) return;
       const next = (data as AthleteRow) ?? null;
       setAthlete((prev) => (sameJson(prev, next) ? prev : next));
     };
 
     const loadJudgeScores = async (athleteId: string | null) => {
       if (!athleteId) { setJudgeScores((prev) => (prev.length === 0 ? prev : [])); return; }
+      const requestedVersion = snapshotVersion;
       const { data } = await supabase
         .from("judge_scores")
         .select("judge_slot,judge_role,score,payload")
         .eq("session_code", sessionCode)
         .eq("athlete_id", athleteId);
-      if (cancelled) return;
+      if (cancelled || requestedVersion !== snapshotVersion || athleteId !== currentAthleteId) return;
       const next = (data as JudgeScore[]) ?? [];
       setJudgeScores((prev) => (sameJson(prev, next) ? prev : next));
     };
@@ -159,16 +163,23 @@ function useLiveDisplay(sessionCode: string | null) {
     };
 
     const clearLiveSnapshot = () => {
+      snapshotVersion += 1;
       currentAthleteId = null;
       applyResult(null);
       setAthlete(null);
       setJudgeScores([]);
       applyTaTotal(0);
+      setDisplayEpoch((value) => value + 1);
     };
 
     const loadActiveAthlete = async (athleteId: string) => {
+      snapshotVersion += 1;
       currentAthleteId = athleteId;
       applyResult(null);
+      setAthlete(null);
+      setJudgeScores([]);
+      applyTaTotal(0);
+      setDisplayEpoch((value) => value + 1);
       await Promise.all([
         loadAthlete(athleteId),
         loadJudgeScores(athleteId),
@@ -186,7 +197,7 @@ function useLiveDisplay(sessionCode: string | null) {
       const source = readDisplayPayload(row);
       const payload = readDisplayPayload(source.payload);
       const incomingAthleteId = readDisplayAthleteId(row);
-      const nextStatus = readDisplayStatus(payload);
+      const nextStatus = readDisplayStatus({ ...source, ...payload });
       const previousAthleteId = currentAthleteId;
       const previousStatus = currentMatchStatus;
       const athleteChanged = incomingAthleteId !== previousAthleteId;
@@ -198,7 +209,7 @@ function useLiveDisplay(sessionCode: string | null) {
       const td = source.ta_deductions;
       applyTaTotal(td && typeof td === "object" ? Number((td as { total?: unknown }).total ?? 0) : 0);
 
-      if (!incomingAthleteId || nextStatus === "READY" && !incomingAthleteId || nextStatus === "GLOBAL_RESET" || nextStatus === "NEXT_ATHLETE") {
+      if (!incomingAthleteId || nextStatus === "RESET" || nextStatus === "GLOBAL_RESET" || nextStatus === "NEXT_ATHLETE") {
         clearLiveSnapshot();
         return;
       }
@@ -212,10 +223,13 @@ function useLiveDisplay(sessionCode: string | null) {
     };
 
     const loadReadyAthlete = async (athleteId: string) => {
+      snapshotVersion += 1;
       currentAthleteId = athleteId;
       applyResult(null);
+      setAthlete(null);
       setJudgeScores([]);
       applyTaTotal(0);
+      setDisplayEpoch((value) => value + 1);
       await loadAthlete(athleteId);
     };
 
@@ -226,6 +240,7 @@ function useLiveDisplay(sessionCode: string | null) {
         applyResult(null);
         return null;
       }
+      const requestedVersion = snapshotVersion;
       const { data } = await supabase
         .from("match_results")
         .select("id,session_code,athlete_id,athlete_name,final_score,score_a,score_b,score_c,deductions,published,payload,style,updated_at")
@@ -235,6 +250,7 @@ function useLiveDisplay(sessionCode: string | null) {
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+      if (cancelled || requestedVersion !== snapshotVersion || athleteId !== currentAthleteId) return null;
       applyResult((data as MatchResult) ?? null);
       return athleteId;
     };
@@ -246,12 +262,14 @@ function useLiveDisplay(sessionCode: string | null) {
     const reloadSnapshot = async () => {
       if (reloading) return;
       reloading = true;
+      const requestedVersion = snapshotVersion;
       try {
         const { data: cm } = await supabase
           .from("current_match")
           .select("athlete_id, ta_deductions, payload")
           .eq("session_code", sessionCode)
           .maybeSingle();
+        if (cancelled || requestedVersion !== snapshotVersion) return;
         const currentId = cm?.athlete_id ?? null;
         const currentPayload = cm?.payload && typeof cm.payload === "object"
           ? cm.payload as Record<string, unknown>
@@ -262,6 +280,7 @@ function useLiveDisplay(sessionCode: string | null) {
         }
         const td = (cm as any)?.ta_deductions;
         applyTaTotal(td && typeof td === "object" ? Number(td.total ?? 0) : 0);
+        currentAthleteId = currentId;
         const resultAthleteId = await loadResult(currentId);
         currentAthleteId = currentId ?? resultAthleteId;
         await Promise.all([
@@ -303,6 +322,11 @@ function useLiveDisplay(sessionCode: string | null) {
         : readDisplayAthleteId({ payload: statePayload });
       const statusChanged = stateStatus !== null && stateStatus !== currentMatchStatus;
       if (stateStatus) currentMatchStatus = stateStatus;
+      const isReset = stateStatus === "RESET" || stateStatus === "GLOBAL_RESET" || stateStatus === "NEXT_ATHLETE";
+      if (isReset) {
+        clearLiveSnapshot();
+        return;
+      }
       const isReady = stateStatus === "READY";
       if (isReady && incomingAthleteId) {
         void loadReadyAthlete(incomingAthleteId);
@@ -334,15 +358,21 @@ function useLiveDisplay(sessionCode: string | null) {
       .on("postgres_changes",
         { event: "*", schema: "public", table: "match_results", filter: `session_code=eq.${sessionCode}` },
         () => { scheduleReload(); })
-      // TA "NEXT ATHLETE / GLOBAL RESET" — wipe the local snapshot at once.
+      // TA/Chief athlete-change and reset events — invalidate stale requests and
+      // wipe the previous result before loading the next athlete.
       .on("postgres_changes",
         { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${sessionCode}` },
         (payload) => {
-          const ev = (payload.new as { event_type?: string })?.event_type;
-          const isReset = ev === "global_reset" || ev === "next_athlete" || ev === "GLOBAL_RESET" || ev === "NEXT_ATHLETE";
-          if (!isReset || cancelled) return;
-          clearLiveSnapshot();
-          scheduleReload();
+          const row = payload.new as { event_type?: string; payload?: Record<string, unknown> };
+          const ev = row.event_type?.trim().toUpperCase();
+          if (cancelled) return;
+          if (ev === "GLOBAL_RESET" || ev === "NEXT_ATHLETE" || ev === "RESET") {
+            clearLiveSnapshot();
+            return;
+          }
+          if (ev === "ATHLETE_CHANGE" || ev === "MATCH_STATE_CHANGE") {
+            void applyCurrentMatchRow(row.payload ?? {});
+          }
         })
       .subscribe();
 
@@ -354,7 +384,7 @@ function useLiveDisplay(sessionCode: string | null) {
     };
   }, [sessionCode]);
 
-  return { athlete, judgeScores, result, liveTaDeduction, liveTaPulse, showStandingsOverlay };
+  return { athlete, judgeScores, result, liveTaDeduction, liveTaPulse, showStandingsOverlay, displayEpoch };
 }
 
 
@@ -419,10 +449,15 @@ function bTrimRoles(scores: { slot: string; score: number }[]): Record<string, "
 }
 
 // ── Count up ──────────────────────────────────────────────────────────
-function useCountUp(target: number, duration = 1400) {
+function useCountUp(target: number, duration = 1400, resetKey = 0) {
   const [value, setValue] = useState(0);
   const fromRef = useRef(0);
   useEffect(() => {
+    if (target === 0) {
+      fromRef.current = 0;
+      setValue(0);
+      return;
+    }
     fromRef.current = value;
     let raf = 0;
     let start: number | null = null;
@@ -436,7 +471,7 @@ function useCountUp(target: number, duration = 1400) {
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target]);
+  }, [target, resetKey]);
   return value;
 }
 
@@ -879,7 +914,7 @@ export function PublicDisplay() {
   const [standingsOpen, setStandingsOpen] = useState(false);
   useRoomPresence(sessionCode, { role: "display" });
 
-  const { athlete, judgeScores, result, liveTaDeduction, liveTaPulse, showStandingsOverlay } = useLiveDisplay(sessionCode);
+  const { athlete, judgeScores, result, liveTaDeduction, liveTaPulse, showStandingsOverlay, displayEpoch } = useLiveDisplay(sessionCode);
   const varLive = useVarBroadcastFlag(sessionCode);
   const liveVideoUrl = useLiveVideoUrl(sessionCode);
   const ahjClips = useVerifiedClips(sessionCode, athlete?.id ?? null);
@@ -918,7 +953,7 @@ export function PublicDisplay() {
   const autoPodium = useAutoPodium(sessionCode, athlete, result, isPublished);
   const matchMode: "compulsory" | "optional" = (result?.payload?.match_mode as any) ?? "optional";
   const finalScore = Number(result?.final_score ?? 0);
-  const animated = useCountUp(isPublished ? finalScore : 0);
+  const animated = useCountUp(isPublished ? finalScore : 0, 1400, displayEpoch);
   const reportUrl = athlete ? `${origin || ""}/public-report/${athlete.id}` : "";
 
   // Live rank for current athlete
