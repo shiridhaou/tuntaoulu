@@ -132,11 +132,11 @@ export function LeaderboardModal({
   return (
     <div className={`fixed inset-0 z-[120] flex items-center justify-center ${arena ? "p-0 animate-in fade-in duration-300" : "p-4"}`} style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(10px)" }}>
       <div className={`${arena ? "h-screen max-h-screen max-w-none rounded-none border-x-0 animate-in slide-in-from-bottom-4 duration-300" : "max-h-[88vh] max-w-7xl rounded-2xl"} w-full flex flex-col border border-white/10 bg-black/80 overflow-hidden`}>
-        <header className={`flex items-center justify-between gap-3 border-b border-white/10 shrink-0 ${arena ? "px-8 py-6" : "px-4 py-3"}`}>
+        <header className={`flex items-center justify-between gap-3 border-b border-white/10 shrink-0 ${arena ? "px-8 py-6" : "px-4 py-3"}`} dir={arena ? "ltr" : undefined}>
           <div className="flex items-center gap-2 min-w-0">
             <Trophy className={arena ? "h-8 w-8" : "h-4 w-4"} style={{ color: "#FACC15" }} />
             <div className="min-w-0">
-              <p className={`${arena ? "text-2xl md:text-4xl" : "text-sm"} font-heading font-black text-white truncate`}>
+              <p className={`${arena ? "text-2xl lg:text-3xl" : "text-sm"} font-heading font-black text-white truncate`}>
                 {eventTitle ?? "الترتيب العام · STANDINGS"}
               </p>
               <p className={`${arena ? "text-sm md:text-lg mt-1" : "text-[10px]"} font-bold text-white/45 truncate`}>
