@@ -97,7 +97,7 @@ function readDisplayAthleteId(row: unknown): string | null {
   const payload = readDisplayPayload(source.payload);
   const direct = source.athlete_id ?? source.current_athlete_id ?? payload.current_athlete_id ?? payload.athlete_id;
   if (typeof direct === "string" && direct.trim()) return direct;
-  const activeAthlete = readDisplayPayload(payload.activeAthlete ?? payload.athlete);
+  const activeAthlete = readDisplayPayload(source.activeAthlete ?? source.athlete ?? payload.activeAthlete ?? payload.athlete);
   const nested = activeAthlete.id;
   return typeof nested === "string" && nested.trim() ? nested : null;
 }
@@ -262,12 +262,14 @@ function useLiveDisplay(sessionCode: string | null) {
     const reloadSnapshot = async () => {
       if (reloading) return;
       reloading = true;
+      const requestedVersion = snapshotVersion;
       try {
         const { data: cm } = await supabase
           .from("current_match")
           .select("athlete_id, ta_deductions, payload")
           .eq("session_code", sessionCode)
           .maybeSingle();
+        if (cancelled || requestedVersion !== snapshotVersion) return;
         const currentId = cm?.athlete_id ?? null;
         const currentPayload = cm?.payload && typeof cm.payload === "object"
           ? cm.payload as Record<string, unknown>
