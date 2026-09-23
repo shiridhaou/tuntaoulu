@@ -6,8 +6,9 @@ import {
   Download, Settings, ListChecks, KeyRound, Copy, X, FileCheck2,
   Timer, Pause, RotateCcw, AlertTriangle, Megaphone,
   Activity, Send, LogIn, UserPlus, Lock, Unlock, Plus, Minus,
-  ChevronDown, ChevronUp, Radio, Zap, Video,
+  ChevronDown, ChevronUp, Radio, Zap, Video, Archive,
 } from "lucide-react";
+import { CategoryArchivePanel } from "./CategoryArchivePanel";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
@@ -61,7 +62,7 @@ interface Athlete {
   age_category: string | null;
   club: string | null;
   country: string | null;
-  status: "waiting" | "judging" | "done";
+  status: "waiting" | "judging" | "done" | "archived";
   style?: string | null;
   difficulty_codes?: string[] | null;
   difficulty_sheet?: DifficultyItem[] | null;
