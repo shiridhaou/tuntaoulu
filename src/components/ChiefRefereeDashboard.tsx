@@ -1483,11 +1483,10 @@ function StatusOrb({ state, color }: { state: "waiting" | "active" | "submitted"
 function JudgeChip({ slot, revealed }: { slot: JudgeSlot; revealed: boolean }) {
   if (!slot.online) {
     return (
-      <div className="flex flex-col items-center justify-center self-center gap-0.5 opacity-40 w-[42px]">
+      <div className="flex items-center justify-center self-center opacity-40 w-[42px]">
         <div className="h-9 w-9 rounded-full border border-dashed border-white/20 flex items-center justify-center self-center">
           <span className="text-[8px] font-heading font-black text-white/40" dir="ltr">{slot.label}</span>
         </div>
-        <span className="text-[8px] text-white/30 font-body leading-none">انتظار</span>
       </div>
     );
   }
@@ -1511,7 +1510,7 @@ function JudgeChip({ slot, revealed }: { slot: JudgeSlot; revealed: boolean }) {
     : "rgba(255,255,255,0.4)";
 
   return (
-    <div className="flex flex-col items-center justify-center self-center gap-0.5 w-[42px]">
+    <div className="flex items-center justify-center self-center w-[42px]">
       <div className="relative h-9 w-9 rounded-full border-2 flex flex-col items-center justify-center self-center transition-all"
         style={{ borderColor: ring, background: "rgba(255,255,255,0.03)" }}>
         <span className="text-[7px] font-heading font-black text-white/70 leading-none" dir="ltr">{slot.label}</span>
@@ -1526,9 +1525,6 @@ function JudgeChip({ slot, revealed }: { slot: JudgeSlot; revealed: boolean }) {
           title={slot.submitted ? "Received" : "Waiting"}
         />
       </div>
-      <span className={`text-[7px] font-heading font-black tracking-wider leading-none ${slot.submitted ? "text-emerald-400" : "text-amber-400/80"}`} dir="ltr">
-        {slot.submitted ? "✓" : "…"}
-      </span>
     </div>
   );
 }
