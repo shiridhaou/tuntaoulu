@@ -123,7 +123,7 @@ export function LeaderboardModal({
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(10px)" }}>
-      <div className="w-full max-w-5xl max-h-[88vh] flex flex-col rounded-2xl border border-white/10 bg-black/80 overflow-hidden">
+      <div className="w-full max-w-7xl max-h-[88vh] flex flex-col rounded-2xl border border-white/10 bg-black/80 overflow-hidden">
         <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <Trophy className="h-4 w-4" style={{ color: "#FACC15" }} />
@@ -180,15 +180,15 @@ export function LeaderboardModal({
                         {r.dns ? "DNS" : i + 1}
                       </span>
                     </td>
-                    <td className="p-2 text-[13px] font-heading font-bold truncate max-w-[220px]">{r.name}</td>
-                    <td className="p-2 text-[11px] text-white/60 truncate max-w-[220px]">
+                    <td className="p-2 text-xl font-heading font-black truncate max-w-[260px]">{r.name}</td>
+                    <td className="p-2 text-base text-white/60 truncate max-w-[220px]">
                       {affiliationLabel(r.club, r.country) || "—"}
                     </td>
-                    <td className="p-2 text-right text-[12px] tabular-nums text-white/70" dir="ltr">{r.scoreA.toFixed(3)}</td>
-                    <td className="p-2 text-right text-[12px] tabular-nums text-white/70" dir="ltr">{r.scoreB.toFixed(3)}</td>
-                    <td className="p-2 text-right text-[12px] tabular-nums text-white/70" dir="ltr">{r.scoreC.toFixed(3)}</td>
-                    <td className="p-2 text-right text-[12px] tabular-nums text-red-300/80" dir="ltr">−{r.deductions.toFixed(3)}</td>
-                    <td className="p-2 text-right text-[15px] font-black tabular-nums" style={{ color: r.dns ? "rgba(255,255,255,0.45)" : "#FACC15" }} dir="ltr">
+                    <td className="p-2 text-right text-lg tabular-nums text-white/70" dir="ltr">{r.scoreA.toFixed(3)}</td>
+                    <td className="p-2 text-right text-lg tabular-nums text-white/70" dir="ltr">{r.scoreB.toFixed(3)}</td>
+                    <td className="p-2 text-right text-lg tabular-nums text-white/70" dir="ltr">{r.scoreC.toFixed(3)}</td>
+                    <td className="p-2 text-right text-lg tabular-nums text-red-300/80" dir="ltr">−{r.deductions.toFixed(3)}</td>
+                    <td className="p-2 text-right text-2xl font-black tabular-nums" style={{ color: r.dns ? "rgba(255,255,255,0.45)" : "#FACC15" }} dir="ltr">
                       {r.dns ? "DNS" : r.finalScore.toFixed(3)}
                     </td>
                   </tr>
