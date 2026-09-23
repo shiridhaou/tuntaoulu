@@ -1190,7 +1190,7 @@ function ChiefRefereeDashboardInner() {
             arr.some(j => j.submitted || typeof j.score === "number" || typeof judgeOverrides[j.key] === "number");
           const aReady = hasAny(groupA);
           const bReady = hasAny(groupB);
-          const cReady = matchMode === "compulsory" || hasAny(groupC) || cSubmitted.length > 0;
+          const cReady = matchMode === "compulsory" || hasAny(groupC) || cEvaluatedCount > 0;
           const minReady = (aReady && bReady && cReady) || forceUnlock;
           const missing: string[] = [];
           if (!aReady) missing.push("A");
@@ -1293,11 +1293,9 @@ function ChiefRefereeDashboardInner() {
             </>
           );
         })()}
-        {/* ATOMIC RESET — archives, clears current_match, judge_scores, returns to waiting */}
-        <NextAthleteButton
-          sessionCode={sessionCode}
-          onReset={hardResetForNextAthlete}
-        />
+        {/* ROLE SCOPE — multi-screen reset / next-athlete authority belongs to the
+            Technical Assistant panel only. The Chief keeps public-display
+            broadcasting and score approval. */}
       </footer>
 
       {/* DRAWER */}
