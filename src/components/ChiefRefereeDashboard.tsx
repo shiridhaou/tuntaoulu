@@ -1416,7 +1416,7 @@ function GroupColumn({
   return (
     <button
       onClick={onOpen}
-      className="rounded-2xl border backdrop-blur-md p-3 flex flex-col text-left hover:brightness-110 transition-all min-h-0"
+      className="rounded-2xl border backdrop-blur-md p-3 flex flex-col text-left hover:brightness-110 transition-all min-h-0 overflow-hidden"
       style={{
         borderColor: revealed ? `${color}88` : `${color}44`,
         background: `linear-gradient(180deg, ${color}10, ${color}03)`,
@@ -1447,10 +1447,9 @@ function GroupColumn({
       </p>
       <p className="text-[9px] text-white/40 font-body mt-0.5 whitespace-nowrap" dir="ltr">{summaryLabel}</p>
 
-      {/* Mini-grid of individual judge results — directly under the group total (v1.2.2) */}
-      <div className="mt-2 pt-2 border-t shrink-0" style={{ borderColor: `${color}33` }}>
-        <p className="text-[8px] uppercase tracking-[0.25em] text-white/35 font-body mb-1.5">Individual</p>
-        <div className="flex flex-wrap gap-1.5 items-center justify-center h-full">
+      {/* Mini-grid of individual judge results — aligned on the card's divider line (v1.2.3) */}
+      <div className="mt-auto pt-1.5 border-t shrink-0" style={{ borderColor: `${color}33` }}>
+        <div className="flex flex-wrap gap-1.5 items-center justify-center">
           {judges.map(j => (
             <JudgeChip key={j.key} slot={j} revealed={revealed} />
           ))}
