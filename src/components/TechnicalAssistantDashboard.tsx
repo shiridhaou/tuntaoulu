@@ -408,7 +408,7 @@ function TADashboardInner() {
     });
     void broadcastStandingsToggle(sessionCode, next);
     void broadcastPublicStandings(sessionCode, next);
-    await emitEvent("SHOW_PUBLIC_STANDINGS", { open: next, at: Date.now() });
+    await emitEvent("SHOW_PUBLIC_STANDINGS", { show: next, open: next, at: Date.now() });
   }
 
   /**

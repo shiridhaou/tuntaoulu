@@ -169,10 +169,10 @@ export function LeaderboardModal({
                   <th className="p-2 text-left w-16">Rank</th>
                   <th className="p-2 text-left">Country / Club</th>
                   <th className="p-2 text-left">Athlete</th>
-                  {!arena && <th className="p-2 text-right w-16">A</th>}
-                  {!arena && <th className="p-2 text-right w-16">B</th>}
-                  {!arena && <th className="p-2 text-right w-16">C</th>}
-                  {!arena && <th className="p-2 text-right w-20">Ded.</th>}
+                   <th className="p-2 text-right w-16">A</th>
+                   <th className="p-2 text-right w-16">B</th>
+                   <th className="p-2 text-right w-16">C</th>
+                   <th className="p-2 text-right w-20">Ded.</th>
                   <th className="p-2 text-right w-24">Final</th>
                 </tr>
               </thead>
@@ -196,10 +196,10 @@ export function LeaderboardModal({
                         : affiliationLabel(r.club, r.country) || "—"}
                     </td>
                     <td className={`${arena ? "p-4 text-2xl md:text-3xl" : "p-2 text-xl"} font-heading font-black truncate max-w-[420px]`}>{r.name}</td>
-                    {!arena && <td className="p-2 text-right text-lg tabular-nums text-white/70" dir="ltr">{r.scoreA.toFixed(3)}</td>}
-                    {!arena && <td className="p-2 text-right text-lg tabular-nums text-white/70" dir="ltr">{r.scoreB.toFixed(3)}</td>}
-                    {!arena && <td className="p-2 text-right text-lg tabular-nums text-white/70" dir="ltr">{r.scoreC.toFixed(3)}</td>}
-                    {!arena && <td className="p-2 text-right text-lg tabular-nums text-red-300/80" dir="ltr">−{r.deductions.toFixed(3)}</td>}
+                     <td className={`${arena ? "p-4 text-xl" : "p-2 text-lg"} text-right tabular-nums text-white/70`} dir="ltr">{r.scoreA.toFixed(3)}</td>
+                     <td className={`${arena ? "p-4 text-xl" : "p-2 text-lg"} text-right tabular-nums text-white/70`} dir="ltr">{r.scoreB.toFixed(3)}</td>
+                     <td className={`${arena ? "p-4 text-xl" : "p-2 text-lg"} text-right tabular-nums text-white/70`} dir="ltr">{r.scoreC.toFixed(3)}</td>
+                     <td className={`${arena ? "p-4 text-xl" : "p-2 text-lg"} text-right tabular-nums text-red-300/80`} dir="ltr">−{r.deductions.toFixed(3)}</td>
                     <td className={`${arena ? "p-4 text-4xl" : "p-2 text-2xl"} text-right font-black tabular-nums`} style={{ color: r.dns ? "rgba(255,255,255,0.45)" : "#FACC15" }} dir="ltr">
                       {r.dns ? "DNS" : r.finalScore.toFixed(3)}
                     </td>

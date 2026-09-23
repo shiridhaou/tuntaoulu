@@ -15,3 +15,5 @@
 - [x] Center the Chief screen's A/B/C judge status badges.
 - [x] Synchronize the Chief and Technical Assistant standings toggle with the arena display.
 - [x] Present category standings in a full-screen IWUF-style arena overlay.
+- [x] Hard-couple both public display screens to SHOW_PUBLIC_STANDINGS on arena-display.
+- [x] Complete category archive, clear the mat, and stage the next active category.

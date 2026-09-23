@@ -3,6 +3,7 @@ import { Archive, FileText, Loader2, Printer, RefreshCw, Trophy } from "lucide-r
 import { Button } from "./ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { broadcastPublicStandings, broadcastSessionState, broadcastStandingsToggle } from "@/hooks/useMatchSync";
 
 export interface ArchiveAthlete {
   id: string;
@@ -11,6 +12,7 @@ export interface ArchiveAthlete {
   club: string | null;
   country: string | null;
   age_category: string | null;
+  style?: string | null;
   status: string;
 }
 
@@ -99,7 +101,10 @@ export function CategoryArchivePanel({
     const byId = new Map(inCategory.map((a) => [a.id, a]));
     return results
       .filter((r) => byId.has(r.athlete_id))
-      .map((r) => ({ ...r, athlete: byId.get(r.athlete_id)! }))
+      .flatMap((r) => {
+        const athlete = byId.get(r.athlete_id);
+        return athlete ? [{ ...r, athlete }] : [];
+      })
       .sort((a, b) => Number(b.final_score) - Number(a.final_score));
   }, [results, inCategory]);
 
@@ -120,24 +125,85 @@ export function CategoryArchivePanel({
     )) return;
     setArchiving(true);
     try {
-      await supabase.from("athletes").update({ status: "archived" }).in("id", ids);
-      await supabase.from("match_events").insert({
+      const nextAthlete = athletes.find((athlete) => !ids.includes(athlete.id) && athlete.status !== "archived") ?? null;
+      const { error: archiveError } = await supabase.from("athletes").update({ status: "archived" }).in("id", ids);
+      if (archiveError) throw archiveError;
+
+      const { data: currentRow, error: currentError } = await supabase
+        .from("current_match")
+        .select("payload")
+        .eq("session_code", sessionCode)
+        .maybeSingle();
+      if (currentError) throw currentError;
+      const previousPayload = currentRow?.payload && typeof currentRow.payload === "object"
+        ? currentRow.payload as Record<string, unknown>
+        : {};
+      const nextAthletePayload = nextAthlete ? {
+        id: nextAthlete.id,
+        name: nextAthlete.full_name,
+        bib: nextAthlete.bib_number,
+        club: nextAthlete.club,
+        country: nextAthlete.country,
+        category: nextAthlete.age_category,
+      } : null;
+      const readyPayload = {
+        ...previousPayload,
+        match_status: "READY",
+        status: "READY",
+        category: nextAthlete?.age_category ?? null,
+        athlete: nextAthletePayload,
+        activeAthlete: nextAthletePayload,
+        show_standings_overlay: false,
+      };
+
+      const { error: scoresError } = await supabase.from("judge_scores").delete().eq("session_code", sessionCode);
+      if (scoresError) throw scoresError;
+      const { error: statusError } = await supabase.from("judge_status").delete().eq("session_code", sessionCode);
+      if (statusError) throw statusError;
+      const { error: matchError } = await supabase.from("current_match").upsert({
         session_code: sessionCode,
-        event_type: "CATEGORY_ARCHIVED",
-        payload: { category, athletes: ids.length, at: Date.now() } as never,
-      });
-      await supabase.from("current_match").upsert({
-        session_code: sessionCode,
-        athlete_id: null,
+        athlete_id: nextAthlete?.id ?? null,
+        style: nextAthlete?.style ?? null,
         timer_state: "idle",
         started_at: null,
         elapsed_ms: 0,
-        payload: { match_status: "READY", show_standings_overlay: false } as never,
+        payload: readyPayload as never,
+        ta_deductions: { time: { value: 0 }, oob: { count: 0, value: 0 }, total: 0 } as never,
         updated_at: new Date().toISOString(),
       }, { onConflict: "session_code" });
-      await supabase.from("judge_scores").delete().eq("session_code", sessionCode);
-      await supabase.from("judge_status").delete().eq("session_code", sessionCode);
-      toast.success("تمت أرشفة الفئة — البساط جاهز للفئة التالية");
+      if (matchError) throw matchError;
+
+      await broadcastSessionState(sessionCode, {
+        athlete_id: nextAthlete?.id ?? null,
+        current_athlete_id: nextAthlete?.id ?? null,
+        match_status: "READY",
+        show_standings_overlay: false,
+        timer_state: "idle",
+        started_at: null,
+        elapsed_ms: 0,
+        style: nextAthlete?.style ?? null,
+        payload: readyPayload,
+      });
+      void broadcastStandingsToggle(sessionCode, false);
+      void broadcastPublicStandings(sessionCode, false);
+
+      const { error: eventError } = await supabase.from("match_events").insert({
+        session_code: sessionCode,
+        event_type: "CATEGORY_ARCHIVED",
+        payload: {
+          category,
+          status: "ARCHIVED",
+          athletes: ids.length,
+          next_athlete_id: nextAthlete?.id ?? null,
+          next_category: nextAthlete?.age_category ?? null,
+          at: Date.now(),
+        } as never,
+      });
+      if (eventError) throw eventError;
+      setCategory(nextAthlete?.age_category ?? "all");
+      toast.success(nextAthlete
+        ? `تمت الأرشفة — الفئة التالية ${nextAthlete.age_category ?? "جاهزة"}`
+        : "تمت الأرشفة — لا توجد فئة نشطة تالية");
       onArchived?.();
       await load();
     } catch (e: any) {
