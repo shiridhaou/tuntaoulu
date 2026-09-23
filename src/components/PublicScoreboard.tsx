@@ -6,7 +6,7 @@ import { FederationLogo } from "./FederationLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useDisplaySettings } from "@/hooks/useDisplaySettings";
 import { FullscreenToggle } from "./FullscreenToggle";
-import { useMatchSync, onSessionState } from "@/hooks/useMatchSync";
+import { useMatchSync, onSessionState, onPublicStandings, onStandingsToggle } from "@/hooks/useMatchSync";
 import { LeaderboardModal } from "./LeaderboardModal";
 
 // Live data from TA's session (current_match + match_events)
@@ -300,6 +300,13 @@ function StandingsOverlayListener({ sessionCode }: { sessionCode: string | null 
   useEffect(() => {
     const code = (sessionCode ?? "").trim().toUpperCase();
     if (!code) { setOpen(false); return; }
+    const offPublic = onPublicStandings(code, setOpen);
+    const offLegacy = onStandingsToggle(code, setOpen);
+    return () => { offPublic(); offLegacy(); };
+  }, [sessionCode]);
+  useEffect(() => {
+    const code = (sessionCode ?? "").trim().toUpperCase();
+    if (!code) { setOpen(false); return; }
     let cancelled = false;
     const ch = supabase
       .channel(`sb-standings-${code}`)
@@ -309,12 +316,21 @@ function StandingsOverlayListener({ sessionCode }: { sessionCode: string | null 
           const eventType = String(payload.new?.event_type ?? "").toUpperCase();
           if (eventType !== "TOGGLE_STANDINGS" && eventType !== "TOGGLE_STANDINGS_OVERLAY" && eventType !== "SHOW_PUBLIC_STANDINGS") return;
           if (cancelled) return;
-          setOpen(!!payload.new?.payload?.open);
+          setOpen(Boolean(payload.new?.payload?.show ?? payload.new?.payload?.open));
         })
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(ch); };
   }, [sessionCode]);
-  return <LeaderboardModal sessionCode={sessionCode} open={open} onClose={() => setOpen(false)} />;
+  return (
+    <LeaderboardModal
+      sessionCode={sessionCode}
+      open={open}
+      onClose={() => setOpen(false)}
+      eventTitle="Tunisian Wushu Federation — Category Result List"
+      categoryTitle="Official standings · الترتيب العام"
+      displayMode="arena"
+    />
+  );
 }
 
 export function PublicScoreboard() {

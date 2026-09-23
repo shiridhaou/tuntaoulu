@@ -143,7 +143,7 @@ function ChiefRefereeDashboardInner() {
       await supabase.from("match_events").insert({
         session_code: sessionCode,
         event_type: "SHOW_PUBLIC_STANDINGS",
-        payload: { open: next, at: Date.now() } as never,
+        payload: { show: next, open: next, at: Date.now() } as never,
       });
     } catch { /* non-fatal: local modal already opened */ }
   };

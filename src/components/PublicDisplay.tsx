@@ -958,7 +958,7 @@ export function PublicDisplay() {
           const event = (payload.new as { event_type?: string; payload?: { open?: boolean } }) ?? {};
           const eventType = event.event_type?.toUpperCase();
           if (cancelled || (eventType !== "TOGGLE_STANDINGS" && eventType !== "TOGGLE_STANDINGS_OVERLAY" && eventType !== "SHOW_PUBLIC_STANDINGS")) return;
-          setStandingsOpen(Boolean(event.payload?.open));
+          setStandingsOpen(Boolean((event.payload as { show?: boolean } | undefined)?.show ?? event.payload?.open));
         })
       .subscribe();
     return () => { cancelled = true; void supabase.removeChannel(ch); };

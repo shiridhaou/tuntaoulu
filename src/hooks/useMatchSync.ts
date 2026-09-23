@@ -56,37 +56,43 @@ export const sessionStateChannel = (code: string) => `session-state-${code}`;
  * standings overlay independently of the match-state channel.
  */
 export const PUBLIC_STANDINGS_EVENT = "SHOW_PUBLIC_STANDINGS";
-export const arenaDisplayChannel = (code: string) => `arena-display-${code}`;
-const arenaChannels = new Map<string, ReturnType<typeof supabase.channel>>();
+export const arenaDisplayChannel = () => "arena-display";
 const arenaListeners = new Map<string, Set<(open: boolean) => void>>();
+let arenaChannel: ReturnType<typeof supabase.channel> | null = null;
 
-export function getArenaDisplayChannel(code: string) {
-  const topic = arenaDisplayChannel(code);
-  let ch = arenaChannels.get(topic);
-  if (!ch) {
-    ch = supabase.channel(topic, { config: { broadcast: { self: true } } });
-    arenaListeners.set(topic, new Set());
-    ch.on("broadcast", { event: PUBLIC_STANDINGS_EVENT }, ({ payload }) => {
-      const open = Boolean((payload as { open?: unknown } | null)?.open);
-      arenaListeners.get(topic)?.forEach((fn) => fn(open));
+export function getArenaDisplayChannel() {
+  if (!arenaChannel) {
+    arenaChannel = supabase.channel(arenaDisplayChannel(), { config: { broadcast: { self: true } } });
+    arenaChannel.on("broadcast", { event: PUBLIC_STANDINGS_EVENT }, ({ payload }) => {
+      const message = (payload ?? {}) as { session_code?: unknown; show?: unknown; open?: unknown };
+      const code = String(message.session_code ?? "").trim().toUpperCase();
+      if (!code) return;
+      const open = Boolean(message.show ?? message.open);
+      arenaListeners.get(code)?.forEach((fn) => fn(open));
     }).subscribe();
-    arenaChannels.set(topic, ch);
   }
-  return ch;
+  return arenaChannel;
 }
 
 /** Subscribe to SHOW_PUBLIC_STANDINGS on the arena-display channel. */
 export function onPublicStandings(code: string, fn: (open: boolean) => void) {
-  getArenaDisplayChannel(code);
-  const set = arenaListeners.get(arenaDisplayChannel(code));
-  if (!set) return () => undefined;
+  getArenaDisplayChannel();
+  const normalizedCode = code.trim().toUpperCase();
+  let set = arenaListeners.get(normalizedCode);
+  if (!set) {
+    set = new Set();
+    arenaListeners.set(normalizedCode, set);
+  }
   set.add(fn);
-  return () => { set.delete(fn); };
+  return () => {
+    set?.delete(fn);
+    if (set?.size === 0) arenaListeners.delete(normalizedCode);
+  };
 }
 
 /** Emit SHOW_PUBLIC_STANDINGS to every connected arena display. */
 export async function broadcastPublicStandings(code: string, open: boolean) {
-  const ch = getArenaDisplayChannel(code);
+  const ch = getArenaDisplayChannel();
   if (ch.state !== "joined") {
     await new Promise<void>((resolve) => {
       const startedAt = Date.now();
@@ -98,7 +104,11 @@ export async function broadcastPublicStandings(code: string, open: boolean) {
     });
   }
   try {
-    await ch.send({ type: "broadcast", event: PUBLIC_STANDINGS_EVENT, payload: { open } });
+    await ch.send({
+      type: "broadcast",
+      event: PUBLIC_STANDINGS_EVENT,
+      payload: { session_code: code.trim().toUpperCase(), show: open, open },
+    });
   } catch { /* never block an operator action on a broadcast failure */ }
 }
 
