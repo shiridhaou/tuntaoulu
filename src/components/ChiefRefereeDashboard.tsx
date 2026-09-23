@@ -1416,7 +1416,7 @@ function GroupColumn({
   return (
     <button
       onClick={onOpen}
-      className="rounded-2xl border backdrop-blur-md p-3 flex flex-col text-left hover:brightness-110 transition-all min-h-0"
+      className="rounded-2xl border backdrop-blur-md px-3 py-2 flex flex-col text-left hover:brightness-110 transition-all min-h-0 overflow-hidden"
       style={{
         borderColor: revealed ? `${color}88` : `${color}44`,
         background: `linear-gradient(180deg, ${color}10, ${color}03)`,
@@ -1424,7 +1424,7 @@ function GroupColumn({
       }}
       title="عرض تفاصيل الحكام"
     >
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-0.5">
         <div>
           <p className="text-[11px] font-heading font-black tracking-[0.3em]" style={{ color }}>
             {name}
@@ -1435,7 +1435,7 @@ function GroupColumn({
       </div>
 
       <p
-        className="text-3xl md:text-4xl font-heading font-black tabular-nums mt-1 whitespace-nowrap overflow-visible"
+        className="text-3xl md:text-4xl font-heading font-black tabular-nums whitespace-nowrap overflow-visible"
         style={{
           color: revealed ? color : "rgba(255,255,255,0.2)",
           textShadow: revealed ? `0 0 18px ${color}AA, 0 0 36px ${color}44` : "none",
@@ -1445,12 +1445,11 @@ function GroupColumn({
       >
         {revealed ? summary.toFixed(2) : "—.——"}
       </p>
-      <p className="text-[9px] text-white/40 font-body mt-0.5 whitespace-nowrap" dir="ltr">{summaryLabel}</p>
+      <p className="text-[9px] text-white/40 font-body whitespace-nowrap" dir="ltr">{summaryLabel}</p>
 
-      {/* Mini-grid of individual judge results — directly under the group total (v1.2.2) */}
-      <div className="mt-2 pt-2 border-t shrink-0" style={{ borderColor: `${color}33` }}>
-        <p className="text-[8px] uppercase tracking-[0.25em] text-white/35 font-body mb-1.5">Individual</p>
-        <div className="flex flex-wrap gap-1.5 items-center justify-center h-full">
+      {/* Mini-grid of individual judge results — aligned on the card's divider line (v1.2.3) */}
+      <div className="mt-auto pt-1 border-t shrink-0" style={{ borderColor: `${color}33` }}>
+        <div className="flex flex-wrap gap-1.5 items-center justify-center">
           {judges.map(j => (
             <JudgeChip key={j.key} slot={j} revealed={revealed} />
           ))}
@@ -1484,11 +1483,10 @@ function StatusOrb({ state, color }: { state: "waiting" | "active" | "submitted"
 function JudgeChip({ slot, revealed }: { slot: JudgeSlot; revealed: boolean }) {
   if (!slot.online) {
     return (
-      <div className="flex flex-col items-center justify-center self-center gap-0.5 opacity-40 w-[42px]">
+      <div className="flex items-center justify-center self-center opacity-40 w-[42px]">
         <div className="h-9 w-9 rounded-full border border-dashed border-white/20 flex items-center justify-center self-center">
           <span className="text-[8px] font-heading font-black text-white/40" dir="ltr">{slot.label}</span>
         </div>
-        <span className="text-[8px] text-white/30 font-body leading-none">انتظار</span>
       </div>
     );
   }
@@ -1512,7 +1510,7 @@ function JudgeChip({ slot, revealed }: { slot: JudgeSlot; revealed: boolean }) {
     : "rgba(255,255,255,0.4)";
 
   return (
-    <div className="flex flex-col items-center justify-center self-center gap-0.5 w-[42px]">
+    <div className="flex items-center justify-center self-center w-[42px]">
       <div className="relative h-9 w-9 rounded-full border-2 flex flex-col items-center justify-center self-center transition-all"
         style={{ borderColor: ring, background: "rgba(255,255,255,0.03)" }}>
         <span className="text-[7px] font-heading font-black text-white/70 leading-none" dir="ltr">{slot.label}</span>
@@ -1527,9 +1525,6 @@ function JudgeChip({ slot, revealed }: { slot: JudgeSlot; revealed: boolean }) {
           title={slot.submitted ? "Received" : "Waiting"}
         />
       </div>
-      <span className={`text-[7px] font-heading font-black tracking-wider leading-none ${slot.submitted ? "text-emerald-400" : "text-amber-400/80"}`} dir="ltr">
-        {slot.submitted ? "✓" : "…"}
-      </span>
     </div>
   );
 }
