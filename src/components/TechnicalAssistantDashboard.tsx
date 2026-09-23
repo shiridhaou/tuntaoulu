@@ -819,6 +819,16 @@ function TADashboardInner() {
     await matchControl.reset(sessionCode);
     // 3) Wipe judge scores for this session
     await supabase.from("judge_scores").delete().eq("session_code", sessionCode);
+    await broadcastSessionState(sessionCode, {
+      athlete_id: null,
+      current_athlete_id: null,
+      match_status: "READY",
+      show_standings_overlay: false,
+      timer_state: "idle",
+      started_at: null,
+      elapsed_ms: 0,
+      payload: { match_status: "READY", show_standings_overlay: false },
+    });
     // 4) Previous results stay PUBLISHED — they are the session's ranking
     //    history (CURRENT PLACING / standings). The scoreboard clears itself
     //    because current_match.athlete_id is now null.

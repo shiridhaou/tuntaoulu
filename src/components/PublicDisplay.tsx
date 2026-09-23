@@ -11,6 +11,7 @@ import { useRoomPresence } from "@/hooks/useRoomPresence";
 import { LeaderboardModal } from "./LeaderboardModal";
 import { PodiumOverlay } from "./PodiumOverlay";
 import { countryFlag } from "@/lib/affiliation";
+import { onSessionState, type SessionStatePatch } from "@/hooks/useMatchSync";
 
 
 /**
@@ -93,6 +94,7 @@ function useLiveDisplay(sessionCode: string | null) {
   const [result, setResult] = useState<MatchResult | null>(null);
   const [liveTaDeduction, setLiveTaDeduction] = useState<number>(0);
   const [liveTaPulse, setLiveTaPulse] = useState<number>(0);
+  const [showStandingsOverlay, setShowStandingsOverlay] = useState(false);
   const taRef = useRef<number>(0);
 
   useEffect(() => {
@@ -136,6 +138,32 @@ function useLiveDisplay(sessionCode: string | null) {
       setResult((prev) => (sameJson(prev, next) ? prev : next));
     };
 
+    const clearLiveSnapshot = () => {
+      currentAthleteId = null;
+      applyResult(null);
+      setAthlete(null);
+      setJudgeScores([]);
+      applyTaTotal(0);
+    };
+
+    const loadActiveAthlete = async (athleteId: string) => {
+      currentAthleteId = athleteId;
+      applyResult(null);
+      await Promise.all([
+        loadAthlete(athleteId),
+        loadJudgeScores(athleteId),
+        loadResult(athleteId),
+      ]);
+    };
+
+    const loadReadyAthlete = async (athleteId: string) => {
+      currentAthleteId = athleteId;
+      applyResult(null);
+      setJudgeScores([]);
+      applyTaTotal(0);
+      await loadAthlete(athleteId);
+    };
+
     const loadResult = async (athleteId: string | null) => {
       // No live athlete → nothing to reveal. Past results remain published as
       // session ranking history, so they must NOT be shown as the current one.
@@ -166,10 +194,16 @@ function useLiveDisplay(sessionCode: string | null) {
       try {
         const { data: cm } = await supabase
           .from("current_match")
-          .select("athlete_id, ta_deductions")
+          .select("athlete_id, ta_deductions, payload")
           .eq("session_code", sessionCode)
           .maybeSingle();
         const currentId = cm?.athlete_id ?? null;
+        const currentPayload = cm?.payload && typeof cm.payload === "object"
+          ? cm.payload as Record<string, unknown>
+          : {};
+        if (typeof currentPayload.show_standings_overlay === "boolean") {
+          setShowStandingsOverlay(currentPayload.show_standings_overlay);
+        }
         const td = (cm as any)?.ta_deductions;
         applyTaTotal(td && typeof td === "object" ? Number(td.total ?? 0) : 0);
         const resultAthleteId = await loadResult(currentId);
@@ -189,6 +223,33 @@ function useLiveDisplay(sessionCode: string | null) {
     };
 
     void reloadSnapshot();
+
+    // Primary low-latency display state. Database listeners below remain as
+    // reconnect/late-join recovery, while this channel changes the arena UI at once.
+    const offSessionState = onSessionState(sessionCode, (raw) => {
+      const state = raw as SessionStatePatch;
+      if (typeof state.show_standings_overlay === "boolean") {
+        setShowStandingsOverlay(state.show_standings_overlay);
+      }
+
+      const hasAthleteKey = Object.prototype.hasOwnProperty.call(state, "current_athlete_id")
+        || Object.prototype.hasOwnProperty.call(state, "athlete_id");
+      const incomingAthleteId = state.current_athlete_id !== undefined
+        ? state.current_athlete_id
+        : state.athlete_id;
+      const isReady = state.match_status === "READY";
+      if (isReady && incomingAthleteId) {
+        void loadReadyAthlete(incomingAthleteId);
+        return;
+      }
+      if (isReady || (hasAthleteKey && !incomingAthleteId)) {
+        clearLiveSnapshot();
+        return;
+      }
+      if (incomingAthleteId && incomingAthleteId !== currentAthleteId) {
+        void loadActiveAthlete(incomingAthleteId);
+      }
+    });
 
     const ch = supabase
       .channel(`pdisplay-${sessionCode}-${Math.random().toString(36).slice(2, 6)}`)
@@ -213,11 +274,7 @@ function useLiveDisplay(sessionCode: string | null) {
           const ev = (payload.new as { event_type?: string })?.event_type;
           const isReset = ev === "global_reset" || ev === "next_athlete" || ev === "GLOBAL_RESET" || ev === "NEXT_ATHLETE";
           if (!isReset || cancelled) return;
-          currentAthleteId = null;
-          applyResult(null);
-          setAthlete(null);
-          setJudgeScores([]);
-          applyTaTotal(0);
+          clearLiveSnapshot();
           scheduleReload();
         })
       .subscribe();
@@ -226,10 +283,11 @@ function useLiveDisplay(sessionCode: string | null) {
       cancelled = true;
       if (reloadTimer) clearTimeout(reloadTimer);
       supabase.removeChannel(ch);
+      offSessionState();
     };
   }, [sessionCode]);
 
-  return { athlete, judgeScores, result, liveTaDeduction, liveTaPulse };
+  return { athlete, judgeScores, result, liveTaDeduction, liveTaPulse, showStandingsOverlay };
 }
 
 
@@ -754,7 +812,7 @@ export function PublicDisplay() {
   const [standingsOpen, setStandingsOpen] = useState(false);
   useRoomPresence(sessionCode, { role: "display" });
 
-  const { athlete, judgeScores, result, liveTaDeduction, liveTaPulse } = useLiveDisplay(sessionCode);
+  const { athlete, judgeScores, result, liveTaDeduction, liveTaPulse, showStandingsOverlay } = useLiveDisplay(sessionCode);
   const varLive = useVarBroadcastFlag(sessionCode);
   const liveVideoUrl = useLiveVideoUrl(sessionCode);
   const ahjClips = useVerifiedClips(sessionCode, athlete?.id ?? null);
@@ -767,6 +825,27 @@ export function PublicDisplay() {
   useEffect(() => {
     setOrigin(window.location.origin);
   }, []);
+
+  useEffect(() => {
+    setStandingsOpen(showStandingsOverlay);
+  }, [showStandingsOverlay]);
+
+  useEffect(() => {
+    const code = (sessionCode ?? "").trim().toUpperCase();
+    if (!code) return;
+    let cancelled = false;
+    const ch = supabase
+      .channel(`pdisplay-standings-${code}-${Math.random().toString(36).slice(2, 6)}`)
+      .on("postgres_changes",
+        { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${code}` },
+        (payload) => {
+          const event = (payload.new as { event_type?: string; payload?: { open?: boolean } }) ?? {};
+          if (cancelled || (event.event_type !== "toggle_standings_overlay" && event.event_type !== "TOGGLE_STANDINGS_OVERLAY")) return;
+          setStandingsOpen(Boolean(event.payload?.open));
+        })
+      .subscribe();
+    return () => { cancelled = true; void supabase.removeChannel(ch); };
+  }, [sessionCode]);
 
   const isPublished = !!result?.published;
   const autoPodium = useAutoPodium(sessionCode, athlete, result, isPublished);

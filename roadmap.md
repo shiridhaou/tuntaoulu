@@ -11,3 +11,5 @@
 - [x] Make TA time deductions informational and exclude them from published totals.
 - [x] Add the capped, Western-numeral HD deduction field with presets and clear.
 - [x] Fit the Chief Referee compulsory and optional layouts within one viewport.
+- [x] Synchronize arena athlete/reset/standings state with the Chief screen.
+- [x] Center the Chief screen's A/B/C judge status badges.
