@@ -1175,6 +1175,8 @@ function TADashboardInner() {
   }
 
   const filtered = useMemo(() => athletes.filter((a) => {
+    // Archived categories live in the archive report, not in the active queue.
+    if (a.status === "archived") return false;
     if (filter !== "all" && a.age_category !== filter) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
