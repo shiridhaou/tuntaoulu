@@ -6,8 +6,9 @@ import {
   Download, Settings, ListChecks, KeyRound, Copy, X, FileCheck2,
   Timer, Pause, RotateCcw, AlertTriangle, Megaphone,
   Activity, Send, LogIn, UserPlus, Lock, Unlock, Plus, Minus,
-  ChevronDown, ChevronUp, Radio, Zap, Video,
+  ChevronDown, ChevronUp, Radio, Zap, Video, Archive,
 } from "lucide-react";
+import { CategoryArchivePanel } from "./CategoryArchivePanel";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
@@ -17,7 +18,7 @@ import Papa from "papaparse";
 import { supabase } from "@/integrations/supabase/client";
 import { joinSessionMembership, ensureDeviceSession } from "@/lib/sessionMembership";
 
-import { matchControl, useMatchSync, broadcastSessionState, broadcastStandingsToggle, onStandingsToggle } from "@/hooks/useMatchSync";
+import { matchControl, useMatchSync, broadcastSessionState, broadcastStandingsToggle, broadcastPublicStandings, onStandingsToggle } from "@/hooks/useMatchSync";
 import { useLogout } from "@/hooks/useLogout";
 import { getWebhookSettings, saveWebhookSettings, isValidWebhookUrl, type WebhookSettings } from "@/lib/resultsWebhook";
 import { dateInputProps, fmtClock, parseDecimalInput, toWesternDigits } from "@/lib/numFormat";
@@ -61,7 +62,7 @@ interface Athlete {
   age_category: string | null;
   club: string | null;
   country: string | null;
-  status: "waiting" | "judging" | "done";
+  status: "waiting" | "judging" | "done" | "archived";
   style?: string | null;
   difficulty_codes?: string[] | null;
   difficulty_sheet?: DifficultyItem[] | null;
@@ -79,6 +80,7 @@ const STATUS_META: Record<Athlete["status"], { label: string; cls: string; icon:
   waiting: { label: "انتظار", cls: "bg-muted/40 text-muted-foreground border-muted", icon: Clock },
   judging: { label: "جاري التحكيم", cls: "bg-fed-blue/15 text-fed-blue border-fed-blue/40", icon: Loader2 },
   done:    { label: "انتهى", cls: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40", icon: CheckCircle2 },
+  archived: { label: "مؤرشف", cls: "bg-white/5 text-white/50 border-white/20", icon: Archive },
 };
 
 const CATEGORIES: AgeCategory[] = ["Poussins", "Pupilles", "Benjamins", "Minimes", "Cadets", "Juniors", "Seniors"];
@@ -405,7 +407,8 @@ function TADashboardInner() {
       payload: { show_standings_overlay: next },
     });
     void broadcastStandingsToggle(sessionCode, next);
-    await emitEvent("TOGGLE_STANDINGS", { open: next, at: Date.now() });
+    void broadcastPublicStandings(sessionCode, next);
+    await emitEvent("SHOW_PUBLIC_STANDINGS", { open: next, at: Date.now() });
   }
 
   /**
@@ -1172,6 +1175,8 @@ function TADashboardInner() {
   }
 
   const filtered = useMemo(() => athletes.filter((a) => {
+    // Archived categories live in the archive report, not in the active queue.
+    if (a.status === "archived") return false;
     if (filter !== "all" && a.age_category !== filter) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -1413,14 +1418,27 @@ function TADashboardInner() {
                   </SheetTitle>
                 </SheetHeader>
                 <Tabs value={tab} onValueChange={setTab} className="w-full mt-4">
-                  <TabsList className="grid grid-cols-2 w-full bg-card/40 backdrop-blur p-1 h-auto">
+                  <TabsList className="grid grid-cols-3 w-full bg-card/40 backdrop-blur p-1 h-auto">
                     <TabsTrigger value="import" className="data-[state=active]:bg-fed-blue data-[state=active]:text-white py-2">
                       <FileSpreadsheet className="h-4 w-4 ml-1.5" /> استيراد
                     </TabsTrigger>
                     <TabsTrigger value="setup" className="data-[state=active]:bg-gold data-[state=active]:text-navy py-2">
                       <Settings className="h-4 w-4 ml-1.5" /> الإعدادات
                     </TabsTrigger>
+                    <TabsTrigger value="archive" className="data-[state=active]:bg-fed-red data-[state=active]:text-white py-2">
+                      <Archive className="h-4 w-4 ml-1.5" /> الأرشفة
+                    </TabsTrigger>
                   </TabsList>
+
+                  {/* ===== TAB: CATEGORY SUMMARY & ARCHIVE ===== */}
+                  <TabsContent value="archive" className="mt-4">
+                    <CategoryArchivePanel
+                      sessionCode={sessionCode}
+                      tournamentName={tournament?.name ?? null}
+                      athletes={athletes}
+                      onArchived={() => { void loadActive(); }}
+                    />
+                  </TabsContent>
 
                   {/* ===== TAB: SETUP ===== */}
                   <TabsContent value="setup" className="mt-4">

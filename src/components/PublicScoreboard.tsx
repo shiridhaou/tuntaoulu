@@ -307,7 +307,7 @@ function StandingsOverlayListener({ sessionCode }: { sessionCode: string | null 
         { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${code}` },
         (payload: any) => {
           const eventType = String(payload.new?.event_type ?? "").toUpperCase();
-          if (eventType !== "TOGGLE_STANDINGS" && eventType !== "TOGGLE_STANDINGS_OVERLAY") return;
+          if (eventType !== "TOGGLE_STANDINGS" && eventType !== "TOGGLE_STANDINGS_OVERLAY" && eventType !== "SHOW_PUBLIC_STANDINGS") return;
           if (cancelled) return;
           setOpen(!!payload.new?.payload?.open);
         })

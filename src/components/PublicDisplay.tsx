@@ -11,7 +11,7 @@ import { useRoomPresence } from "@/hooks/useRoomPresence";
 import { LeaderboardModal } from "./LeaderboardModal";
 import { PodiumOverlay } from "./PodiumOverlay";
 import { countryFlag } from "@/lib/affiliation";
-import { onSessionState, onStandingsToggle, type SessionStatePatch } from "@/hooks/useMatchSync";
+import { onSessionState, onStandingsToggle, onPublicStandings, type SessionStatePatch } from "@/hooks/useMatchSync";
 import { styleLabelEn } from "@/lib/styleNames";
 
 
@@ -939,6 +939,13 @@ export function PublicDisplay() {
     return onStandingsToggle(code, setStandingsOpen);
   }, [sessionCode]);
 
+  // Dedicated arena-display channel: SHOW_PUBLIC_STANDINGS from Chief / TA.
+  useEffect(() => {
+    const code = (sessionCode ?? "").trim().toUpperCase();
+    if (!code) return;
+    return onPublicStandings(code, setStandingsOpen);
+  }, [sessionCode]);
+
   useEffect(() => {
     const code = (sessionCode ?? "").trim().toUpperCase();
     if (!code) return;
@@ -950,7 +957,7 @@ export function PublicDisplay() {
         (payload) => {
           const event = (payload.new as { event_type?: string; payload?: { open?: boolean } }) ?? {};
           const eventType = event.event_type?.toUpperCase();
-          if (cancelled || (eventType !== "TOGGLE_STANDINGS" && eventType !== "TOGGLE_STANDINGS_OVERLAY")) return;
+          if (cancelled || (eventType !== "TOGGLE_STANDINGS" && eventType !== "TOGGLE_STANDINGS_OVERLAY" && eventType !== "SHOW_PUBLIC_STANDINGS")) return;
           setStandingsOpen(Boolean(event.payload?.open));
         })
       .subscribe();

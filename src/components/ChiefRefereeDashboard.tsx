@@ -17,7 +17,7 @@ import { countryFlag } from "@/lib/affiliation";
 
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
-import { useMatchSync, broadcastSessionState, broadcastStandingsToggle } from "@/hooks/useMatchSync";
+import { useMatchSync, broadcastSessionState, broadcastStandingsToggle, broadcastPublicStandings } from "@/hooks/useMatchSync";
 import { joinSessionMembership } from "@/lib/sessionMembership";
 import { toast } from "sonner";
 import { styleLabelAr, styleLabelEn, normalizeStyle } from "@/lib/styleNames";
@@ -139,9 +139,10 @@ function ChiefRefereeDashboardInner() {
         payload: { show_standings_overlay: next },
       });
       void broadcastStandingsToggle(sessionCode, next);
+      void broadcastPublicStandings(sessionCode, next);
       await supabase.from("match_events").insert({
         session_code: sessionCode,
-        event_type: "TOGGLE_STANDINGS",
+        event_type: "SHOW_PUBLIC_STANDINGS",
         payload: { open: next, at: Date.now() } as never,
       });
     } catch { /* non-fatal: local modal already opened */ }
@@ -729,15 +730,35 @@ function ChiefRefereeDashboardInner() {
   const bKept = groupB.filter(j => j.bRole !== "high" && j.bRole !== "low" && j.score !== null).map(j => j.score as number);
   const groupBNet = bKept.length ? roundScore(bKept.reduce((s, v) => s + v, 0) / bKept.length) : 0;
   const cSubmitted = groupC.filter(j => typeof j.score === "number").map(j => j.score as number);
-  const groupCTotal = cSubmitted.length
+  const liveGroupCTotal = cSubmitted.length
     ? roundScore(cSubmitted.reduce((s, v) => s + v, 0) / cSubmitted.length)
     : 0;
+  // GROUP C PERSISTENCE — a received difficulty score must survive screen
+  // refreshes and READY transitions. It is only replaced when a new Group C
+  // submission arrives, and only dropped when the athlete actually changes.
+  const stickyCRef = useRef<{ athleteId: string | null; total: number; count: number }>({
+    athleteId: null, total: 0, count: 0,
+  });
+  const stickyAthleteId = currentAthlete?.id ?? timerSync.athleteId ?? null;
+  if (stickyCRef.current.athleteId !== stickyAthleteId && stickyAthleteId !== null) {
+    if (cSubmitted.length > 0) {
+      stickyCRef.current = { athleteId: stickyAthleteId, total: liveGroupCTotal, count: cSubmitted.length };
+    } else if (stickyCRef.current.athleteId !== null) {
+      stickyCRef.current = { athleteId: stickyAthleteId, total: 0, count: 0 };
+    } else {
+      stickyCRef.current = { athleteId: stickyAthleteId, total: stickyCRef.current.total, count: stickyCRef.current.count };
+    }
+  } else if (cSubmitted.length > 0) {
+    stickyCRef.current = { athleteId: stickyAthleteId, total: liveGroupCTotal, count: cSubmitted.length };
+  }
+  const groupCTotal = cSubmitted.length > 0 ? liveGroupCTotal : stickyCRef.current.total;
+  const cEvaluatedCount = cSubmitted.length > 0 ? cSubmitted.length : stickyCRef.current.count;
 
   // Group A already arrives net of its own deductions. The only deduction
   // applied after A+B+C here is the explicit Chief Judge deduction.
   // Difficulty counts whenever the C judges actually evaluated the routine,
   // even if the mode flag from the TA has not flipped to "optional" yet.
-  const cContrib = matchMode === "optional" || cSubmitted.length > 0 ? groupCTotal : 0;
+  const cContrib = matchMode === "optional" || cEvaluatedCount > 0 ? groupCTotal : 0;
   const choreoTotal = roundScore(choreoApplied.reduce((s, d) => s + d.value, 0));
   const aggregateFinal = roundScore(
     Math.max(0, groupATotal + groupBNet + cContrib - chiefDeduction - choreoTotal),
@@ -745,7 +766,7 @@ function ChiefRefereeDashboardInner() {
   // Show real aggregates whenever ANY judge has submitted — even if TA hasn't
   // formally "called" the athlete via current_match.athlete_id yet. This fixes
   // the case where group totals + final stay at 0.00 despite scores arriving.
-  const hasAnySubmission = aSubmitted.length > 0 || bKept.length > 0 || cSubmitted.length > 0;
+  const hasAnySubmission = aSubmitted.length > 0 || bKept.length > 0 || cEvaluatedCount > 0;
   const showLive = hasActiveAthlete || hasAnySubmission;
   const displayGroupATotal = showLive ? groupATotal : 0;
   const displayGroupBNet = showLive ? groupBNet : 0;
@@ -1169,7 +1190,7 @@ function ChiefRefereeDashboardInner() {
             arr.some(j => j.submitted || typeof j.score === "number" || typeof judgeOverrides[j.key] === "number");
           const aReady = hasAny(groupA);
           const bReady = hasAny(groupB);
-          const cReady = matchMode === "compulsory" || hasAny(groupC) || cSubmitted.length > 0;
+          const cReady = matchMode === "compulsory" || hasAny(groupC) || cEvaluatedCount > 0;
           const minReady = (aReady && bReady && cReady) || forceUnlock;
           const missing: string[] = [];
           if (!aReady) missing.push("A");
@@ -1272,11 +1293,9 @@ function ChiefRefereeDashboardInner() {
             </>
           );
         })()}
-        {/* ATOMIC RESET — archives, clears current_match, judge_scores, returns to waiting */}
-        <NextAthleteButton
-          sessionCode={sessionCode}
-          onReset={hardResetForNextAthlete}
-        />
+        {/* ROLE SCOPE — multi-screen reset / next-athlete authority belongs to the
+            Technical Assistant panel only. The Chief keeps public-display
+            broadcasting and score approval. */}
       </footer>
 
       {/* DRAWER */}
