@@ -25,6 +25,9 @@ import { TIME_WINDOWS, fmtWindow, type TimeWindow } from "@/lib/timeRules";
 import { modeCaps } from "@/lib/matchMode";
 import { computeGroupAConsensus } from "@/lib/groupAConsensus";
 import { useGroupAConsensus } from "@/hooks/useGroupAConsensus";
+import { useGroupCConsensus } from "@/hooks/useGroupCConsensus";
+import { GroupCConsensusPanel } from "./GroupCConsensusPanel";
+import type { ChiefOverride } from "@/lib/groupCConsensus";
 import { roundScore, toWesternDigits } from "@/lib/numFormat";
 import { CHOREO_CODES, lookupChoreoCode } from "@/lib/choreographyCodes";
 
@@ -193,6 +196,14 @@ function ChiefRefereeDashboardInner() {
 
   // Group A consensus (IWUF): only codes recorded by ≥2 Group A judges count.
   const groupAConsensus = useGroupAConsensus(sessionCode, currentAthlete?.id ?? null, effMaxA);
+  // Group C 2/3 majority — Chief per-item overrides (reset on athlete change).
+  const [cOverrides, setCOverrides] = useState<Record<string, ChiefOverride>>({});
+  const cOverrideAthleteRef = useRef<string | null>(null);
+  useEffect(() => {
+    const id = currentAthlete?.id ?? null;
+    if (cOverrideAthleteRef.current !== id) { cOverrideAthleteRef.current = id; setCOverrides({}); }
+  }, [currentAthlete?.id]);
+  const groupCConsensus = useGroupCConsensus(sessionCode, currentAthlete?.id ?? null, cOverrides);
 
 
   const waitingCount = joinRequests.filter(r => r.status === "waiting").length;
@@ -730,9 +741,13 @@ function ChiefRefereeDashboardInner() {
   const bKept = groupB.filter(j => j.bRole !== "high" && j.bRole !== "low" && j.score !== null).map(j => j.score as number);
   const groupBNet = bKept.length ? roundScore(bKept.reduce((s, v) => s + v, 0) / bKept.length) : 0;
   const cSubmitted = groupC.filter(j => typeof j.score === "number").map(j => j.score as number);
-  const liveGroupCTotal = cSubmitted.length
-    ? roundScore(cSubmitted.reduce((s, v) => s + v, 0) / cSubmitted.length)
-    : 0;
+  // IWUF 2/3 majority when ≥2 C judges sent itemised decisions; legacy
+  // per-slot average otherwise (backwards compatible with older scores).
+  const liveGroupCTotal = groupCConsensus.score !== null && cSubmitted.length > 0
+    ? groupCConsensus.score
+    : cSubmitted.length
+      ? roundScore(cSubmitted.reduce((s, v) => s + v, 0) / cSubmitted.length)
+      : 0;
   // GROUP C PERSISTENCE — a received difficulty score must survive screen
   // refreshes and READY transitions. It is only replaced when a new Group C
   // submission arrives, and only dropped when the athlete actually changes.
@@ -954,6 +969,29 @@ function ChiefRefereeDashboardInner() {
 
         {/* Consensus codes (Group A — codes confirmed by ≥2 judges) */}
         <ConsensusCodesPanel sessionCode={sessionCode} athleteId={currentAthlete?.id ?? null} maxA={effMaxA} />
+        {matchMode === "optional" && (
+          <GroupCConsensusPanel
+            consensus={groupCConsensus}
+            onOverride={(item, next) => {
+              setCOverrides((prev) => {
+                const n = { ...prev };
+                if (next) n[item.key] = next; else delete n[item.key];
+                return n;
+              });
+              if (sessionCode) {
+                void supabase.from("match_events").insert({
+                  session_code: sessionCode,
+                  event_type: "CHIEF_C_OVERRIDE",
+                  payload: {
+                    athlete_id: currentAthlete?.id ?? null,
+                    item: item.key, code: item.code, votes: item.votes,
+                    majority: item.majority, override: next, at: new Date().toISOString(),
+                  } as never,
+                });
+              }
+            }}
+          />
+        )}
 
         {/* RAW judge submissions — full transparency for chief */}
         <RawJudgesBreakdown
