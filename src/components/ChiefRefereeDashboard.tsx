@@ -13,6 +13,7 @@ import { VideoEvidenceIndicator } from "./VideoEvidenceIndicator";
 import { ConsensusCodesPanel } from "./ConsensusCodesPanel";
 import { FinalScoreSheetModal } from "./FinalScoreSheetModal";
 import { LeaderboardModal } from "./LeaderboardModal";
+import { PoolHistoryButton } from "./PoolHistoryPanel";
 import { countryFlag } from "@/lib/affiliation";
 
 import { QRCodeSVG } from "qrcode.react";
@@ -1316,6 +1317,14 @@ function ChiefRefereeDashboardInner() {
                 <Trophy className="h-3.5 w-3.5" />
                 عرض الترتيب / Standings
               </button>
+
+              <PoolHistoryButton
+                sessionCode={sessionCode}
+                canReopen
+                activeCategory={currentAthlete?.category ?? null}
+                className="h-9 px-4 rounded-xl font-heading font-black text-[11px] tracking-[0.1em] flex items-center gap-2 transition-all hover:brightness-110"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)" }}
+              />
 
               {/* Manual override — Chief unlocks calculation when a group cannot submit */}
               <button

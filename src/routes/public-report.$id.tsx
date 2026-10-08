@@ -18,7 +18,7 @@ export const Route = createFileRoute("/public-report/$id")({
   errorComponent: ({ error }) => (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 text-center">
       <AlertTriangle className="h-12 w-12 text-orange-400 mb-4" />
-      <p className="text-sm text-white/60">{error.message}</p>
+      <p className="text-sm text-white/60">{(error as Error).message}</p>
     </div>
   ),
   notFoundComponent: () => (
