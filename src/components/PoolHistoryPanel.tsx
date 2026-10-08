@@ -252,6 +252,8 @@ function Breakdown({ athlete, result, rank, canReopen, sessionCode, onSaved }: {
           aDed.map((d, i) => <Row key={i} k={String(d.code ?? d.label ?? "—")} v={f3(num(d.value ?? d.deduction))} />)}
       </section>
 
+      <GroupATimeline sessionCode={sessionCode} athleteId={athlete.id} />
+
       <section className="rounded-lg border border-border p-2">
         <p className="font-bold mb-1">Group B · Performance — {f3(result.score_b)}</p>
         {bInd.map((b, i) => <Row key={i} k={`${b.slot ?? "B"}${b.role && b.role !== "kept" ? ` (${b.role})` : ""}`} v={f3(b.score)} />)}
