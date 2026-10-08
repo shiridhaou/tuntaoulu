@@ -1274,6 +1274,11 @@ function TADashboardInner() {
             >
               <Trophy className="h-3 w-3 ml-1" /> عرض الترتيب / Standings
             </Button>
+            <PoolHistoryButton
+              sessionCode={sessionCode}
+              canReopen={false}
+              className="h-7 px-2 rounded-md border border-gold/50 text-gold hover:bg-gold/10 text-[10px] font-heading font-black flex items-center gap-1"
+            />
             {/* PROMINENT MODE TOGGLE — Compulsory / Optional.
                 Big, color-coded buttons so the TA can flip the whole tournament
                 in one tap and every Judge B / C screen rescales instantly. */}
