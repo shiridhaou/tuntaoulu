@@ -9,6 +9,7 @@ import {
   ChevronDown, ChevronUp, Radio, Zap, Video, Archive,
 } from "lucide-react";
 import { CategoryArchivePanel } from "./CategoryArchivePanel";
+import { PoolHistoryButton } from "./PoolHistoryPanel";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
