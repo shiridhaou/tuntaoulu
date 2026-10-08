@@ -63,6 +63,7 @@ function PoolHistoryModal({ sessionCode, canReopen, activeCategory, onClose }: {
         supabase.from("match_results").select("id, athlete_id, score_a, score_b, score_c, deductions, final_score, published, payload, updated_at").eq("session_code", sessionCode),
       ]);
       setAthletes((ath ?? []) as PoolAthlete[]);
+      setCategory((c) => (c === "all" || (ath ?? []).some((x: any) => x.age_category === c) ? c : "all"));
       setResults((res ?? []) as unknown as PoolResult[]);
     } finally { setLoading(false); }
   };
