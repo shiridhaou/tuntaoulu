@@ -27,6 +27,7 @@ export type Database = {
           full_name: string
           gender: string | null
           id: string
+          sequence_order: number | null
           status: string
           style: string | null
           tournament_id: string | null
@@ -44,6 +45,7 @@ export type Database = {
           full_name: string
           gender?: string | null
           id?: string
+          sequence_order?: number | null
           status?: string
           style?: string | null
           tournament_id?: string | null
@@ -61,6 +63,7 @@ export type Database = {
           full_name?: string
           gender?: string | null
           id?: string
+          sequence_order?: number | null
           status?: string
           style?: string | null
           tournament_id?: string | null

@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791459255730,
+      "tag": "0000_athletes_sequence_order",
+      "breakpoints": true
+    }
+  ]
+}
