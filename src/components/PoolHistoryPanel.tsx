@@ -187,6 +187,95 @@ function PoolHistoryModal({ sessionCode, canReopen, activeCategory, onClose }: {
   );
 }
 
+/**
+ * READ-ONLY Group A deduction timeline. Queries judge_scores directly; never writes.
+ * Graceful fallback: records without per-judge timestamps render the plain summary.
+ */
+function GroupATimeline({ sessionCode, athleteId }: { sessionCode: string | null; athleteId: string }) {
+  const [rows, setRows] = useState<any[] | null>(null);
+
+  useEffect(() => {
+    if (!sessionCode) { setRows([]); return; }
+    let cancelled = false;
+    void supabase
+      .from("judge_scores")
+      .select("judge_slot, payload")
+      .eq("session_code", sessionCode)
+      .eq("athlete_id", athleteId)
+      .eq("judge_role", "A")
+      .then(({ data }) => { if (!cancelled) setRows(data ?? []); });
+    return () => { cancelled = true; };
+  }, [sessionCode, athleteId]);
+
+  const timeline = useMemo(() => {
+    if (!rows || rows.length === 0) return null;
+    // slot -> map of code -> deduction entry
+    const byJudge = new Map<string, Map<string, any>>();
+    let anyTime = false;
+    for (const r of rows) {
+      const slot = String(r.judge_slot ?? "A?");
+      const deds: any[] = Array.isArray(r.payload?.deductions) ? r.payload.deductions : [];
+      const m = new Map<string, any>();
+      for (const d of deds) {
+        if (!d?.code) continue;
+        m.set(String(d.code), d);
+        if (typeof d.timeSec === "number") anyTime = true;
+      }
+      byJudge.set(slot, m);
+    }
+    if (!anyTime) return null; // fallback: no timestamps stored
+    const codes = new Map<string, { code: string; label: string; value: number; timeSec: number; votes: { slot: string; yes: boolean }[] }>();
+    byJudge.forEach((deds, slot) => {
+      deds.forEach((d, code) => {
+        if (!codes.has(code)) codes.set(code, { code, label: String(d.label ?? code), value: num(d.value), timeSec: num(d.timeSec), votes: [] });
+        codes.get(code)!.votes.push({ slot, yes: true });
+      });
+    });
+    // add NO votes for judges who didn't record the code
+    codes.forEach((c) => {
+      byJudge.forEach((_d, slot) => { if (!c.votes.some((v) => v.slot === slot)) c.votes.push({ slot, yes: false }); });
+      c.votes.sort((a, b) => a.slot.localeCompare(b.slot));
+    });
+    return Array.from(codes.values()).sort((a, b) => a.timeSec - b.timeSec || a.code.localeCompare(b.code));
+  }, [rows]);
+
+  if (!timeline) return null; // graceful fallback — old records keep the summary view only
+
+  const fmtSec = (s: number) => `00:${String(Math.max(0, Math.round(s))).padStart(2, "0")}s`;
+
+  return (
+    <section className="rounded-lg border border-border p-2">
+      <p className="font-bold mb-1">Group A Deduction Timeline · السجل الزمني لخصومات الجودة</p>
+      <div className="space-y-1.5">
+        {timeline.map((t) => {
+          const yes = t.votes.filter((v) => v.yes).length;
+          const accepted = yes >= 2;
+          return (
+            <div key={t.code} className="rounded border border-border/60 px-2 py-1" dir="ltr">
+              <div className="flex justify-between items-center">
+                <span className="font-mono font-bold">{t.code} <span className="font-normal text-muted-foreground">{t.label}</span></span>
+                <span className="font-mono text-muted-foreground">{fmtSec(t.timeSec)}</span>
+              </div>
+              <div className="flex justify-between items-center mt-0.5">
+                <span className="text-muted-foreground">
+                  {t.votes.map((v) => (
+                    <span key={v.slot} className={v.yes ? "" : "line-through opacity-60"}>
+                      {v.slot}: {v.yes ? "YES" : "NO"}{" · "}
+                    </span>
+                  ))}
+                </span>
+                <span className={`font-black ${accepted ? "" : "text-destructive"}`}>
+                  {accepted ? `ACCEPTED (${yes}/${t.votes.length} Majority)` : `REJECTED (No 2-Judge Majority at ${fmtSec(t.timeSec)})`}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function Breakdown({ athlete, result, rank, canReopen, sessionCode, onSaved }: {
   athlete: PoolAthlete; result: PoolResult; rank: number | null; canReopen: boolean;
   sessionCode: string | null; onSaved: () => void;
@@ -251,6 +340,8 @@ function Breakdown({ athlete, result, rank, canReopen, sessionCode, onSaved }: {
         {aDed.length === 0 ? <p className="text-muted-foreground">لا توجد تفاصيل خصم محفوظة.</p> :
           aDed.map((d, i) => <Row key={i} k={String(d.code ?? d.label ?? "—")} v={f3(num(d.value ?? d.deduction))} />)}
       </section>
+
+      <GroupATimeline sessionCode={sessionCode} athleteId={athlete.id} />
 
       <section className="rounded-lg border border-border p-2">
         <p className="font-bold mb-1">Group B · Performance — {f3(result.score_b)}</p>
