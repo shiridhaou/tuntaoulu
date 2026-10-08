@@ -1120,6 +1120,16 @@ export function PublicDisplay() {
         .filter((m: any) => typeof m?.code === "string")
         .map((m: any) => ({ code: String(m.code), success: typeof m.successful === "boolean" ? m.successful : typeof m.success === "boolean" ? m.success : null }));
 
+  // Transparency breakdown (published payload; older results simply lack these).
+  const aDedValues = new Map<string, number>();
+  (Array.isArray(result?.payload?.a_deductions) ? result.payload.a_deductions : []).forEach((d: any) => {
+    if (typeof d?.code === "string" && d.value != null && Number.isFinite(Number(d.value))) aDedValues.set(d.code, Number(d.value));
+  });
+  const cConsensusList = (Array.isArray(result?.payload?.c_consensus) ? result.payload.c_consensus : [])
+    .filter((c: any) => typeof c?.code === "string") as { code: string; value: number; yes: number; no: number; decision: string; override: string | null }[];
+  const taInfoTime = Number(result?.payload?.ta_info_deduction ?? 0);
+  const showGroupC = matchMode === "optional" || groupCScore > 0 || cConsensusList.length > 0;
+
   // Standings is an arena-level takeover and must remain available while the
   // display is waiting, live, published, showing VAR, or showing the podium.
   if (sessionCode && standingsOpen) {
@@ -1448,6 +1458,14 @@ export function PublicDisplay() {
                 <span className="text-[11px] uppercase tracking-wider text-white/50 font-body">Out of Bounds</span>
                 <span className="text-base font-heading font-black tabular-nums text-white" dir="ltr">{taOob}</span>
               </div>
+              <div className="flex items-center justify-between py-1 border-b border-white/5">
+                <span className="text-[11px] uppercase tracking-wider text-white/50 font-body">Time note · info (HD decides)</span>
+                <span className="text-base font-heading font-black tabular-nums text-white/70" dir="ltr">{taInfoTime.toFixed(3)}</span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-white/5">
+                <span className="text-[11px] uppercase tracking-wider text-white/50 font-body">Time / general · HD</span>
+                <span className="text-base font-heading font-black tabular-nums" style={{ color: RED }} dir="ltr">− {chiefDeduction.toFixed(3)}</span>
+              </div>
               <div className="flex items-center justify-between py-1">
                 <span className="text-[11px] uppercase tracking-wider text-white/50 font-body">Total deduction</span>
                 <span className="text-base font-heading font-black tabular-nums" style={{ color: RED }} dir="ltr">− {taDed.toFixed(3)}</span>
@@ -1458,7 +1476,7 @@ export function PublicDisplay() {
               <p className="text-[11px] font-heading font-black tracking-[0.4em] text-white/70 mb-2">FINAL CALCULATION</p>
               <Row label="Group A" value={groupAScore.toFixed(3)} color="#22c55e" />
               <Row label="Group B (avg)" value={groupBAvg.toFixed(3)} color={GOLD} />
-              {matchMode === "optional" && <Row label="Group C" value={groupCScore.toFixed(3)} color={CYAN} />}
+              {showGroupC && <Row label="Group C" value={groupCScore.toFixed(3)} color={CYAN} />}
               <Row label="TA deduction" value={`− ${taDed.toFixed(3)}`} color={RED} />
               <Row label="Chief Judge deduction · HD" value={`− ${chiefDeduction.toFixed(3)}`} color={RED} />
               {choreoDeduction > 0 && (
@@ -1576,7 +1594,7 @@ export function PublicDisplay() {
                       }}
                       dir="ltr"
                     >
-                      {c.code}
+                      {c.code}{aDedValues.has(c.code) ? ` −${Math.abs(aDedValues.get(c.code)!).toFixed(2)}` : ""}
                     </span>
                   ))
                 )}
@@ -1632,7 +1650,7 @@ export function PublicDisplay() {
           </section>
 
           {/* GROUP C · DIFFICULTY — numbered movement attempts */}
-          {matchMode === "optional" && (
+          {showGroupC && (
             <section className="rounded-2xl border border-cyan-400/40 bg-gradient-to-br from-cyan-500/15 to-transparent p-3.5">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-[10px] font-heading font-black tracking-[0.3em]" style={{ color: CYAN }}>GROUP C · DD</p>
@@ -1640,7 +1658,23 @@ export function PublicDisplay() {
                   {groupCScore.toFixed(3)}
                 </p>
               </div>
-              {displayCMovements.length === 0 ? (
+              {cConsensusList.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {cConsensusList.map((c, i) => {
+                    const ok = c.decision === "YES";
+                    const color = ok ? GREEN : c.decision === "NO" ? RED : "#9ca3af";
+                    return (
+                      <span key={`${c.code}-${i}`} title={c.override ? "Chief override" : "Majority 2/3"}
+                        className="inline-flex items-center gap-1 h-7 px-2 rounded-full text-[10px] font-heading font-black tabular-nums border"
+                        style={{ borderColor: `${color}99`, background: `${color}1A`, color }} dir="ltr">
+                        <span className={ok ? "" : "line-through"}>{c.code}</span>
+                        <span className="opacity-70">{c.yes}/{c.yes + c.no}</span>
+                        {ok && <span>+{Number(c.value ?? 0).toFixed(2)}</span>}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : displayCMovements.length === 0 ? (
                 <p className="text-[10px] text-white/40 italic">— لا حركات —</p>
               ) : (
                 <div className="flex flex-wrap gap-1.5">

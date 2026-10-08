@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { CategoryArchivePanel } from "./CategoryArchivePanel";
 import { PoolHistoryButton } from "./PoolHistoryPanel";
+import { QuickAddAthleteButton } from "./QuickAddAthlete";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
@@ -370,8 +371,13 @@ function TADashboardInner() {
           ...athlete,
           routine_mode: importedRoutineModes.current.get(athlete.id) ?? athlete.routine_mode,
         }));
-        const ids = new Set(remote.map((x) => x.id));
-        return [...remote, ...prev.filter((x) => !ids.has(x.id))];
+        // Late registrations carry a sequence_order: slot them at that position.
+        const base = remote.filter((x: any) => !(Number((x as any).sequence_order) > 0));
+        remote.filter((x: any) => Number((x as any).sequence_order) > 0)
+          .sort((p: any, q: any) => p.sequence_order - q.sequence_order)
+          .forEach((x: any) => base.splice(Math.min(base.length, x.sequence_order - 1), 0, x));
+        const ids = new Set(base.map((x) => x.id));
+        return [...base, ...prev.filter((x) => !ids.has(x.id))];
       });
     } else {
       const local = readLocalTournament();
@@ -1278,6 +1284,10 @@ function TADashboardInner() {
             <PoolHistoryButton
               sessionCode={sessionCode}
               canReopen={false}
+              className="h-7 px-2 rounded-md border border-gold/50 text-gold hover:bg-gold/10 text-[10px] font-heading font-black flex items-center gap-1"
+            />
+            <QuickAddAthleteButton
+              sessionCode={sessionCode}
               className="h-7 px-2 rounded-md border border-gold/50 text-gold hover:bg-gold/10 text-[10px] font-heading font-black flex items-center gap-1"
             />
             {/* PROMINENT MODE TOGGLE — Compulsory / Optional.

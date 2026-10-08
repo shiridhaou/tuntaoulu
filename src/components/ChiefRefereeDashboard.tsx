@@ -14,6 +14,8 @@ import { ConsensusCodesPanel } from "./ConsensusCodesPanel";
 import { FinalScoreSheetModal } from "./FinalScoreSheetModal";
 import { LeaderboardModal } from "./LeaderboardModal";
 import { PoolHistoryButton } from "./PoolHistoryPanel";
+import { QuickAddAthleteButton } from "./QuickAddAthlete";
+import { CATALOG as A_CODE_CATALOG } from "@/lib/deductionCodes";
 import { countryFlag } from "@/lib/affiliation";
 
 import { QRCodeSVG } from "qrcode.react";
@@ -533,7 +535,7 @@ function ChiefRefereeDashboardInner() {
         style: competitionStyle,
         score_a: groupATotal,
         score_b: groupBNet,
-        score_c: matchMode === "optional" ? groupCTotal : null,
+        score_c: (matchMode === "optional" || cEvaluatedCount > 0) ? groupCTotal : null,
         deductions: roundScore(chiefDeduction + choreoTotal),
         final_score: aggregateFinal,
         published: true,
@@ -543,6 +545,13 @@ function ChiefRefereeDashboardInner() {
           flagged_codes,
           b_individual,
           c_movements,
+          a_deductions: confirmed_codes.flatMap(c => Array.from({ length: c.count }, () => ({
+            code: c.code, value: A_CODE_CATALOG.find(e => e.code === c.code)?.value ?? null,
+          }))),
+          c_consensus: groupCConsensus.items.map(it => ({
+            code: it.code, label: it.label, kind: it.kind, value: it.value,
+            yes: it.yes, no: it.no, decision: it.decision, override: it.override, minority: it.minority,
+          })),
           ta_oob_count: taOobCount,
           ta_deduction: 0,
           ta_info_deduction: roundScore(taDeduction),
@@ -566,7 +575,7 @@ function ChiefRefereeDashboardInner() {
             athlete_name: currentAthlete.name,
             score_a: groupATotal,
             score_b: groupBNet,
-            score_c: matchMode === "optional" ? groupCTotal : null,
+            score_c: (matchMode === "optional" || cEvaluatedCount > 0) ? groupCTotal : null,
             deductions: roundScore(chiefDeduction + choreoTotal),
             ta_deduction: 0,
             ta_info_deduction: roundScore(taDeduction),
@@ -599,7 +608,7 @@ function ChiefRefereeDashboardInner() {
         athleteName: currentAthlete.name,
         team: currentAthlete.country ?? null,
         style: competitionStyle,
-        difficultyScore: matchMode === "optional" ? groupCTotal : null,
+        difficultyScore: (matchMode === "optional" || cEvaluatedCount > 0) ? groupCTotal : null,
         deductionScore: roundScore(chiefDeduction + choreoTotal),
         finalScore: aggregateFinal,
         timestamp: new Date().toISOString(),
@@ -970,7 +979,7 @@ function ChiefRefereeDashboardInner() {
 
         {/* Consensus codes (Group A — codes confirmed by ≥2 judges) */}
         <ConsensusCodesPanel sessionCode={sessionCode} athleteId={currentAthlete?.id ?? null} maxA={effMaxA} />
-        {matchMode === "optional" && (
+        {(matchMode === "optional" || groupCConsensus.items.length > 0) && (
           <GroupCConsensusPanel
             consensus={groupCConsensus}
             onOverride={(item, next) => {
@@ -1322,6 +1331,13 @@ function ChiefRefereeDashboardInner() {
                 sessionCode={sessionCode}
                 canReopen
                 activeCategory={currentAthlete?.category ?? null}
+                className="h-9 px-4 rounded-xl font-heading font-black text-[11px] tracking-[0.1em] flex items-center gap-2 transition-all hover:brightness-110"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)" }}
+              />
+
+              <QuickAddAthleteButton
+                sessionCode={sessionCode}
+                defaultCategory={currentAthlete?.category ?? null}
                 className="h-9 px-4 rounded-xl font-heading font-black text-[11px] tracking-[0.1em] flex items-center gap-2 transition-all hover:brightness-110"
                 style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)" }}
               />
