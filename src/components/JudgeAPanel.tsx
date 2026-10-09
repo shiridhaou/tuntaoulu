@@ -327,7 +327,7 @@ export function JudgeAPanel() {
             >
               −{totalDeduction.toFixed(2)}
             </p>
-            <p className="text-[10px] text-white/40 font-bold tabular-nums" dir="ltr">{confirmed.length} codes</p>
+            <p className="text-[10px] text-white/40 font-bold tabular-nums" dir="ltr">{effective.length} codes</p>
           </div>
 
           <div className="text-right min-w-0">
