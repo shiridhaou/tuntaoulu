@@ -15,6 +15,7 @@ import { FinalScoreSheetModal } from "./FinalScoreSheetModal";
 import { LeaderboardModal } from "./LeaderboardModal";
 import { PoolHistoryButton } from "./PoolHistoryPanel";
 import { QuickAddAthleteButton } from "./QuickAddAthlete";
+import { GroupATimelineReview } from "./GroupATimelineReview";
 import { CATALOG as A_CODE_CATALOG } from "@/lib/deductionCodes";
 import { countryFlag } from "@/lib/affiliation";
 
@@ -1331,6 +1332,13 @@ function ChiefRefereeDashboardInner() {
                 sessionCode={sessionCode}
                 canReopen
                 activeCategory={currentAthlete?.category ?? null}
+                className="h-9 px-4 rounded-xl font-heading font-black text-[11px] tracking-[0.1em] flex items-center gap-2 transition-all hover:brightness-110"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)" }}
+              />
+
+              <GroupATimelineReview
+                rows={groupAConsensus.rows}
+                athleteId={currentAthlete?.id ?? null}
                 className="h-9 px-4 rounded-xl font-heading font-black text-[11px] tracking-[0.1em] flex items-center gap-2 transition-all hover:brightness-110"
                 style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)" }}
               />
