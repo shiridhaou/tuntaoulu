@@ -342,7 +342,50 @@ export function JudgeAPanel() {
         </div>
       </div>
 
-      {/* Deduction log */}
+      {/* Scoring mode toggle */}
+      <div className="px-3 pt-2 shrink-0">
+        <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1" dir="rtl">
+          {(["direct", "hold"] as const).map(m => (
+            <button key={m} type="button" onClick={() => switchMode(m)}
+              className={`h-9 rounded-lg text-[12px] font-black transition-all ${mode === m ? "bg-emerald-500/20 border border-emerald-400/60 text-emerald-200" : "text-white/50 hover:text-white"}`}>
+              {m === "direct" ? "مباشر / Direct" : "النمط الدولي (حجز ثم تخصيص) / IWUF Hold & Assign"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {mode === "hold" ? (
+        <div className="px-3 pt-2 shrink-0 flex gap-2" dir="ltr">
+          <div className="flex-1 min-w-0 rounded-xl border border-white/15 bg-neutral-900 p-2 flex gap-2">
+            <div className="flex-1 min-h-[96px] flex flex-wrap content-start gap-2 overflow-y-auto max-h-[120px]">
+              {markers.length === 0 ? (
+                <span className="text-[11px] text-white/35 p-2" dir="rtl">اضغط + عند كل خطأ أثناء الأداء، ثم خصص الرمز بعد الانتهاء</span>
+              ) : markers.map((m, i) => (
+                <button key={i} type="button" onClick={() => setSel(i)}
+                  className={`h-14 w-14 rounded-full border-2 flex flex-col items-center justify-center font-black tabular-nums transition ${i === sel ? "border-emerald-400 bg-emerald-400/15" : "border-white/80 bg-black"}`}
+                  style={{ boxShadow: i === sel ? "0 0 14px rgba(52,211,153,0.6)" : "0 0 10px rgba(255,255,255,0.25)" }}>
+                  <span className={`text-base leading-none ${m.code ? "text-white" : "text-white/40"}`}>{m.code?.code ?? "?"}</span>
+                  <span className="text-[9px] text-white/50">{fmtTime(m.t)}</span>
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-col justify-between items-end">
+              <div className="flex flex-col gap-1">
+                <button type="button" onClick={() => setSel(s => Math.max(0, s - 1))} className="h-9 w-9 rounded-md bg-emerald-700 text-white font-black">↑</button>
+                <button type="button" onClick={() => setSel(s => Math.min(markers.length - 1, s + 1))} className="h-9 w-9 rounded-md bg-emerald-700 text-white font-black">↓</button>
+              </div>
+              <span className="text-sm font-black tabular-nums">{markers.filter(m => m.code).length}/{markers.length}</span>
+            </div>
+          </div>
+          <div className="w-24 shrink-0 flex flex-col gap-2">
+            <button type="button" onClick={removeLastMarker} disabled={markers.length === 0}
+              className="h-12 rounded-xl bg-white/80 text-black text-3xl font-black disabled:opacity-30 active:scale-95">−</button>
+            <button type="button" onClick={addMarker} disabled={locked}
+              className="h-24 rounded-xl text-black text-5xl font-black disabled:opacity-30 active:scale-95"
+              style={{ background: "#22c55e", boxShadow: "0 0 24px rgba(34,197,94,0.55)" }}>+</button>
+          </div>
+        </div>
+      ) : (
       <div className="px-3 pt-2 shrink-0">
         <div className="rounded-xl border border-white/10 bg-white/[0.02] px-2 py-2 min-h-[46px] flex items-center gap-1.5 overflow-x-auto">
           <span className="shrink-0 text-[9px] uppercase tracking-[0.25em] text-white/40 px-1" dir="ltr">LOG</span>
@@ -361,6 +404,7 @@ export function JudgeAPanel() {
           ))}
         </div>
       </div>
+      )}
 
       {/* Group A keypad — restricted to 0–7 */}
       <div className="px-3 pt-2 shrink-0">
