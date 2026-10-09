@@ -214,7 +214,8 @@ export function JudgeAPanel() {
     // Zero deductions is a valid perfect score (5.00 / 7.00) — never block it.
     haptic([60, 40, 60]);
 
-    confirmed.forEach(c => addJudgeADeduction({ code: c.code, value: c.value, label: c.label }));
+    if (mode === "hold" && markers.some(m => !m.code)) { toast.error("خصص رمزاً لكل علامة زمنية أو احذف الزائدة"); return; }
+    effective.forEach(c => addJudgeADeduction({ code: c.code, value: c.value, label: c.label }));
 
     const code = sessionCode ?? activeSession;
     if (!code) { toast.error("كود الجلسة غير متوفر — أعد الدخول بالرمز"); return; }
@@ -224,8 +225,9 @@ export function JudgeAPanel() {
         athleteId: currentAthlete?.id ?? null,
         score: projectedScore,
         payload: {
-          codes: confirmed.map(c => c.code),
-          deductions: confirmed.map(c => ({ code: c.code, value: c.value, label: c.label, timeSec: timerElapsed })),
+          codes: effective.map(c => c.code),
+          deductions: effective.map(c => ({ code: c.code, value: c.value, label: c.label, timeSec: c.t ?? timerElapsed })),
+          mode,
         },
       });
       if (!res.ok) { toast.error(`فشل الإرسال: ${res.error ?? "خطأ"}`); return; }
@@ -233,11 +235,12 @@ export function JudgeAPanel() {
     }
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 2200);
-  }, [locked, canSend, confirmed, sessionCode, activeSession, judgeId, currentAthlete, projectedScore, timerElapsed, addJudgeADeduction]);
+  }, [locked, canSend, mode, markers, effective, sessionCode, activeSession, judgeId, currentAthlete, projectedScore, timerElapsed, addJudgeADeduction]);
 
 
   const resetAll = useCallback(() => {
     haptic([20, 40, 20]);
+    setMarkers([]); setSel(0);
     setConfirmed([]); resetJudgeADeductions();
   }, [resetJudgeADeductions]);
 
