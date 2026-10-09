@@ -139,11 +139,52 @@ export function JudgeAPanel() {
   }, [liveMode, liveStyle]);
 
 
+  // ── IWUF Hold & Assign mode (local-only UI; submission payload shape unchanged) ──
+  const [mode, setMode] = useState<"direct" | "hold">("direct");
+  useEffect(() => { try { const m = localStorage.getItem("taolu.judgeAMode"); if (m === "hold") setMode("hold"); } catch { /* noop */ } }, []);
+  const switchMode = (m: "direct" | "hold") => { setMode(m); try { localStorage.setItem("taolu.judgeAMode", m); } catch { /* noop */ } };
+  const [markers, setMarkers] = useState<{ t: number; code: CodeEntry | null }[]>([]);
+  const [sel, setSel] = useState(0);
+  useEffect(() => { setMarkers([]); setSel(0); }, [currentAthlete?.id, aSync.athleteId]);
+  useEffect(() => {
+    const code = sessionCode ?? activeSession;
+    if (!code) return;
+    const ch = supabase
+      .channel(`ja-hold-reset-${code}-${Math.random().toString(36).slice(2, 8)}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "match_events", filter: `session_code=eq.${code}` },
+        (payload) => {
+          const ev = String(((payload.new ?? {}) as { event_type?: string }).event_type ?? "").toLowerCase();
+          if (ev === "global_reset" || ev === "next_athlete") queueMicrotask(() => { setMarkers([]); setSel(0); });
+        })
+      .subscribe();
+    return () => { try { supabase.removeChannel(ch); } catch { /* ignore */ } };
+  }, [sessionCode, activeSession]);
+  const addMarker = useCallback(() => {
+    if (locked) { toast.error("التقييم مقفل — انتظر فتح الحكم الرئيسي"); return; }
+    haptic([40, 20, 40]);
+    setMarkers(prev => { setSel(prev.length); return [...prev, { t: timerElapsed, code: null }]; });
+  }, [locked, timerElapsed]);
+  const removeLastMarker = useCallback(() => {
+    haptic(20);
+    setMarkers(prev => { const n = prev.slice(0, -1); setSel(s => Math.max(0, Math.min(s, n.length - 1))); return n; });
+  }, []);
+
   const addCode = useCallback((c: CodeEntry) => {
     if (locked) { toast.error("التقييم مقفل — انتظر فتح الحكم الرئيسي"); return; }
     haptic([28, 18, 28]);
+    if (mode === "hold") {
+      setMarkers(prev => {
+        if (prev.length === 0) { toast.error("أضف علامة زمنية بزر + أولاً"); return prev; }
+        const idx = Math.min(sel, prev.length - 1);
+        const n = prev.map((m, i) => (i === idx ? { ...m, code: c } : m));
+        const nextEmpty = n.findIndex((m, i) => i > idx && !m.code);
+        if (nextEmpty >= 0) setSel(nextEmpty);
+        return n;
+      });
+      return;
+    }
     setConfirmed(prev => [...prev, c]);
-  }, [locked]);
+  }, [locked, mode, sel]);
 
   const undoLast = useCallback(() => {
     haptic(20);
@@ -155,7 +196,14 @@ export function JudgeAPanel() {
     setConfirmed(prev => prev.filter((_, i) => i !== idx));
   }, []);
 
-  const totalDeduction = useMemo(() => confirmed.reduce((s, c) => s + c.value, 0), [confirmed]);
+  // What actually gets scored/sent: direct list, or assigned markers (with their timestamps).
+  const effective = useMemo<(CodeEntry & { t?: number })[]>(
+    () => mode === "hold"
+      ? markers.filter(m => m.code).map(m => ({ ...(m.code as CodeEntry), t: m.t }))
+      : confirmed,
+    [mode, markers, confirmed],
+  );
+  const totalDeduction = useMemo(() => effective.reduce((s, c) => s + c.value, 0), [effective]);
   const projectedScore = Math.max(0, maxA - totalDeduction);
 
   const canSend = !locked && ((!timerRunning && timerElapsed > 0) || timeUp);
